@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResearchTree</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0e12;--surface:#16181f;--surface2:#1e2028;--surface3:#252832;
+  --border:#2e3140;--border2:#3a3e52;--text:#e8eaf2;--text2:#9099b5;--text3:#5a6280;
+  --accent:#7c6af0;--accent2:#5e4fd4;--gold:#d4a843;--gold2:#b8892e;
+  --teal:#3dbfa0;--coral:#e8715a;--plus:#3dbfa0;--pro:#d4a843;
+  --radius:10px;--radius-lg:16px;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* LAYOUT */
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:300px;min-width:300px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .3s,min-width .3s}
+#sidebar.collapsed{width:0;min-width:0}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;white-space:nowrap;overflow:hidden}
+.logo{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;letter-spacing:-0.5px}
+.logo span{color:var(--accent)}
+.plan-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.4px;text-transform:uppercase;flex-shrink:0}
+.plan-free{background:#1e2028;color:var(--text3);border:1px solid var(--border2)}
+.plan-plus{background:#0d2420;color:var(--plus);border:1px solid #1a4038}
+.plan-pro{background:#2a1e08;color:var(--pro);border:1px solid #4a3210}
+.search-wrap{padding:10px 12px;border-bottom:1px solid var(--border);position:relative}
+.search-icon{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none}
+.search-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px 8px 32px;outline:none;transition:.15s}
+.search-input:focus{border-color:var(--accent)}
+.sidebar-section-label{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px 4px}
+.trees-list{flex:1;overflow-y:auto;padding:12px}
+.tree-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius);cursor:pointer;transition:.15s;margin-bottom:4px;border:1px solid transparent;white-space:nowrap;overflow:hidden}
+.tree-item:hover{background:var(--surface2)}
+.tree-item.active{background:var(--surface3);border-color:var(--border2)}
+.tree-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.tree-name{font-size:14px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.tree-count{font-size:11px;color:var(--text3);flex-shrink:0}
+.tree-del-btn{width:22px;height:22px;background:transparent;border:none;color:var(--text3);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;transition:.15s}
+.tree-del-btn:hover{color:var(--coral);background:#2e1e20}
+.btn-new-tree{margin:12px;padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;transition:.15s}
+.btn-new-tree:hover{background:var(--accent2)}
+.sidebar-upgrade{margin:0 12px 12px;padding:12px;background:linear-gradient(135deg,#1e1a3a,#1a2838);border:1px solid #3d3870;border-radius:var(--radius);cursor:pointer;transition:.15s}
+.sidebar-upgrade:hover{border-color:var(--accent)}
+.su-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.su-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px}
+.su-btn{font-size:12px;font-weight:600;color:var(--accent);display:flex;align-items:center;gap:4px}
+
+/* TOPBAR */
+#topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.breadcrumb{display:flex;align-items:center;gap:6px;flex:1;overflow:hidden}
+.breadcrumb-item{font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap;transition:.15s}
+.breadcrumb-item:hover{color:var(--text)}
+.breadcrumb-item.current{color:var(--text);font-weight:500}
+.bc-sep{color:var(--text3);font-size:12px}
+.topbar-actions{display:flex;gap:6px;flex-shrink:0}
+.icon-btn{width:34px;height:34px;border:1px solid var(--border2);border-radius:8px;background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:.15s;position:relative}
+.icon-btn:hover{background:var(--surface2);color:var(--text)}
+.icon-btn.active{background:rgba(124,106,240,.15);border-color:var(--accent);color:var(--accent)}
+.icon-btn .lock-dot{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--gold);border:2px solid var(--bg);font-size:6px;display:flex;align-items:center;justify-content:center}
+
+/* CANVAS */
+#canvas-wrap{flex:1;overflow:auto;padding:36px 40px}
+#canvas{display:flex;flex-direction:column;align-items:flex-start;gap:0;min-width:600px}
+
+/* EMPTY STATE */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;text-align:center;width:100%}
+.empty-state h2{font-family:'Playfair Display',serif;font-size:28px}
+.empty-state p{color:var(--text2);font-size:15px;max-width:340px;line-height:1.7}
+
+/* NODE CARDS */
+.node-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;min-width:260px;max-width:380px;margin:8px 0;cursor:default;transition:.2s;position:relative}
+.node-card:hover{border-color:var(--border2);background:var(--surface2)}
+.node-card.root-card{background:linear-gradient(135deg,#1e1a3a 0%,#1a2235 100%);border-color:#3d3870;min-width:320px}
+.node-card.selected{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,106,240,.15)}
+.node-header{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
+.node-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:600;line-height:1.35;flex:1}
+.node-card.root-card .node-title{font-size:19px}
+.node-desc{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px}
+.node-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.node-tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.tag-img{background:#1a2e28;color:var(--teal);border:1px solid #264038}
+.tag-vid{background:#1e1a3a;color:#9a8df8;border:1px solid #3d3870}
+.tag-link{background:#2e1e20;color:var(--coral);border:1px solid #3e2828}
+.node-actions{display:flex;gap:4px;flex-wrap:wrap}
+.node-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid;transition:.15s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.btn-child{background:transparent;border-color:var(--accent);color:var(--accent)}
+.btn-child:hover{background:var(--accent);color:#fff}
+.btn-edit-node{background:transparent;border-color:var(--border2);color:var(--text2)}
+.btn-edit-node:hover{background:var(--surface3);color:var(--text)}
+.btn-del-node{background:transparent;border-color:#3e2828;color:var(--coral)}
+.btn-del-node:hover{background:#2e1e20}
+.btn-detail{background:transparent;border-color:var(--border2);color:var(--text2);margin-left:auto}
+.btn-detail:hover{background:var(--surface3);color:var(--text)}
+.expand-btn{width:22px;height:22px;border-radius:5px;background:var(--surface3);border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;flex-shrink:0;transition:.15s}
+.expand-btn:hover{background:var(--border2);color:var(--text)}
+.media-thumbs{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0}
+.media-thumb{width:52px;height:38px;border-radius:6px;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;flex-shrink:0}
+.media-thumb img{width:100%;height:100%;object-fit:cover}
+.node-color-bar{position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0}
+
+/* TREE STRUCTURE */
+.children-wrap{padding-left:28px;border-left:1px solid var(--border2);margin-left:22px;display:flex;flex-direction:column}
+.add-sibling-btn{margin:6px 0 14px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:1px dashed var(--border2);color:var(--text3);background:transparent;display:inline-flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;transition:.15s;width:fit-content}
+.add-sibling-btn:hover{border-color:var(--accent);color:var(--accent)}
+.add-root-btn{margin-top:16px;padding:9px 18px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;border:1px dashed var(--accent);color:var(--accent);background:transparent;display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;transition:.15s}
+.add-root-btn:hover{background:rgba(124,106,240,.1)}
+
+/* DETAIL PANEL */
+#detail-panel{width:380px;min-width:380px;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;transition:width .3s,min-width .3s;flex-shrink:0}
+#detail-panel.hidden{width:0;min-width:0;overflow:hidden}
+.detail-inner{padding:24px}
+.detail-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:10px;line-height:1.3}
+.detail-desc{font-size:14px;color:var(--text2);line-height:1.75;margin-bottom:20px;white-space:pre-wrap}
+.detail-section{margin-bottom:20px}
+.detail-section-title{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:6px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.detail-media-item{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);margin-bottom:8px;background:var(--surface2)}
+.detail-media-img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.detail-media-caption{font-size:12px;color:var(--text2);padding:8px 10px}
+.detail-video-wrap{aspect-ratio:16/9;background:var(--surface3)}
+.detail-video-wrap iframe{width:100%;height:100%;border:none;display:block}
+.detail-link{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--border);border-radius:9px;text-decoration:none;color:var(--text2);font-size:13px;margin-bottom:6px;transition:.15s;background:var(--surface2)}
+.detail-link:hover{border-color:var(--border2);color:var(--text);background:var(--surface3)}
+.detail-close{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.detail-path{font-size:11px;color:var(--text3)}
+/* Node note card (Pro) */
+.node-note{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
+.modal-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:600}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--surface)}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:11px;font-weight:500;color:var(--text2);margin-bottom:7px;text-transform:uppercase;letter-spacing:.6px}
+.field input,.field textarea,.field select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;transition:.15s;outline:none;-webkit-appearance:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,106,240,.15)}
+.field textarea{min-height:90px;resize:vertical;line-height:1.6}
+.field select option{background:var(--surface2)}
+.btn-primary{padding:10px 22px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{padding:10px 22px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:.15s}
+.btn-secondary:hover{background:var(--surface2);color:var(--text)}
+.btn-danger{padding:10px 22px;background:transparent;color:var(--coral);border:1px solid #3e2828;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:.15s}
+.btn-danger:hover{background:#2e1e20}
+.btn-gold{padding:10px 22px;background:linear-gradient(135deg,#d4a843,#b8892e);color:#1a1200;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-gold:hover{opacity:.9}
+.btn-teal{padding:10px 22px;background:linear-gradient(135deg,#3dbfa0,#2a9b82);color:#001a14;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-teal:hover{opacity:.9}
+.emoji-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.emoji-opt{width:38px;height:38px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:19px;transition:.15s}
+.emoji-opt:hover{border-color:var(--border2)}
+.emoji-opt.selected{border-color:var(--accent);background:rgba(124,106,240,.12)}
+.color-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.color-opt{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.15s}
+.color-opt:hover{transform:scale(1.15)}
+.color-opt.selected{border-color:var(--text);transform:scale(1.1)}
+
+/* MEDIA LIST */
+.media-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.media-item-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px}
+.mi-icon{width:30px;height:30px;border-radius:6px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.mi-info{flex:1;min-width:0}
+.mi-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mi-url{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mi-del{width:28px;height:28px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;transition:.15s;flex-shrink:0}
+.mi-del:hover{color:var(--coral);background:#2e1e20}
+
+/* PAYWALL MODAL */
+.paywall-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
+.paywall-overlay.open{display:flex}
+.paywall-modal{background:var(--surface);border:1px solid var(--border2);border-radius:20px;width:100%;max-width:640px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.6)}
+.paywall-header{padding:32px 32px 24px;text-align:center;background:linear-gradient(135deg,#14102e 0%,#0d1a2e 100%);border-bottom:1px solid var(--border)}
+.paywall-header h2{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;margin-bottom:8px}
+.paywall-header p{color:var(--text2);font-size:14px;line-height:1.6;max-width:380px;margin:0 auto}
+.paywall-plans{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0}
+.plan-col{padding:28px 28px 24px;border-right:1px solid var(--border)}
+.plan-col:last-child{border-right:none}
+.plan-col.highlighted{background:linear-gradient(135deg,#1a1408 0%,#12100a 100%)}
+.plan-name{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.plan-price{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;margin-bottom:4px;line-height:1}
+.plan-price span{font-size:14px;font-weight:400;color:var(--text2);font-family:'DM Sans',sans-serif}
+.plan-tagline{font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.5}
+.plan-features{list-style:none;margin-bottom:20px;display:flex;flex-direction:column;gap:8px}
+.plan-features li{font-size:13px;color:var(--text2);display:flex;align-items:flex-start;gap:8px;line-height:1.4}
+.plan-features li i{font-size:14px;margin-top:1px;flex-shrink:0}
+.feat-check{color:var(--teal)}
+.feat-gold{color:var(--gold)}
+.paywall-footer{padding:16px 28px;border-top:1px solid var(--border);display:flex;justify-content:center}
+
+/* LIMIT BANNER */
+.limit-banner{background:linear-gradient(135deg,#1e1a3a,#1a2035);border:1px solid #3d3870;border-radius:12px;padding:16px 20px;margin:20px 0;display:flex;align-items:center;gap:14px}
+.lb-icon{width:40px;height:40px;border-radius:10px;background:rgba(124,106,240,.15);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.lb-text{flex:1}
+.lb-title{font-size:14px;font-weight:500;margin-bottom:3px}
+.lb-desc{font-size:12px;color:var(--text2);line-height:1.5}
+.lb-btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:.15s}
+
+/* FEATURE LOCKED BADGE */
+.feat-locked{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;cursor:pointer;transition:.15s}
+.locked-plus{background:#0d2420;color:var(--plus);border:1px solid #1a4038}
+.locked-plus:hover{background:#1a4038}
+.locked-pro{background:#2a1e08;color:var(--pro);border:1px solid #4a3210}
+.locked-pro:hover{background:#4a3210}
+
+/* PRO NODE COLORS */
+.node-card.color-teal{border-left:3px solid var(--teal)}
+.node-card.color-coral{border-left:3px solid var(--coral)}
+.node-card.color-gold{border-left:3px solid var(--gold)}
+.node-card.color-purple{border-left:3px solid var(--accent)}
+.node-card.color-blue{border-left:3px solid #5bc8f5}
+
+/* STATS BAR (Pro) */
+.stats-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:36px;display:flex;align-items:center;gap:20px;font-size:12px;color:var(--text3);flex-shrink:0}
+.stat-item{display:flex;align-items:center;gap:5px}
+.stat-val{color:var(--text2);font-weight:500}
+
+/* EXPORT MENU */
+.export-menu{position:absolute;top:38px;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:6px;min-width:160px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.export-item{padding:8px 12px;border-radius:7px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--text2);transition:.15s}
+.export-item:hover{background:var(--surface2);color:var(--text)}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--text);opacity:0;transition:opacity .3s;pointer-events:none;z-index:3000;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#toast.show{opacity:1}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <i class="ti ti-tree" style="font-size:22px;color:var(--accent);flex-shrink:0"></i>
+      <span class="logo">Research<span>Tree</span></span>
+      <span class="plan-badge plan-free" id="plan-badge-sidebar">Free</span>
+    </div>
+    <div class="search-wrap">
+      <i class="ti ti-search search-icon"></i>
+      <input class="search-input" id="search-input" placeholder="Search trees..." oninput="filterTrees(this.value)">
+    </div>
+    <div class="sidebar-section-label">Your Trees</div>
+    <div class="trees-list" id="trees-list"></div>
+    <button class="btn-new-tree" onclick="handleNewTree()"><i class="ti ti-plus"></i> New Research Tree</button>
+    <div class="sidebar-upgrade" id="upgrade-prompt" onclick="openPaywall('plus')">
+      <div class="su-label">Upgrade</div>
+      <div class="su-title">Unlock unlimited trees, exports & more</div>
+      <div class="su-btn"><i class="ti ti-arrow-up-circle"></i> View plans →</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="topbar">
+      <button class="icon-btn" onclick="toggleSidebar()" title="Toggle sidebar"><i class="ti ti-layout-sidebar"></i></button>
+      <div class="breadcrumb" id="breadcrumb"></div>
+      <div class="topbar-actions">
+        <button class="icon-btn" onclick="expandAll()" title="Expand all"><i class="ti ti-arrows-maximize"></i></button>
+        <button class="icon-btn" onclick="collapseAll()" title="Collapse all"><i class="ti ti-arrows-minimize"></i></button>
+        <button class="icon-btn" id="btn-detail" onclick="toggleDetailPanel()" title="Info panel"><i class="ti ti-layout-sidebar-right"></i></button>
+        <button class="icon-btn" id="btn-search-nodes" onclick="handleNodeSearch()" title="Search nodes">
+          <i class="ti ti-search"></i>
+          <span class="lock-dot" id="search-lock" title="Plus feature">+</span>
+        </button>
+        <div style="position:relative">
+          <button class="icon-btn" id="btn-export" onclick="handleExport()" title="Export tree">
+            <i class="ti ti-download"></i>
+            <span class="lock-dot" id="export-lock" title="Plus feature">+</span>
+          </button>
+          <div class="export-menu" id="export-menu" style="display:none">
+            <div class="export-item" onclick="exportJSON()"><i class="ti ti-file-code"></i> Export JSON</div>
+            <div class="export-item" onclick="exportMarkdown()"><i class="ti ti-markdown"></i> Export Markdown</div>
+            <div class="export-item" onclick="exportCSV()"><i class="ti ti-table"></i> Export CSV</div>
+            <div class="export-item" onclick="printTree()"><i class="ti ti-printer"></i> Print / PDF</div>
+          </div>
+        </div>
+        <button class="icon-btn" onclick="openTreeSettingsModal()" id="btn-settings" title="Tree settings"><i class="ti ti-settings"></i></button>
+        <button class="icon-btn" onclick="openPaywall('plus')" title="Upgrade plan" id="btn-upgrade" style="border-color:#3d3870;color:var(--accent)"><i class="ti ti-crown"></i></button>
+      </div>
+    </div>
+    <div id="stats-bar" class="stats-bar" style="display:none"></div>
+    <div id="node-search-bar" style="display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px">
+      <input id="node-search-input" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 14px;outline:none" placeholder="Search nodes in this tree..." oninput="searchNodes(this.value)">
+    </div>
+    <div id="canvas-wrap"><div id="canvas"></div></div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div id="detail-panel" class="hidden">
+    <div class="detail-inner" id="detail-inner">
+      <div class="empty-state" style="min-height:300px">
+        <div style="font-size:40px;color:var(--text3)"><i class="ti ti-info-circle"></i></div>
+        <p>Click a node's Info button to see details here.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title"></span>
+      <button class="icon-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- PAYWALL MODAL -->
+<div class="paywall-overlay" id="paywall-overlay" onclick="if(event.target===this)closePaywall()">
+  <div class="paywall-modal">
+    <div class="paywall-header">
+      <h2 id="pw-headline">Unlock more with ResearchTree</h2>
+      <p id="pw-subhead">Choose the plan that fits your research workflow.</p>
+    </div>
+    <div class="paywall-plans">
+      <div class="plan-col">
+        <div class="plan-name" style="color:var(--plus)">Plus</div>
+        <div class="plan-price" style="color:var(--text)">$9<span>/mo</span></div>
+        <div class="plan-tagline">For serious researchers who need more room to think.</div>
+        <ul class="plan-features">
+          <li><i class="ti ti-check feat-check"></i>Unlimited research trees</li>
+          <li><i class="ti ti-check feat-check"></i>Unlimited nodes per tree</li>
+          <li><i class="ti ti-check feat-check"></i>Full-text node search</li>
+          <li><i class="ti ti-check feat-check"></i>Export to JSON, Markdown & CSV</li>
+          <li><i class="ti ti-check feat-check"></i>Print / PDF export</li>
+          <li><i class="ti ti-check feat-check"></i>Node images & video embeds</li>
+          <li><i class="ti ti-check feat-check"></i>Tree import from JSON</li>
+          <li><i class="ti ti-check feat-check"></i>Priority support</li>
+        </ul>
+        <button class="btn-teal" style="width:100%;justify-content:center" onclick="activatePlan('plus')">
+          <i class="ti ti-arrow-up-circle"></i> Start with Plus
+        </button>
+      </div>
+      <div class="plan-col highlighted">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <div class="plan-name" style="color:var(--gold)">Pro</div>
+          <span style="font-size:10px;font-weight:600;background:linear-gradient(135deg,#d4a843,#b8892e);color:#1a1200;padding:2px 8px;border-radius:20px">BEST VALUE</span>
+        </div>
+        <div class="plan-price" style="color:var(--gold)">$19<span>/mo</span></div>
+        <div class="plan-tagline">For power users building deep knowledge systems.</div>
+        <ul class="plan-features">
+          <li><i class="ti ti-check feat-gold"></i>Everything in Plus</li>
+          <li><i class="ti ti-check feat-gold"></i>Node color labels</li>
+          <li><i class="ti ti-check feat-gold"></i>Node tags & filtering</li>
+          <li><i class="ti ti-check feat-gold"></i>Inline node notes (rich text)</li>
+          <li><i class="ti ti-check feat-gold"></i>Tree statistics dashboard</li>
+          <li><i class="ti ti-check feat-gold"></i>AI-powered node suggestions</li>
+          <li><i class="ti ti-check feat-gold"></i>Multiple collaborators</li>
+          <li><i class="ti ti-check feat-gold"></i>Custom node templates</li>
+        </ul>
+        <button class="btn-gold" style="width:100%;justify-content:center" onclick="activatePlan('pro')">
+          <i class="ti ti-crown"></i> Go Pro
+        </button>
+      </div>
+    </div>
+    <div class="paywall-footer">
+      <button class="btn-secondary" onclick="closePaywall()">Maybe later — stay on Free</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const EMOJIS=['📚','🔬','🎮','🏛️','🌍','⚡','🧬','🎨','🎵','🚀','💡','🏺','🧪','📡','🌿','🔭','⚔️','🎭','🏗️','🌊','🧠','💻','🎬','📰','🔮','🎯','🦠','🌐','🏆','🎪','🦋','🌋','🔑','💎','🌸','🐉'];
+const TREE_COLORS=['#7c6af0','#3dbfa0','#e8715a','#d4a843','#5bc8f5','#e07bb0','#6fd98f','#f0a653'];
+const NODE_COLORS=['none','teal','coral','gold','purple','blue'];
+
+// ===== PLAN LIMITS =====
+const PLANS = {
+  free:  { trees: 3, nodes: 20, media: false, export: false, nodeSearch: false, nodeColors: false, nodeTags: false, nodeNotes: false, stats: false, aiSuggest: false },
+  plus:  { trees: Infinity, nodes: Infinity, media: true, export: true, nodeSearch: true, nodeColors: false, nodeTags: false, nodeNotes: false, stats: false, aiSuggest: false },
+  pro:   { trees: Infinity, nodes: Infinity, media: true, export: true, nodeSearch: true, nodeColors: true, nodeTags: true, nodeNotes: true, stats: true, aiSuggest: true }
+};
+
+// ===== STATE =====
+let state = {
+  plan: 'free',
+  trees: [], activeTree: null, collapsed: {}, selectedNode: null, detailOpen: false, sidebarOpen: true
+};
+let _mediaItems = [];
+let exportMenuOpen = false;
+
+function plan() { return PLANS[state.plan] || PLANS.free; }
+function can(feature) { return plan()[feature]; }
+
+// ===== PERSISTENCE =====
+function save() { try { localStorage.setItem('rt_v3', JSON.stringify(state)); } catch(e){} }
+function load() { try { const d=localStorage.getItem('rt_v3'); if(d) state={...state,...JSON.parse(d)}; } catch(e){} }
+
+// ===== UTILS =====
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function toast(msg,dur=2200) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+function getActiveTree() { return state.trees.find(t=>t.id===state.activeTree); }
+function findNode(nodes,id) {
+  for(const n of nodes){ if(n.id===id) return n; const r=findNode(n.children||[],id); if(r) return r; } return null;
+}
+function countNodes(nodes) { return nodes.reduce((s,n)=>s+1+countNodes(n.children||[]),0); }
+function deleteNodeFrom(nodes,id) {
+  const i=nodes.findIndex(n=>n.id===id); if(i>-1){nodes.splice(i,1);return true;}
+  return nodes.some(n=>deleteNodeFrom(n.children||[],id));
+}
+function getNodePath(roots,id,path=[]) {
+  for(const n of roots){ const p=[...path,n]; if(n.id===id) return p; const r=getNodePath(n.children||[],id,p); if(r) return r; } return null;
+}
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function totalNodes() { const t=getActiveTree(); return t ? countNodes(t.roots||[]) : 0; }
+function allNodes(nodes,arr=[]) { nodes.forEach(n=>{arr.push(n);allNodes(n.children||[],arr);}); return arr; }
+function maxDepth(nodes,d=0) { if(!nodes.length) return d; return Math.max(...nodes.map(n=>maxDepth(n.children||[],d+1))); }
+
+// ===== PLAN UI =====
+function updatePlanUI() {
+  const p = state.plan;
+  const badge = document.getElementById('plan-badge-sidebar');
+  if(p==='free'){badge.className='plan-badge plan-free';badge.textContent='Free';}
+  else if(p==='plus'){badge.className='plan-badge plan-plus';badge.textContent='Plus';}
+  else{badge.className='plan-badge plan-pro';badge.textContent='Pro';}
+
+  // Export lock
+  const elock=document.getElementById('export-lock');
+  if(elock) elock.style.display = can('export')?'none':'flex';
+  // Search lock
+  const slock=document.getElementById('search-lock');
+  if(slock) slock.style.display = can('nodeSearch')?'none':'flex';
+  // Upgrade button
+  const ubtn=document.getElementById('btn-upgrade');
+  if(ubtn) ubtn.style.display = p==='pro'?'none':'flex';
+  // Upgrade prompt
+  const up=document.getElementById('upgrade-prompt');
+  if(up) up.style.display = p==='pro'?'none':'block';
+  // Stats bar
+  document.getElementById('stats-bar').style.display = can('stats')&&getActiveTree()?'flex':'none';
+  if(can('stats')&&getActiveTree()) renderStatsBar();
+}
+
+// ===== STATS BAR =====
+function renderStatsBar() {
+  const tree=getActiveTree(); if(!tree) return;
+  const nodes=allNodes(tree.roots||[]);
+  const withMedia=nodes.filter(n=>(n.media||[]).length).length;
+  const depth=maxDepth(tree.roots||[]);
+  document.getElementById('stats-bar').innerHTML=`
+    <span class="stat-item"><i class="ti ti-git-branch"></i> <span class="stat-val">${nodes.length}</span> nodes</span>
+    <span class="stat-item"><i class="ti ti-photo"></i> <span class="stat-val">${withMedia}</span> with media</span>
+    <span class="stat-item"><i class="ti ti-layers-intersect"></i> Depth: <span class="stat-val">${depth}</span></span>
+    <span class="stat-item"><i class="ti ti-trees"></i> Roots: <span class="stat-val">${(tree.roots||[]).length}</span></span>`;
+}
+
+// ===== PAYWALL =====
+function openPaywall(highlight='plus', reason='') {
+  if(reason){
+    document.getElementById('pw-headline').textContent = reason;
+    document.getElementById('pw-subhead').textContent = 'Upgrade to unlock this and many more features.';
+  } else {
+    document.getElementById('pw-headline').textContent = 'Unlock more with ResearchTree';
+    document.getElementById('pw-subhead').textContent = 'Choose the plan that fits your research workflow.';
+  }
+  document.getElementById('paywall-overlay').classList.add('open');
+}
+function closePaywall() { document.getElementById('paywall-overlay').classList.remove('open'); }
+function activatePlan(p) {
+  state.plan = p;
+  save(); closePaywall(); updatePlanUI(); renderSidebar(); renderCanvas(); updateDetailPanel();
+  toast(p==='plus' ? '✓ Welcome to Plus!' : '✓ Welcome to Pro! All features unlocked.');
+}
+
+// ===== FEATURE GUARDS =====
+function requirePlan(feature, reason) {
+  if(can(feature)) return true;
+  const needed = PLANS.plus[feature] ? 'plus' : 'pro';
+  openPaywall(needed, reason);
+  return false;
+}
+
+// ===== SIDEBAR =====
+function filterTrees(q) { renderSidebar(q); }
+function renderSidebar(filter='') {
+  const list=document.getElementById('trees-list');
+  const trees=state.trees.filter(t=>!filter||t.name.toLowerCase().includes(filter.toLowerCase()));
+  if(!trees.length){
+    list.innerHTML=`<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;line-height:1.7">${filter?'No matching trees.':'No trees yet.<br>Create your first research tree.'}</div>`;
+    return;
+  }
+  list.innerHTML='';
+  trees.forEach(tree=>{
+    const div=document.createElement('div');
+    div.className='tree-item'+(state.activeTree===tree.id?' active':'');
+    div.innerHTML=`<div class="tree-icon" style="background:${tree.color}22">${tree.emoji}</div>
+      <span class="tree-name">${escHtml(tree.name)}</span>
+      <span class="tree-count">${countNodes(tree.roots||[])}n</span>
+      <button class="tree-del-btn" onclick="deleteTree('${tree.id}',event)"><i class="ti ti-trash"></i></button>`;
+    div.onclick=()=>activateTree(tree.id);
+    list.appendChild(div);
+  });
+  // Show free limit warning
+  if(state.plan==='free' && state.trees.length>=PLANS.free.trees){
+    const warn=document.createElement('div');
+    warn.style.cssText='margin:8px 12px;padding:8px 12px;background:#1e1a3a;border:1px solid #3d3870;border-radius:8px;font-size:12px;color:var(--text2);line-height:1.5;cursor:pointer';
+    warn.innerHTML=`<i class="ti ti-lock" style="color:var(--accent)"></i> Free plan: ${PLANS.free.trees} trees max. <span style="color:var(--accent);font-weight:500">Upgrade →</span>`;
+    warn.onclick=()=>openPaywall('plus','You\'ve reached the free tree limit');
+    list.appendChild(warn);
+  }
+}
+function toggleSidebar() { state.sidebarOpen=!state.sidebarOpen; document.getElementById('sidebar').classList.toggle('collapsed',!state.sidebarOpen); save(); }
+
+// ===== TREE OPS =====
+function handleNewTree() {
+  if(state.plan==='free' && state.trees.length>=PLANS.free.trees){
+    openPaywall('plus',`Free plan is limited to ${PLANS.free.trees} trees`); return;
+  }
+  openNewTreeModal();
+}
+function activateTree(id) { state.activeTree=id; state.selectedNode=null; save(); renderSidebar(); renderCanvas(); updateDetailPanel(); updatePlanUI(); }
+function deleteTree(id,e) {
+  e.stopPropagation();
+  const tree=state.trees.find(t=>t.id===id);
+  if(!confirm(`Delete "${tree.name}" and all its nodes?`)) return;
+  state.trees=state.trees.filter(t=>t.id!==id);
+  if(state.activeTree===id){state.activeTree=state.trees[0]?.id||null;state.selectedNode=null;}
+  save(); renderSidebar(); renderCanvas(); updateDetailPanel(); toast('Tree deleted');
+}
+
+// ===== BREADCRUMB =====
+function buildBreadcrumb(items) {
+  const bc=document.getElementById('breadcrumb'); bc.innerHTML='';
+  items.forEach((item,i)=>{
+    if(i>0){const sep=document.createElement('span');sep.className='bc-sep';sep.textContent='›';bc.appendChild(sep);}
+    const el=document.createElement('span');
+    el.className='breadcrumb-item'+(i===items.length-1?' current':'');
+    el.textContent=item.label;
+    if(item.onClick) el.onclick=item.onClick;
+    bc.appendChild(el);
+  });
+}
+
+// ===== RENDER CANVAS =====
+function renderCanvas() {
+  const canvas=document.getElementById('canvas');
+  document.getElementById('btn-settings').style.display=getActiveTree()?'flex':'none';
+  const tree=getActiveTree();
+  if(!tree){
+    canvas.innerHTML='';
+    const es=document.createElement('div'); es.className='empty-state'; es.style.minHeight='60vh';
+    es.innerHTML=`<div style="font-size:72px;color:var(--accent)"><i class="ti ti-trees"></i></div>
+      <h2>Welcome to ResearchTree</h2>
+      <p>Organize any topic into deep, expandable research trees with notes, images, videos, and links.</p>
+      <button class="btn-primary" onclick="handleNewTree()"><i class="ti ti-plus"></i> Create your first tree</button>`;
+    canvas.appendChild(es);
+    buildBreadcrumb([{label:'Research Trees'}]);
+    return;
+  }
+  buildBreadcrumb([{label:'Research Trees'},{label:tree.emoji+' '+tree.name}]);
+  canvas.innerHTML='';
+  (tree.roots||[]).forEach(node=>canvas.appendChild(buildNodeEl(node,true,tree)));
+  // Node limit banner for free
+  if(state.plan==='free' && totalNodes()>=PLANS.free.nodes){
+    const banner=makeLimitBanner('You\'ve reached 20 nodes on the free plan','Upgrade to Plus for unlimited nodes and media attachments.','plus','Upgrade to Plus');
+    canvas.appendChild(banner);
+  } else {
+    const addBtn=document.createElement('button');
+    addBtn.className='add-root-btn';
+    addBtn.innerHTML='<i class="ti ti-plus"></i> Add root node';
+    addBtn.onclick=()=>handleAddNode({parentId:null,treeId:tree.id});
+    canvas.appendChild(addBtn);
+  }
+  updatePlanUI();
+}
+
+function makeLimitBanner(title,desc,plan,btnLabel) {
+  const div=document.createElement('div'); div.className='limit-banner';
+  div.innerHTML=`<div class="lb-icon"><i class="ti ti-lock" style="color:var(--accent);font-size:20px"></i></div>
+    <div class="lb-text"><div class="lb-title">${escHtml(title)}</div><div class="lb-desc">${escHtml(desc)}</div></div>
+    <button class="lb-btn ${plan==='pro'?'btn-gold':'btn-teal'}" onclick="openPaywall('${plan}','${escHtml(title)}')">${escHtml(btnLabel)}</button>`;
+  return div;
+}
+
+function buildNodeEl(node,isRoot,tree) {
+  const collapsed=state.collapsed[node.id];
+  const hasChildren=(node.children||[]).length>0;
+  const isSelected=state.selectedNode===node.id;
+
+  const wrap=document.createElement('div'); wrap.style.cssText='display:flex;flex-direction:column';
+  const card=document.createElement('div');
+  let cls='node-card'+(isRoot?' root-card':'')+(isSelected?' selected':'');
+  if(can('nodeColors')&&node.color&&node.color!=='none') cls+=` color-${node.color}`;
+  card.className=cls; card.dataset.id=node.id;
+
+  const imgs=(node.media||[]).filter(m=>m.type==='image');
+  const vids=(node.media||[]).filter(m=>m.type==='video');
+  const links=(node.media||[]).filter(m=>m.type==='link');
+
+  let thumbsHTML='';
+  if(imgs.length && can('media')){
+    thumbsHTML=`<div class="media-thumbs">${imgs.slice(0,4).map(m=>`<div class="media-thumb"><img src="${escHtml(m.url)}" alt="${escHtml(m.name||'')}" onerror="this.parentNode.innerHTML='🖼️'"></div>`).join('')}</div>`;
+  }
+
+  const tags=[
+    imgs.length&&can('media')?`<span class="node-tag tag-img">🖼️ ${imgs.length}</span>`:'',
+    vids.length&&can('media')?`<span class="node-tag tag-vid">🎬 ${vids.length}</span>`:'',
+    links.length?`<span class="node-tag tag-link">🔗 ${links.length}</span>`:'',
+    (node.tags||[]).map(t=>`<span class="node-tag" style="background:#1e2028;color:var(--text2);border:1px solid var(--border2)">#${escHtml(t)}</span>`).join('')
+  ].filter(Boolean).join('');
+
+  const hasDetail=node.desc||(node.media||[]).length;
+
+  card.innerHTML=`
+    <div class="node-header">
+      <div style="flex:1;min-width:0">
+        <div class="node-title">${escHtml(node.title)}</div>
+        ${node.desc?`<div class="node-desc">${escHtml(node.desc.slice(0,130))}${node.desc.length>130?'…':''}</div>`:''}
+      </div>
+      ${hasChildren?`<button class="expand-btn" onclick="toggleCollapse('${node.id}',event)"><i class="ti ti-chevron-${collapsed?'right':'down'}"></i></button>`:''}
+    </div>
+    ${thumbsHTML}
+    ${tags?`<div class="node-meta">${tags}</div>`:''}
+    ${node.note&&can('nodeNotes')?`<div class="node-note">${escHtml(node.note.slice(0,200))}${(node.note||'').length>200?'…':''}</div>`:''}
+    <div class="node-actions">
+      <button class="node-btn btn-child" onclick="handleAddNode({parentId:'${node.id}',treeId:'${tree.id}'},event)"><i class="ti ti-plus"></i> Add child</button>
+      <button class="node-btn btn-edit-node" onclick="openNodeModal({editId:'${node.id}',treeId:'${tree.id}'},event)"><i class="ti ti-pencil"></i> Edit</button>
+      <button class="node-btn btn-del-node" onclick="confirmDeleteNode('${node.id}','${tree.id}',event)"><i class="ti ti-trash"></i></button>
+      ${hasDetail?`<button class="node-btn btn-detail" onclick="selectNode('${node.id}','${tree.id}',event)"><i class="ti ti-info-circle"></i> Info</button>`:''}
+    </div>`;
+  card.onclick=(e)=>{if(e.target===card)selectNode(node.id,tree.id,e);};
+  wrap.appendChild(card);
+
+  if(hasChildren&&!collapsed){
+    const cw=document.createElement('div'); cw.className='children-wrap';
+    (node.children||[]).forEach(child=>cw.appendChild(buildNodeEl(child,false,tree)));
+    const sib=document.createElement('button'); sib.className='add-sibling-btn';
+    sib.innerHTML='<i class="ti ti-plus"></i> Add sibling';
+    sib.onclick=(e)=>{e.stopPropagation();handleAddNode({siblingOf:node.id,treeId:tree.id},e);};
+    cw.appendChild(sib); wrap.appendChild(cw);
+  }
+  return wrap;
+}
+
+function handleAddNode(opts,e) {
+  if(e) e.stopPropagation();
+  if(state.plan==='free' && totalNodes()>=PLANS.free.nodes){
+    openPaywall('plus',`Free plan is limited to ${PLANS.free.nodes} nodes`); return;
+  }
+  openNodeModal(opts,e);
+}
+
+// ===== COLLAPSE =====
+function toggleCollapse(id,e) { e.stopPropagation(); state.collapsed[id]=!state.collapsed[id]; save(); renderCanvas(); }
+function expandAll() { state.collapsed={}; save(); renderCanvas(); toast('All nodes expanded'); }
+function collapseAll() {
+  const tree=getActiveTree(); if(!tree) return;
+  function col(nodes){nodes.forEach(n=>{state.collapsed[n.id]=true;col(n.children||[]);});}
+  col(tree.roots||[]); save(); renderCanvas(); toast('All nodes collapsed');
+}
+
+// ===== NODE SEARCH =====
+function handleNodeSearch() {
+  if(!requirePlan('nodeSearch','Node search is a Plus feature')) return;
+  const bar=document.getElementById('node-search-bar');
+  bar.style.display=bar.style.display==='none'?'block':'none';
+  if(bar.style.display==='block') document.getElementById('node-search-input').focus();
+  else { renderCanvas(); }
+}
+function searchNodes(q) {
+  if(!q.trim()){renderCanvas();return;}
+  const tree=getActiveTree(); if(!tree) return;
+  const canvas=document.getElementById('canvas'); canvas.innerHTML='';
+  const nodes=allNodes(tree.roots||[]).filter(n=>n.title.toLowerCase().includes(q.toLowerCase())||(n.desc||'').toLowerCase().includes(q.toLowerCase()));
+  if(!nodes.length){canvas.innerHTML=`<div style="padding:40px;text-align:center;color:var(--text3);font-size:14px">No matching nodes found.</div>`;return;}
+  nodes.forEach(node=>{
+    const card=document.createElement('div'); card.className='node-card'; card.style.marginBottom='8px';
+    card.innerHTML=`<div class="node-title">${escHtml(node.title)}</div>${node.desc?`<div class="node-desc">${escHtml(node.desc.slice(0,200))}</div>`:''}`;
+    card.onclick=()=>{document.getElementById('node-search-input').value='';searchNodes('');selectNode(node.id,tree.id,null);};
+    canvas.appendChild(card);
+  });
+}
+
+// ===== DETAIL PANEL =====
+function toggleDetailPanel() {
+  state.detailOpen=!state.detailOpen;
+  document.getElementById('detail-panel').classList.toggle('hidden',!state.detailOpen);
+  document.getElementById('btn-detail').classList.toggle('active',state.detailOpen);
+  save();
+}
+function selectNode(nodeId,treeId,e) {
+  if(e) e.stopPropagation();
+  state.selectedNode=nodeId;
+  if(!state.detailOpen){state.detailOpen=true;document.getElementById('detail-panel').classList.remove('hidden');document.getElementById('btn-detail').classList.add('active');}
+  save(); renderCanvas(); updateDetailPanel();
+}
+function updateDetailPanel() {
+  const inner=document.getElementById('detail-inner');
+  const tree=getActiveTree();
+  if(!tree||!state.selectedNode){
+    inner.innerHTML=`<div class="empty-state" style="min-height:300px"><div style="font-size:40px;color:var(--text3)"><i class="ti ti-info-circle"></i></div><p>Click a node's Info button to see details here.</p></div>`;
+    return;
+  }
+  const node=findNode(tree.roots||[],state.selectedNode); if(!node) return;
+  const path=getNodePath(tree.roots||[],state.selectedNode);
+  const pathStr=path?path.map(n=>n.title).join(' › '):'';
+  const imgs=(node.media||[]).filter(m=>m.type==='image');
+  const vids=(node.media||[]).filter(m=>m.type==='video');
+  const links=(node.media||[]).filter(m=>m.type==='link');
+
+  let html=`
+    <div class="detail-close">
+      <span class="detail-path" title="${escHtml(pathStr)}">${escHtml(pathStr.length>50?pathStr.slice(0,50)+'…':pathStr)}</span>
+      <button class="icon-btn" onclick="closeDetail()"><i class="ti ti-x"></i></button>
+    </div>
+    <h2 class="detail-title">${escHtml(node.title)}</h2>
+    ${node.desc?`<p class="detail-desc">${escHtml(node.desc)}</p>`:''}
+    ${node.note&&can('nodeNotes')?`<div class="detail-section"><div class="detail-section-title"><i class="ti ti-notebook"></i> Notes</div><div class="node-note" style="margin:0">${escHtml(node.note)}</div></div>`:''}
+    <div style="display:flex;gap:6px;margin-bottom:20px">
+      <button class="node-btn btn-edit-node" onclick="openNodeModal({editId:'${node.id}',treeId:'${tree.id}'},null)"><i class="ti ti-pencil"></i> Edit</button>
+      <button class="node-btn btn-child" onclick="handleAddNode({parentId:'${node.id}',treeId:'${tree.id}'},null)"><i class="ti ti-plus"></i> Add child</button>
+    </div>`;
+
+  if(imgs.length&&can('media')){
+    html+=`<div class="detail-section"><div class="detail-section-title"><i class="ti ti-photo"></i> Images (${imgs.length})</div>`;
+    imgs.forEach(m=>{html+=`<div class="detail-media-item"><img class="detail-media-img" src="${escHtml(m.url)}" alt="${escHtml(m.name||'')}" onerror="this.style.display='none'">${m.name?`<div class="detail-media-caption">${escHtml(m.name)}</div>`:''}</div>`;});
+    html+='</div>';
+  }
+  if(vids.length&&can('media')){
+    html+=`<div class="detail-section"><div class="detail-section-title"><i class="ti ti-video"></i> Videos (${vids.length})</div>`;
+    vids.forEach(m=>{
+      let eu=m.url;
+      const yt=m.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s?]+)/);
+      const vi=m.url.match(/vimeo\.com\/(\d+)/);
+      if(yt) eu=`https://www.youtube.com/embed/${yt[1]}`;
+      else if(vi) eu=`https://player.vimeo.com/video/${vi[1]}`;
+      html+=`<div class="detail-media-item"><div class="detail-video-wrap"><iframe src="${escHtml(eu)}" allowfullscreen loading="lazy"></iframe></div>${m.name?`<div class="detail-media-caption">${escHtml(m.name)}</div>`:''}</div>`;
+    });
+    html+='</div>';
+  }
+  if(links.length){
+    html+=`<div class="detail-section"><div class="detail-section-title"><i class="ti ti-link"></i> Links (${links.length})</div>`;
+    links.forEach(m=>{html+=`<a class="detail-link" href="${escHtml(m.url)}" target="_blank" rel="noopener"><i class="ti ti-external-link" style="flex-shrink:0;font-size:15px"></i><div style="flex:1;min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--text)">${escHtml(m.name||m.url)}</div><div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(m.url)}</div></div></a>`;});
+    html+='</div>';
+  }
+  if(!can('media')&&((node.media||[]).length)){
+    html+=`<div class="limit-banner" style="margin:0"><div class="lb-icon"><i class="ti ti-photo" style="font-size:18px;color:var(--plus)"></i></div><div class="lb-text"><div class="lb-title">Media requires Plus</div><div class="lb-desc">Upgrade to view and add images & videos.</div></div><button class="lb-btn btn-teal" onclick="openPaywall('plus','Media is a Plus feature')">Upgrade</button></div>`;
+  }
+  inner.innerHTML=html;
+}
+function closeDetail(){state.selectedNode=null;state.detailOpen=false;document.getElementById('detail-panel').classList.add('hidden');document.getElementById('btn-detail').classList.remove('active');save();renderCanvas();updateDetailPanel();}
+
+// ===== EXPORT =====
+function handleExport() {
+  if(!requirePlan('export','Export is a Plus feature')) return;
+  exportMenuOpen=!exportMenuOpen;
+  document.getElementById('export-menu').style.display=exportMenuOpen?'block':'none';
+}
+document.addEventListener('click',e=>{
+  if(!document.getElementById('btn-export').contains(e.target)){
+    document.getElementById('export-menu').style.display='none'; exportMenuOpen=false;
+  }
+});
+function exportJSON() {
+  const tree=getActiveTree(); if(!tree) return;
+  const blob=new Blob([JSON.stringify(tree,null,2)],{type:'application/json'});
+  downloadBlob(blob,tree.name.replace(/\s+/g,'_')+'.json');
+  document.getElementById('export-menu').style.display='none';
+}
+function exportMarkdown() {
+  const tree=getActiveTree(); if(!tree) return;
+  function nodeToMd(node,depth){
+    const indent='  '.repeat(depth);
+    let md=`${indent}${'#'.repeat(Math.min(depth+1,6))} ${node.title}\n`;
+    if(node.desc) md+=`${node.desc}\n`;
+    (node.children||[]).forEach(c=>md+=nodeToMd(c,depth+1));
+    return md+'\n';
+  }
+  const md=`# ${tree.name}\n\n${(tree.roots||[]).map(n=>nodeToMd(n,1)).join('')}`;
+  const blob=new Blob([md],{type:'text/markdown'});
+  downloadBlob(blob,tree.name.replace(/\s+/g,'_')+'.md');
+  document.getElementById('export-menu').style.display='none';
+}
+function exportCSV() {
+  const tree=getActiveTree(); if(!tree) return;
+  const rows=[['Title','Description','Depth','Parent']];
+  function walk(nodes,depth,parent){
+    nodes.forEach(n=>{rows.push([`"${(n.title||'').replace(/"/g,'""')}"`,`"${(n.desc||'').replace(/"/g,'""')}"`,depth,`"${parent}"`]);walk(n.children||[],depth+1,n.title);});
+  }
+  walk(tree.roots||[],0,'');
+  const blob=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});
+  downloadBlob(blob,tree.name.replace(/\s+/g,'_')+'.csv');
+  document.getElementById('export-menu').style.display='none';
+}
+function printTree() {
+  document.getElementById('export-menu').style.display='none';
+  window.print();
+}
+function downloadBlob(blob,filename){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);
+  toast('✓ Exported: '+filename);
+}
+
+// ===== NEW TREE MODAL =====
+function openNewTreeModal() {
+  const eOpts=EMOJIS.map((e,i)=>`<div class="emoji-opt${i===0?' selected':''}" onclick="selectPickerItem(this,'nt-emoji-row')" data-val="${e}">${e}</div>`).join('');
+  const cOpts=TREE_COLORS.map((c,i)=>`<div class="color-opt${i===state.trees.length%TREE_COLORS.length?' selected':''}" onclick="selectPickerItem(this,'nt-color-row')" data-val="${c}" style="background:${c}"></div>`).join('');
+  openModal('New Research Tree',`
+    <div class="field"><label>Tree Name</label><input id="nt-name" placeholder="e.g. History of Video Games" autofocus></div>
+    <div class="field"><label>Icon</label><div class="emoji-row" id="nt-emoji-row">${eOpts}</div></div>
+    <div class="field"><label>Color</label><div class="color-row" id="nt-color-row">${cOpts}</div></div>
+    <div class="field"><label>Description (optional)</label><textarea id="nt-desc" placeholder="What is this research about?"></textarea></div>`,
+    `<button class="btn-secondary" onclick="closeModal()">Cancel</button>
+     <button class="btn-primary" onclick="createTree()"><i class="ti ti-plus"></i> Create Tree</button>`);
+}
+function selectPickerItem(el,rowId){document.querySelectorAll(`#${rowId} .emoji-opt,#${rowId} .color-opt`).forEach(x=>x.classList.remove('selected'));el.classList.add('selected');}
+function createTree(){
+  const name=document.getElementById('nt-name').value.trim(); if(!name){toast('Please enter a name');return;}
+  const emoji=document.querySelector('#nt-emoji-row .selected')?.dataset.val||'📚';
+  const color=document.querySelector('#nt-color-row .selected')?.dataset.val||TREE_COLORS[0];
+  const tree={id:uid(),name,emoji,color,desc:document.getElementById('nt-desc').value.trim(),roots:[],created:Date.now()};
+  state.trees.push(tree); state.activeTree=tree.id;
+  save();closeModal();renderSidebar();renderCanvas();updatePlanUI();toast('✓ Tree created!');
+}
+
+// ===== TREE SETTINGS =====
+function openTreeSettingsModal(){
+  const tree=getActiveTree(); if(!tree) return;
+  const eOpts=EMOJIS.map(e=>`<div class="emoji-opt${tree.emoji===e?' selected':''}" onclick="selectPickerItem(this,'ts-emoji-row')" data-val="${e}">${e}</div>`).join('');
+  const cOpts=TREE_COLORS.map(c=>`<div class="color-opt${tree.color===c?' selected':''}" onclick="selectPickerItem(this,'ts-color-row')" data-val="${c}" style="background:${c}"></div>`).join('');
+  openModal('Tree Settings',`
+    <div class="field"><label>Name</label><input id="ts-name" value="${escHtml(tree.name)}"></div>
+    <div class="field"><label>Icon</label><div class="emoji-row" id="ts-emoji-row">${eOpts}</div></div>
+    <div class="field"><label>Color</label><div class="color-row" id="ts-color-row">${cOpts}</div></div>
+    <div class="field"><label>Description</label><textarea id="ts-desc">${escHtml(tree.desc||'')}</textarea></div>`,
+    `<button class="btn-danger" onclick="deleteTree('${tree.id}',{stopPropagation:()=>{}});closeModal()">Delete Tree</button>
+     <div style="flex:1"></div>
+     <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+     <button class="btn-primary" onclick="saveTreeSettings('${tree.id}')">Save</button>`);
+}
+function saveTreeSettings(id){
+  const tree=state.trees.find(t=>t.id===id); if(!tree) return;
+  const name=document.getElementById('ts-name').value.trim(); if(!name){toast('Name required');return;}
+  tree.name=name; tree.emoji=document.querySelector('#ts-emoji-row .selected')?.dataset.val||tree.emoji;
+  tree.color=document.querySelector('#ts-color-row .selected')?.dataset.val||tree.color; tree.desc=document.getElementById('ts-desc').value.trim();
+  save();closeModal();renderSidebar();renderCanvas();toast('✓ Saved');
+}
+
+// ===== NODE MODAL =====
+function openNodeModal(opts,e){
+  if(e) e.stopPropagation();
+  const tree=state.trees.find(t=>t.id===opts.treeId);
+  const node=opts.editId?findNode(tree.roots||[],opts.editId):null;
+  _mediaItems=node?.media?JSON.parse(JSON.stringify(node.media)):[];
+
+  const mediaSection = can('media') ? `
+    <div class="field">
+      <label>Media & Links</label>
+      <div class="media-list" id="media-list"></div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:8px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Add media</div>
+        <div style="display:grid;grid-template-columns:130px 1fr;gap:6px;margin-bottom:6px">
+          <select id="m-type" style="background:var(--surface3);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none">
+            <option value="link">🔗 Web Link</option>
+            <option value="image">🖼️ Image URL</option>
+            <option value="video">🎬 Video URL</option>
+          </select>
+          <input id="m-url" placeholder="https://...">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:6px">
+          <input id="m-name" placeholder="Label (optional)">
+          <button class="btn-primary" style="padding:8px 14px;font-size:13px" onclick="addMediaItem()"><i class="ti ti-plus"></i> Add</button>
+        </div>
+      </div>
+    </div>` : `<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:10px;padding:14px;margin-bottom:18px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openPaywall('plus','Media attachments require Plus')">
+      <i class="ti ti-photo-plus" style="font-size:20px;color:var(--text3)"></i>
+      <div><div style="font-size:13px;font-weight:500;margin-bottom:2px">Add images, videos & links</div><div style="font-size:12px;color:var(--text3)">Available on Plus & Pro plans</div></div>
+      <span class="feat-locked locked-plus" style="margin-left:auto"><i class="ti ti-lock"></i> Plus</span>
+    </div>`;
+
+  const colorSection = can('nodeColors') ? `
+    <div class="field"><label>Node Color Label</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+        ${NODE_COLORS.map(c=>`<div onclick="selectNodeColor(this,'${c}')" data-color="${c}" style="width:28px;height:28px;border-radius:50%;border:2px solid ${node?.color===c?'var(--text)':'transparent'};background:${c==='none'?'var(--surface3)':c==='teal'?'var(--teal)':c==='coral'?'var(--coral)':c==='gold'?'var(--gold)':c==='purple'?'var(--accent)':'#5bc8f5'};cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center" title="${c}">${c==='none'?'<i class="ti ti-ban" style="font-size:12px;color:var(--text3)"></i>':''}</div>`).join('')}
+      </div>
+    </div>` : `<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;cursor:pointer" onclick="openPaywall('pro','Node color labels require Pro')">
+      <span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.6px">Node Color</span>
+      <span class="feat-locked locked-pro"><i class="ti ti-lock"></i> Pro</span>
+    </div>`;
+
+  const noteSection = can('nodeNotes') ? `
+    <div class="field"><label>Extended Note (rich context)</label>
+      <textarea id="n-note" placeholder="Add detailed notes, analysis, or raw research...">${escHtml(node?.note||'')}</textarea>
+    </div>` : `<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;cursor:pointer" onclick="openPaywall('pro','Extended notes require Pro')">
+      <span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.6px">Extended Note</span>
+      <span class="feat-locked locked-pro"><i class="ti ti-lock"></i> Pro</span>
+    </div>`;
+
+  const tagsSection = can('nodeTags') ? `
+    <div class="field"><label>Tags (comma separated)</label>
+      <input id="n-tags" value="${escHtml((node?.tags||[]).join(', '))}" placeholder="e.g. important, todo, verified">
+    </div>` : '';
+
+  openModal(opts.editId?'Edit Node':'Add Node',`
+    <div class="field"><label>Title *</label><input id="n-title" value="${escHtml(node?.title||'')}" placeholder="Node title" autofocus></div>
+    <div class="field"><label>Description / Notes</label><textarea id="n-desc" placeholder="Add research notes, context, analysis...">${escHtml(node?.desc||'')}</textarea></div>
+    ${colorSection}${tagsSection}${noteSection}${mediaSection}`,
+    `<button class="btn-secondary" onclick="closeModal()">Cancel</button>
+     <button class="btn-primary" onclick="saveNode(${JSON.stringify(JSON.stringify(opts))})">
+       ${opts.editId?'<i class="ti ti-check"></i> Save':'<i class="ti ti-plus"></i> Add Node'}
+     </button>`);
+  renderMediaList();
+}
+
+let _selectedNodeColor='none';
+function selectNodeColor(el,color){
+  _selectedNodeColor=color;
+  document.querySelectorAll('[data-color]').forEach(x=>x.style.borderColor='transparent');
+  el.style.borderColor='var(--text)';
+}
+
+function renderMediaList(){
+  const list=document.getElementById('media-list'); if(!list) return;
+  if(!_mediaItems.length){list.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0">No media added.</div>';return;}
+  list.innerHTML=_mediaItems.map((m,i)=>`<div class="media-item-row">
+    <div class="mi-icon">${m.type==='image'?'🖼️':m.type==='video'?'🎬':'🔗'}</div>
+    <div class="mi-info"><div class="mi-name">${escHtml(m.name||m.url)}</div><div class="mi-url">${escHtml(m.url)}</div></div>
+    <button class="mi-del" onclick="removeMediaItem(${i})"><i class="ti ti-trash"></i></button>
+  </div>`).join('');
+}
+function addMediaItem(){
+  const url=document.getElementById('m-url').value.trim(); if(!url){toast('Enter a URL');return;}
+  const type=document.getElementById('m-type').value;
+  const name=document.getElementById('m-name').value.trim();
+  _mediaItems.push({url,type,name:name||url.split('/').pop().split('?')[0]||url});
+  document.getElementById('m-url').value=''; document.getElementById('m-name').value='';
+  renderMediaList(); toast('Media added');
+}
+function removeMediaItem(i){_mediaItems.splice(i,1);renderMediaList();}
+
+function saveNode(optsStr){
+  const opts=JSON.parse(optsStr);
+  const title=document.getElementById('n-title').value.trim(); if(!title){toast('Please enter a title');return;}
+  const desc=document.getElementById('n-desc').value.trim();
+  const note=can('nodeNotes')&&document.getElementById('n-note')?document.getElementById('n-note').value.trim():'';
+  const tags=can('nodeTags')&&document.getElementById('n-tags')?document.getElementById('n-tags').value.split(',').map(t=>t.trim()).filter(Boolean):[];
+  const media=[..._mediaItems];
+  const color=_selectedNodeColor||'none';
+  const tree=state.trees.find(t=>t.id===opts.treeId);
+
+  if(opts.editId){
+    const node=findNode(tree.roots||[],opts.editId);
+    if(node){node.title=title;node.desc=desc;node.media=media;if(can('nodeNotes'))node.note=note;if(can('nodeTags'))node.tags=tags;if(can('nodeColors'))node.color=color;}
+    toast('✓ Node updated');
+  } else {
+    const newNode={id:uid(),title,desc,media,note,tags,color,children:[],created:Date.now()};
+    if(opts.parentId){
+      const parent=findNode(tree.roots||[],opts.parentId);
+      if(parent){parent.children=parent.children||[];parent.children.push(newNode);state.collapsed[opts.parentId]=false;}
+    } else if(opts.siblingOf){
+      function addSib(nodes){for(let i=0;i<nodes.length;i++){if(nodes[i].id===opts.siblingOf){nodes.push(newNode);return true;}if(addSib(nodes[i].children||[]))return true;}return false;}
+      addSib(tree.roots);
+    } else {
+      tree.roots=tree.roots||[];tree.roots.push(newNode);
+    }
+    toast('✓ Node added');
+  }
+  save();closeModal();renderSidebar();renderCanvas();
+  if(state.selectedNode===opts.editId)updateDetailPanel();
+}
+
+function confirmDeleteNode(nodeId,treeId,e){
+  e.stopPropagation();
+  const tree=state.trees.find(t=>t.id===treeId);
+  const node=findNode(tree.roots||[],nodeId);
+  const cc=countNodes(node.children||[]);
+  if(!confirm(cc>0?`Delete "${node.title}" and its ${cc} child${cc>1?'ren':''}?`:`Delete "${node.title}"?`)) return;
+  deleteNodeFrom(tree.roots||[],nodeId);
+  if(state.selectedNode===nodeId){state.selectedNode=null;updateDetailPanel();}
+  save();renderSidebar();renderCanvas();toast('Node deleted');
+}
+
+// ===== MODAL HELPERS =====
+function openModal(title,body,footer){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML=body;
+  document.getElementById('modal-footer').innerHTML=footer;
+  document.getElementById('modal-overlay').classList.add('open');
+  _selectedNodeColor='none';
+  setTimeout(()=>{const f=document.querySelector('#modal-body input[autofocus]');if(f)f.focus();},50);
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');_mediaItems=[];}
+function handleOverlayClick(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closePaywall();}});
+
+// ===== INIT =====
+load();
+if(!state.trees.length){
+  const id1=uid(),id2=uid(),id3=uid(),id4=uid(),id5=uid(),id6=uid(),id7=uid(),id8=uid();
+  const demo={id:uid(),name:'History of Video Games',emoji:'🎮',color:'#7c6af0',desc:'A comprehensive research tree.',created:Date.now(),roots:[
+    {id:id1,title:'The First Video Games',desc:'The earliest electronic games that started the industry.',media:[{type:'link',url:'https://en.wikipedia.org/wiki/Video_game_history',name:'Video Game History – Wikipedia'}],tags:[],note:'',color:'none',children:[
+      {id:id2,title:'Tennis for Two (1958)',desc:'Created by William Higinbotham at Brookhaven National Laboratory.',media:[{type:'link',url:'https://en.wikipedia.org/wiki/Tennis_for_Two',name:'Wikipedia'},{type:'image',url:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Tennis_for_two_%28Brookhaven%29.jpg/640px-Tennis_for_two_%28Brookhaven%29.jpg',name:'Original setup'}],tags:[],note:'',color:'none',children:[]},
+      {id:id3,title:'Spacewar! (1962)',desc:'Developed at MIT, one of the most influential early games.',media:[],tags:[],note:'',color:'none',children:[]}
+    ]},
+    {id:id4,title:'The Console Era',desc:'The rise of dedicated home video game consoles.',media:[],tags:[],note:'',color:'none',children:[
+      {id:id5,title:'Atari & Pong (1972)',desc:"Atari's Pong was the first commercially successful arcade game.",media:[],tags:[],note:'',color:'none',children:[]},
+      {id:id6,title:'Nintendo NES (1983)',desc:'Nintendo revitalized the industry after the 1983 crash.',media:[],tags:[],note:'',color:'none',children:[]}
+    ]},
+    {id:id7,title:'Modern Gaming',desc:'PC, mobile, cloud, VR, and competitive esports.',media:[],tags:[],note:'',color:'none',children:[
+      {id:id8,title:'Online & Mobile',desc:'The internet and smartphones opened gaming to billions.',media:[],tags:[],note:'',color:'none',children:[]}
+    ]}
+  ]};
+  state.trees.push(demo); state.activeTree=demo.id; save();
+}
+renderSidebar(); renderCanvas(); updateDetailPanel(); updatePlanUI();
+</script>
+</body>
+</html>
