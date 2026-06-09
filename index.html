@@ -2,316 +2,436 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>ResearchTree</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
   --bg:#0d0e12;--surface:#16181f;--surface2:#1e2028;--surface3:#252832;
   --border:#2e3140;--border2:#3a3e52;--text:#e8eaf2;--text2:#9099b5;--text3:#5a6280;
-  --accent:#7c6af0;--accent2:#5e4fd4;--gold:#d4a843;--gold2:#b8892e;
-  --teal:#3dbfa0;--coral:#e8715a;--plus:#3dbfa0;--pro:#d4a843;
-  --radius:10px;--radius-lg:16px;
+  --accent:#7c6af0;--accent2:#5e4fd4;--gold:#d4a843;--teal:#3dbfa0;--coral:#e8715a;
+  --plus:#3dbfa0;--pro:#d4a843;
+  --sidebar-w:300px;--detail-w:360px;--topbar-h:56px;--mobile-nav-h:62px;
 }
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
 
-/* LAYOUT */
-#app{display:flex;height:100vh;overflow:hidden}
-#sidebar{width:300px;min-width:300px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .3s,min-width .3s}
+/* ── LOADING ── */
+#loading-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-label{font-family:'Playfair Display',serif;font-size:18px;color:var(--text2)}
+
+/* ── AUTH ── */
+#auth-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0d0e12,#131528,#0d0e12);z-index:8000;display:none;align-items:center;justify-content:center;padding:20px}
+.auth-card{background:var(--surface);border:1px solid var(--border2);border-radius:24px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.6)}
+.auth-header{padding:32px 32px 24px;text-align:center;background:linear-gradient(135deg,#14102e,#0d1a2e);border-bottom:1px solid var(--border)}
+.auth-logo{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;margin-bottom:4px}
+.auth-logo span{color:var(--accent)}
+.auth-tagline{font-size:13px;color:var(--text2)}
+.auth-body{padding:24px 28px 28px}
+.auth-tabs{display:flex;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:20px;border:1px solid var(--border)}
+.auth-tab{flex:1;padding:8px;border-radius:8px;border:none;background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:.15s}
+.auth-tab.active{background:var(--surface3);color:var(--text)}
+.auth-field{margin-bottom:13px}
+.auth-field label{display:block;font-size:11px;font-weight:500;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.auth-field input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:.15s}
+.auth-field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,106,240,.15)}
+.btn-auth{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:.15s;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-auth:hover{background:var(--accent2)}
+.btn-auth:disabled{opacity:.5;pointer-events:none}
+.auth-divider{display:flex;align-items:center;gap:10px;margin-bottom:12px;color:var(--text3);font-size:12px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.social-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.btn-social{padding:10px 12px;border:1px solid var(--border2);border-radius:9px;background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-social:hover{background:var(--surface3)}
+.btn-social svg{width:16px;height:16px;flex-shrink:0}
+.auth-err{background:#2e1e20;border:1px solid #5a2a2a;color:var(--coral);border-radius:8px;padding:9px 13px;font-size:13px;margin-bottom:12px;display:none}
+.auth-err.show{display:block}
+.auth-note{text-align:center;margin-top:10px;font-size:12px;color:var(--text3)}
+.auth-note a{color:var(--accent);cursor:pointer;text-decoration:none}
+
+/* ── APP ── */
+#app{display:none;height:100vh;overflow:hidden;position:relative;flex-direction:row}
+#app.visible{display:flex}
+
+/* ── SIDEBAR ── */
+#sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .3s,min-width .3s;z-index:200;flex-shrink:0}
 #sidebar.collapsed{width:0;min-width:0}
-#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-
-/* SIDEBAR */
-.sidebar-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;white-space:nowrap;overflow:hidden}
-.logo{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;letter-spacing:-0.5px}
+.sb-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;flex-shrink:0;overflow:hidden}
+.logo{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;letter-spacing:-.5px;white-space:nowrap}
 .logo span{color:var(--accent)}
-.plan-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.4px;text-transform:uppercase;flex-shrink:0}
+.plan-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;letter-spacing:.4px;text-transform:uppercase;flex-shrink:0}
 .plan-free{background:#1e2028;color:var(--text3);border:1px solid var(--border2)}
 .plan-plus{background:#0d2420;color:var(--plus);border:1px solid #1a4038}
 .plan-pro{background:#2a1e08;color:var(--pro);border:1px solid #4a3210}
-.search-wrap{padding:10px 12px;border-bottom:1px solid var(--border);position:relative}
-.search-icon{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none}
-.search-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px 8px 32px;outline:none;transition:.15s}
-.search-input:focus{border-color:var(--accent)}
-.sidebar-section-label{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px 4px}
-.trees-list{flex:1;overflow-y:auto;padding:12px}
-.tree-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius);cursor:pointer;transition:.15s;margin-bottom:4px;border:1px solid transparent;white-space:nowrap;overflow:hidden}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);flex-shrink:0;transition:.3s}
+.sync-dot.syncing{background:var(--gold);animation:pulse 1s infinite}
+.sync-dot.error{background:var(--coral)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-search{padding:8px 10px;border-bottom:1px solid var(--border);position:relative;flex-shrink:0}
+.sb-search i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
+.sb-search input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 10px 7px 30px;outline:none;transition:.15s}
+.sb-search input:focus{border-color:var(--accent)}
+.sec-lbl{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px 3px;flex-shrink:0}
+.trees-list{flex:1;overflow-y:auto;padding:6px}
+.tree-item{display:flex;align-items:center;gap:7px;padding:9px 10px;border-radius:9px;cursor:pointer;transition:.15s;margin-bottom:2px;border:1px solid transparent}
 .tree-item:hover{background:var(--surface2)}
 .tree-item.active{background:var(--surface3);border-color:var(--border2)}
-.tree-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.tree-name{font-size:14px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.tree-count{font-size:11px;color:var(--text3);flex-shrink:0}
-.tree-del-btn{width:22px;height:22px;background:transparent;border:none;color:var(--text3);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;transition:.15s}
-.tree-del-btn:hover{color:var(--coral);background:#2e1e20}
-.btn-new-tree{margin:12px;padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;transition:.15s}
+.tree-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.tree-name{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-count{font-size:10px;color:var(--text3);flex-shrink:0}
+.tree-del{width:20px;height:20px;background:transparent;border:none;color:var(--text3);cursor:pointer;border-radius:4px;display:none;align-items:center;justify-content:center;font-size:11px;transition:.15s;flex-shrink:0}
+.tree-item:hover .tree-del{display:flex}
+.tree-del:hover{color:var(--coral);background:#2e1e20}
+.btn-new-tree{margin:8px;padding:9px 12px;background:var(--accent);color:#fff;border:none;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;transition:.15s;flex-shrink:0}
 .btn-new-tree:hover{background:var(--accent2)}
-.sidebar-upgrade{margin:0 12px 12px;padding:12px;background:linear-gradient(135deg,#1e1a3a,#1a2838);border:1px solid #3d3870;border-radius:var(--radius);cursor:pointer;transition:.15s}
-.sidebar-upgrade:hover{border-color:var(--accent)}
-.su-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
-.su-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px}
-.su-btn{font-size:12px;font-weight:600;color:var(--accent);display:flex;align-items:center;gap:4px}
+.sb-upgrade{margin:0 8px 8px;padding:11px;background:linear-gradient(135deg,#1e1a3a,#1a2838);border:1px solid #3d3870;border-radius:9px;cursor:pointer;transition:.15s;flex-shrink:0}
+.sb-upgrade:hover{border-color:var(--accent)}
+.su-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.su-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px}
+.su-cta{font-size:12px;font-weight:600;color:var(--accent);display:flex;align-items:center;gap:3px}
+.sb-user{margin:0 8px 8px;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;gap:9px;flex-shrink:0}
+.u-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;overflow:hidden}
+.u-avatar img{width:100%;height:100%;object-fit:cover}
+.u-info{flex:1;min-width:0}
+.u-name{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.u-email{font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.signout-btn{width:26px;height:26px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;transition:.15s;flex-shrink:0}
+.signout-btn:hover{color:var(--coral);border-color:#3e2828}
 
-/* TOPBAR */
-#topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;gap:10px;flex-shrink:0}
-.breadcrumb{display:flex;align-items:center;gap:6px;flex:1;overflow:hidden}
-.breadcrumb-item{font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap;transition:.15s}
-.breadcrumb-item:hover{color:var(--text)}
-.breadcrumb-item.current{color:var(--text);font-weight:500}
-.bc-sep{color:var(--text3);font-size:12px}
-.topbar-actions{display:flex;gap:6px;flex-shrink:0}
-.icon-btn{width:34px;height:34px;border:1px solid var(--border2);border-radius:8px;background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:.15s;position:relative}
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 14px;height:var(--topbar-h);display:flex;align-items:center;gap:7px;flex-shrink:0}
+.breadcrumb{display:flex;align-items:center;gap:5px;flex:1;overflow:hidden;min-width:0}
+.bc-item{font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap;transition:.15s;overflow:hidden;text-overflow:ellipsis}
+.bc-item:hover{color:var(--text)}
+.bc-item.cur{color:var(--text);font-weight:500}
+.bc-sep{color:var(--text3);font-size:12px;flex-shrink:0}
+.tb-right{display:flex;gap:5px;flex-shrink:0;align-items:center}
+.icon-btn{width:32px;height:32px;border:1px solid var(--border2);border-radius:7px;background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:.15s;position:relative;flex-shrink:0}
 .icon-btn:hover{background:var(--surface2);color:var(--text)}
 .icon-btn.active{background:rgba(124,106,240,.15);border-color:var(--accent);color:var(--accent)}
-.icon-btn .lock-dot{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--gold);border:2px solid var(--bg);font-size:6px;display:flex;align-items:center;justify-content:center}
+.lock-dot{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--gold);border:2px solid var(--bg);font-size:7px;display:flex;align-items:center;justify-content:center;color:#1a1200;font-weight:700}
+#stats-bar{display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:0 18px;height:32px;align-items:center;gap:16px;font-size:11px;color:var(--text3);flex-shrink:0}
+.si{display:flex;align-items:center;gap:4px}
+.sv{color:var(--text2);font-weight:500}
+#ns-bar{display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:7px 14px;flex-shrink:0}
+#ns-bar input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:8px 12px;outline:none}
+#ns-bar input:focus{border-color:var(--accent)}
 
-/* CANVAS */
-#canvas-wrap{flex:1;overflow:auto;padding:36px 40px}
-#canvas{display:flex;flex-direction:column;align-items:flex-start;gap:0;min-width:600px}
+/* ── CANVAS ── */
+#canvas-wrap{flex:1;overflow:auto;padding:28px 32px;-webkit-overflow-scrolling:touch}
+#canvas{display:flex;flex-direction:column;align-items:flex-start;gap:0}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:55vh;gap:13px;text-align:center;width:100%;padding:20px}
+.empty-state h2{font-family:'Playfair Display',serif;font-size:24px}
+.empty-state p{color:var(--text2);font-size:14px;max-width:300px;line-height:1.7}
 
-/* EMPTY STATE */
-.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;text-align:center;width:100%}
-.empty-state h2{font-family:'Playfair Display',serif;font-size:28px}
-.empty-state p{color:var(--text2);font-size:15px;max-width:340px;line-height:1.7}
-
-/* NODE CARDS */
-.node-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;min-width:260px;max-width:380px;margin:8px 0;cursor:default;transition:.2s;position:relative}
+/* ── NODE CARDS ── */
+.node-wrap{display:flex;flex-direction:row;align-items:flex-start;margin:5px 0}
+.node-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 15px;width:270px;cursor:default;transition:.2s;position:relative;flex-shrink:0}
 .node-card:hover{border-color:var(--border2);background:var(--surface2)}
-.node-card.root-card{background:linear-gradient(135deg,#1e1a3a 0%,#1a2235 100%);border-color:#3d3870;min-width:320px}
+.node-card.root-card{background:linear-gradient(135deg,#1e1a3a,#1a2235);border-color:#3d3870;width:290px}
 .node-card.selected{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,106,240,.15)}
-.node-header{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
-.node-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:600;line-height:1.35;flex:1}
-.node-card.root-card .node-title{font-size:19px}
-.node-desc{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px}
-.node-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px}
-.node-tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
-.tag-img{background:#1a2e28;color:var(--teal);border:1px solid #264038}
-.tag-vid{background:#1e1a3a;color:#9a8df8;border:1px solid #3d3870}
-.tag-link{background:#2e1e20;color:var(--coral);border:1px solid #3e2828}
-.node-actions{display:flex;gap:4px;flex-wrap:wrap}
-.node-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid;transition:.15s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px;white-space:nowrap}
-.btn-child{background:transparent;border-color:var(--accent);color:var(--accent)}
-.btn-child:hover{background:var(--accent);color:#fff}
-.btn-edit-node{background:transparent;border-color:var(--border2);color:var(--text2)}
-.btn-edit-node:hover{background:var(--surface3);color:var(--text)}
-.btn-del-node{background:transparent;border-color:#3e2828;color:var(--coral)}
-.btn-del-node:hover{background:#2e1e20}
-.btn-detail{background:transparent;border-color:var(--border2);color:var(--text2);margin-left:auto}
-.btn-detail:hover{background:var(--surface3);color:var(--text)}
-.expand-btn{width:22px;height:22px;border-radius:5px;background:var(--surface3);border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;flex-shrink:0;transition:.15s}
-.expand-btn:hover{background:var(--border2);color:var(--text)}
-.media-thumbs{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0}
-.media-thumb{width:52px;height:38px;border-radius:6px;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;flex-shrink:0}
-.media-thumb img{width:100%;height:100%;object-fit:cover}
-.node-color-bar{position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0}
+.node-card.c-teal{border-left:3px solid var(--teal)}
+.node-card.c-coral{border-left:3px solid var(--coral)}
+.node-card.c-gold{border-left:3px solid var(--gold)}
+.node-card.c-purple{border-left:3px solid var(--accent)}
+.node-card.c-blue{border-left:3px solid #5bc8f5}
+.node-header{display:flex;align-items:flex-start;gap:7px;margin-bottom:4px}
+.node-title{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;line-height:1.3;flex:1;min-width:0}
+.root-card .node-title{font-size:16px}
+.node-desc{font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:7px}
+.node-meta{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.ntag{font-size:10px;padding:2px 6px;border-radius:20px;font-weight:500}
+.t-img{background:#1a2e28;color:var(--teal);border:1px solid #264038}
+.t-vid{background:#1e1a3a;color:#9a8df8;border:1px solid #3d3870}
+.t-lnk{background:#2e1e20;color:var(--coral);border:1px solid #3e2828}
+.node-actions{display:flex;gap:3px;flex-wrap:wrap}
+.nb{padding:4px 8px;border-radius:5px;font-size:10px;font-weight:500;cursor:pointer;border:1px solid;transition:.15s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:3px;white-space:nowrap}
+.nb-add{background:transparent;border-color:var(--accent);color:var(--accent)}
+.nb-add:hover{background:var(--accent);color:#fff}
+.nb-edit{background:transparent;border-color:var(--border2);color:var(--text2)}
+.nb-edit:hover{background:var(--surface3);color:var(--text)}
+.nb-del{background:transparent;border-color:#3e2828;color:var(--coral)}
+.nb-del:hover{background:#2e1e20}
+.nb-info{background:transparent;border-color:var(--border2);color:var(--text2)}
+.nb-info:hover{background:var(--surface3);color:var(--text)}
+.xbtn{width:19px;height:19px;border-radius:4px;background:var(--surface3);border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;flex-shrink:0;transition:.15s}
+.xbtn:hover{background:var(--border2)}
+.media-thumbs{display:flex;gap:3px;flex-wrap:wrap;margin:4px 0}
+.m-thumb{width:42px;height:30px;border-radius:5px;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;overflow:hidden;flex-shrink:0}
+.m-thumb img{width:100%;height:100%;object-fit:cover}
 
-/* TREE STRUCTURE */
-.children-wrap{padding-left:28px;border-left:1px solid var(--border2);margin-left:22px;display:flex;flex-direction:column}
-.add-sibling-btn{margin:6px 0 14px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:1px dashed var(--border2);color:var(--text3);background:transparent;display:inline-flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;transition:.15s;width:fit-content}
-.add-sibling-btn:hover{border-color:var(--accent);color:var(--accent)}
-.add-root-btn{margin-top:16px;padding:9px 18px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;border:1px dashed var(--accent);color:var(--accent);background:transparent;display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;transition:.15s}
+/* ── TREE CONNECTOR ── */
+.h-line{height:1px;background:var(--border2);width:18px;margin-top:25px;flex-shrink:0}
+.children-col{display:flex;flex-direction:column;border-left:1px solid var(--border2);margin-left:0}
+.child-row{display:flex;flex-direction:row;align-items:flex-start}
+.add-sib-btn{margin:4px 0 10px 20px;padding:4px 9px;border-radius:5px;font-size:10px;font-weight:500;cursor:pointer;border:1px dashed var(--border2);color:var(--text3);background:transparent;display:inline-flex;align-items:center;gap:3px;font-family:'DM Sans',sans-serif;transition:.15s}
+.add-sib-btn:hover{border-color:var(--accent);color:var(--accent)}
+.add-root-btn{margin-top:14px;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;border:1px dashed var(--accent);color:var(--accent);background:transparent;display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;transition:.15s}
 .add-root-btn:hover{background:rgba(124,106,240,.1)}
 
-/* DETAIL PANEL */
-#detail-panel{width:380px;min-width:380px;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;transition:width .3s,min-width .3s;flex-shrink:0}
+/* ── DETAIL PANEL ── */
+#detail-panel{width:var(--detail-w);min-width:var(--detail-w);background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;transition:width .3s,min-width .3s;flex-shrink:0}
 #detail-panel.hidden{width:0;min-width:0;overflow:hidden}
-.detail-inner{padding:24px}
-.detail-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:10px;line-height:1.3}
-.detail-desc{font-size:14px;color:var(--text2);line-height:1.75;margin-bottom:20px;white-space:pre-wrap}
-.detail-section{margin-bottom:20px}
-.detail-section-title{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:6px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.detail-media-item{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);margin-bottom:8px;background:var(--surface2)}
-.detail-media-img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
-.detail-media-caption{font-size:12px;color:var(--text2);padding:8px 10px}
-.detail-video-wrap{aspect-ratio:16/9;background:var(--surface3)}
-.detail-video-wrap iframe{width:100%;height:100%;border:none;display:block}
-.detail-link{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--border);border-radius:9px;text-decoration:none;color:var(--text2);font-size:13px;margin-bottom:6px;transition:.15s;background:var(--surface2)}
-.detail-link:hover{border-color:var(--border2);color:var(--text);background:var(--surface3)}
-.detail-close{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.detail-path{font-size:11px;color:var(--text3)}
-/* Node note card (Pro) */
-.node-note{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
+.dp-inner{padding:18px}
+.dp-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:7px;line-height:1.3}
+.dp-desc{font-size:13px;color:var(--text2);line-height:1.75;margin-bottom:14px;white-space:pre-wrap}
+.dp-sec{margin-bottom:14px}
+.dp-sec-title{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;display:flex;align-items:center;gap:5px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.dp-media-item{border-radius:9px;overflow:hidden;border:1px solid var(--border);margin-bottom:7px;background:var(--surface2)}
+.dp-img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.dp-caption{font-size:11px;color:var(--text2);padding:6px 9px}
+.dp-vid{aspect-ratio:16/9;background:var(--surface3)}
+.dp-vid iframe{width:100%;height:100%;border:none;display:block}
+.dp-link{display:flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text2);font-size:12px;margin-bottom:5px;transition:.15s;background:var(--surface2)}
+.dp-link:hover{border-color:var(--border2);color:var(--text)}
+.dp-close-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.dp-path{font-size:10px;color:var(--text3)}
+.node-note-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
 
-/* MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+/* ── MOBILE SIDEBAR OVERLAY ── */
+#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:199;backdrop-filter:blur(2px)}
+
+/* ── BOTTOM NAV ── */
+#bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:var(--mobile-nav-h);background:var(--surface);border-top:1px solid var(--border);z-index:300;padding:0 4px;align-items:center;justify-content:space-around}
+.bnav{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 10px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:9px;transition:.15s;font-family:'DM Sans',sans-serif;min-width:56px}
+.bnav.active,.bnav:hover{color:var(--accent);background:rgba(124,106,240,.08)}
+.bnav i{font-size:20px}
+.bnav span{font-size:10px;font-weight:500}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;display:none;align-items:center;justify-content:center;padding:14px}
 .modal-overlay.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.5)}
-.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
-.modal-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:600}
-.modal-body{padding:20px 24px}
-.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--surface)}
-.field{margin-bottom:18px}
-.field label{display:block;font-size:11px;font-weight:500;color:var(--text2);margin-bottom:7px;text-transform:uppercase;letter-spacing:.6px}
-.field input,.field textarea,.field select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;transition:.15s;outline:none;-webkit-appearance:none}
-.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,106,240,.15)}
-.field textarea{min-height:90px;resize:vertical;line-height:1.6}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.modal-header{padding:16px 20px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
+.modal-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:600}
+.modal-body{padding:16px 20px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:7px;position:sticky;bottom:0;background:var(--surface)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:500;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.field input,.field textarea,.field select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;transition:.15s;outline:none;-webkit-appearance:none}
+.field input:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,106,240,.15)}
+.field textarea{min-height:80px;resize:vertical;line-height:1.6}
 .field select option{background:var(--surface2)}
-.btn-primary{padding:10px 22px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{padding:9px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:5px}
 .btn-primary:hover{background:var(--accent2)}
-.btn-secondary{padding:10px 22px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:.15s}
+.btn-secondary{padding:9px 18px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:.15s}
 .btn-secondary:hover{background:var(--surface2);color:var(--text)}
-.btn-danger{padding:10px 22px;background:transparent;color:var(--coral);border:1px solid #3e2828;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:.15s}
+.btn-danger{padding:9px 18px;background:transparent;color:var(--coral);border:1px solid #3e2828;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:.15s}
 .btn-danger:hover{background:#2e1e20}
-.btn-gold{padding:10px 22px;background:linear-gradient(135deg,#d4a843,#b8892e);color:#1a1200;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
-.btn-gold:hover{opacity:.9}
-.btn-teal{padding:10px 22px;background:linear-gradient(135deg,#3dbfa0,#2a9b82);color:#001a14;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
-.btn-teal:hover{opacity:.9}
-.emoji-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.emoji-opt{width:38px;height:38px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:19px;transition:.15s}
-.emoji-opt:hover{border-color:var(--border2)}
-.emoji-opt.selected{border-color:var(--accent);background:rgba(124,106,240,.12)}
-.color-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-.color-opt{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.15s}
-.color-opt:hover{transform:scale(1.15)}
-.color-opt.selected{border-color:var(--text);transform:scale(1.1)}
-
-/* MEDIA LIST */
-.media-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
-.media-item-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px}
-.mi-icon{width:30px;height:30px;border-radius:6px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.btn-teal{padding:9px 18px;background:linear-gradient(135deg,#3dbfa0,#2a9b82);color:#001a14;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:5px}
+.btn-gold{padding:9px 18px;background:linear-gradient(135deg,#d4a843,#b8892e);color:#1a1200;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:5px}
+.emoji-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.ep{width:34px;height:34px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;transition:.15s}
+.ep.sel{border-color:var(--accent);background:rgba(124,106,240,.12)}
+.color-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.cp{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.15s}
+.cp:hover{transform:scale(1.15)}
+.cp.sel{border-color:var(--text);transform:scale(1.1)}
+.media-list{display:flex;flex-direction:column;gap:5px;margin-bottom:7px}
+.mi-row{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 10px}
+.mi-ic{width:26px;height:26px;border-radius:5px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
 .mi-info{flex:1;min-width:0}
-.mi-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mi-url{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mi-del{width:28px;height:28px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;transition:.15s;flex-shrink:0}
+.mi-name{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mi-url{font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mi-del{width:24px;height:24px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;transition:.15s;flex-shrink:0}
 .mi-del:hover{color:var(--coral);background:#2e1e20}
 
-/* PAYWALL MODAL */
-.paywall-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
-.paywall-overlay.open{display:flex}
-.paywall-modal{background:var(--surface);border:1px solid var(--border2);border-radius:20px;width:100%;max-width:640px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.6)}
-.paywall-header{padding:32px 32px 24px;text-align:center;background:linear-gradient(135deg,#14102e 0%,#0d1a2e 100%);border-bottom:1px solid var(--border)}
-.paywall-header h2{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;margin-bottom:8px}
-.paywall-header p{color:var(--text2);font-size:14px;line-height:1.6;max-width:380px;margin:0 auto}
-.paywall-plans{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0}
-.plan-col{padding:28px 28px 24px;border-right:1px solid var(--border)}
-.plan-col:last-child{border-right:none}
-.plan-col.highlighted{background:linear-gradient(135deg,#1a1408 0%,#12100a 100%)}
-.plan-name{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
-.plan-price{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;margin-bottom:4px;line-height:1}
-.plan-price span{font-size:14px;font-weight:400;color:var(--text2);font-family:'DM Sans',sans-serif}
-.plan-tagline{font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.5}
-.plan-features{list-style:none;margin-bottom:20px;display:flex;flex-direction:column;gap:8px}
-.plan-features li{font-size:13px;color:var(--text2);display:flex;align-items:flex-start;gap:8px;line-height:1.4}
-.plan-features li i{font-size:14px;margin-top:1px;flex-shrink:0}
-.feat-check{color:var(--teal)}
-.feat-gold{color:var(--gold)}
-.paywall-footer{padding:16px 28px;border-top:1px solid var(--border);display:flex;justify-content:center}
+/* ── PAYWALL ── */
+.pw-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;display:none;align-items:center;justify-content:center;padding:14px}
+.pw-overlay.open{display:flex}
+.pw-modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:620px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.6);max-height:90vh;overflow-y:auto}
+.pw-head{padding:24px 24px 18px;text-align:center;background:linear-gradient(135deg,#14102e,#0d1a2e);border-bottom:1px solid var(--border)}
+.pw-head h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:5px}
+.pw-head p{color:var(--text2);font-size:13px;line-height:1.6;max-width:320px;margin:0 auto}
+.pw-plans{display:grid;grid-template-columns:1fr 1fr}
+.pc{padding:22px 22px 18px;border-right:1px solid var(--border)}
+.pc:last-child{border-right:none}
+.pc.hl{background:linear-gradient(135deg,#1a1408,#12100a)}
+.pc-name{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
+.pc-price{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:3px;line-height:1}
+.pc-price span{font-size:12px;font-weight:400;color:var(--text2);font-family:'DM Sans',sans-serif}
+.pc-tag{font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.5}
+.pc-feats{list-style:none;margin-bottom:14px;display:flex;flex-direction:column;gap:6px}
+.pc-feats li{font-size:12px;color:var(--text2);display:flex;align-items:flex-start;gap:6px;line-height:1.4}
+.pc-feats li i{font-size:12px;margin-top:1px;flex-shrink:0}
+.f-teal{color:var(--teal)}
+.f-gold{color:var(--gold)}
+.pw-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:center}
+.lim-banner{background:linear-gradient(135deg,#1e1a3a,#1a2035);border:1px solid #3d3870;border-radius:10px;padding:12px 14px;margin:14px 0;display:flex;align-items:center;gap:11px}
+.lb-ic{width:34px;height:34px;border-radius:8px;background:rgba(124,106,240,.15);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.lb-txt{flex:1}
+.lb-t{font-size:13px;font-weight:500;margin-bottom:2px}
+.lb-d{font-size:11px;color:var(--text2);line-height:1.5}
+.lb-btn{padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:none;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:.15s}
+.feat-locked{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;cursor:pointer}
+.fl-plus{background:#0d2420;color:var(--plus);border:1px solid #1a4038}
+.fl-pro{background:#2a1e08;color:var(--pro);border:1px solid #4a3210}
+.export-wrap{position:relative}
+.export-menu{position:absolute;top:36px;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:9px;padding:4px;min-width:150px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none}
+.export-menu.open{display:block}
+.em-item{padding:7px 11px;border-radius:6px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:7px;color:var(--text2);transition:.15s}
+.em-item:hover{background:var(--surface2);color:var(--text)}
 
-/* LIMIT BANNER */
-.limit-banner{background:linear-gradient(135deg,#1e1a3a,#1a2035);border:1px solid #3d3870;border-radius:12px;padding:16px 20px;margin:20px 0;display:flex;align-items:center;gap:14px}
-.lb-icon{width:40px;height:40px;border-radius:10px;background:rgba(124,106,240,.15);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
-.lb-text{flex:1}
-.lb-title{font-size:14px;font-weight:500;margin-bottom:3px}
-.lb-desc{font-size:12px;color:var(--text2);line-height:1.5}
-.lb-btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:.15s}
-
-/* FEATURE LOCKED BADGE */
-.feat-locked{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;cursor:pointer;transition:.15s}
-.locked-plus{background:#0d2420;color:var(--plus);border:1px solid #1a4038}
-.locked-plus:hover{background:#1a4038}
-.locked-pro{background:#2a1e08;color:var(--pro);border:1px solid #4a3210}
-.locked-pro:hover{background:#4a3210}
-
-/* PRO NODE COLORS */
-.node-card.color-teal{border-left:3px solid var(--teal)}
-.node-card.color-coral{border-left:3px solid var(--coral)}
-.node-card.color-gold{border-left:3px solid var(--gold)}
-.node-card.color-purple{border-left:3px solid var(--accent)}
-.node-card.color-blue{border-left:3px solid #5bc8f5}
-
-/* STATS BAR (Pro) */
-.stats-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:36px;display:flex;align-items:center;gap:20px;font-size:12px;color:var(--text3);flex-shrink:0}
-.stat-item{display:flex;align-items:center;gap:5px}
-.stat-val{color:var(--text2);font-weight:500}
-
-/* EXPORT MENU */
-.export-menu{position:absolute;top:38px;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:6px;min-width:160px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4)}
-.export-item{padding:8px 12px;border-radius:7px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--text2);transition:.15s}
-.export-item:hover{background:var(--surface2);color:var(--text)}
-
-/* TOAST */
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--text);opacity:0;transition:opacity .3s;pointer-events:none;z-index:3000;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+/* ── TOAST ── */
+#toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:8px 15px;font-size:13px;color:var(--text);opacity:0;transition:opacity .3s;pointer-events:none;z-index:3000;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 #toast.show{opacity:1}
 
-::-webkit-scrollbar{width:5px;height:5px}
+/* ── RESPONSIVE ── */
+@media(max-width:1024px){:root{--sidebar-w:260px;--detail-w:300px}.node-card{width:240px}.root-card{width:260px}#canvas-wrap{padding:20px 24px}}
+@media(max-width:767px){
+  :root{--sidebar-w:280px}
+  #sidebar{position:fixed;top:0;left:0;bottom:0;transform:translateX(-100%);transition:transform .3s;z-index:300;border-right:1px solid var(--border2)}
+  #sidebar.m-open{transform:translateX(0)}
+  #detail-panel{position:fixed;top:0;right:0;bottom:0;width:88vw!important;min-width:0!important;transform:translateX(100%);transition:transform .3s;z-index:300;border-left:1px solid var(--border2)}
+  #detail-panel.m-open{transform:translateX(0)}
+  #bottom-nav{display:flex}
+  #canvas-wrap{padding:14px;padding-bottom:74px}
+  .tb-right .icon-btn:not(#btn-menu):not(#btn-settings){display:none}
+  .node-card{width:230px}.root-card{width:250px}
+  #toast{bottom:70px}
+  .pw-plans{grid-template-columns:1fr}.pc{border-right:none;border-bottom:1px solid var(--border)}.pc:last-child{border-bottom:none}
+  .social-grid{grid-template-columns:1fr}
+}
+@media(max-width:380px){.node-card,.root-card{width:200px}.auth-body{padding:18px 18px 22px}}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
-::-webkit-scrollbar-thumb:hover{background:var(--text3)}
 </style>
 </head>
 <body>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-label">ResearchTree</div>
+</div>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-logo">Research<span>Tree</span></div>
+      <div class="auth-tagline">Build knowledge, one branch at a time.</div>
+    </div>
+    <div class="auth-body">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-in" onclick="switchTab('in')">Sign In</button>
+        <button class="auth-tab" id="tab-up" onclick="switchTab('up')">Sign Up</button>
+      </div>
+      <div class="auth-err" id="auth-err"></div>
+      <!-- Sign In -->
+      <div id="form-in">
+        <div class="auth-field"><label>Email</label><input type="email" id="si-email" placeholder="you@example.com" autocomplete="email"></div>
+        <div class="auth-field"><label>Password</label><input type="password" id="si-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doSignIn()"></div>
+        <button class="btn-auth" id="btn-signin" onclick="doSignIn()"><i class="ti ti-login"></i> Sign In</button>
+        <div class="auth-note"><a onclick="doReset()">Forgot password?</a></div>
+      </div>
+      <!-- Sign Up -->
+      <div id="form-up" style="display:none">
+        <div class="auth-field"><label>Name</label><input type="text" id="su-name" placeholder="Your name" autocomplete="name"></div>
+        <div class="auth-field"><label>Email</label><input type="email" id="su-email" placeholder="you@example.com" autocomplete="email"></div>
+        <div class="auth-field"><label>Password</label><input type="password" id="su-pass" placeholder="Min 6 characters" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignUp()"></div>
+        <button class="btn-auth" id="btn-signup" onclick="doSignUp()"><i class="ti ti-user-plus"></i> Create Account</button>
+      </div>
+      <div class="auth-divider">or</div>
+      <div class="social-grid">
+        <button class="btn-social" onclick="doGoogle()">
+          <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Google
+        </button>
+        <button class="btn-social" onclick="doGitHub()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          GitHub
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
 <div id="app">
+  <div id="sb-overlay" onclick="closeMobileSB()"></div>
   <!-- SIDEBAR -->
   <div id="sidebar">
-    <div class="sidebar-header">
-      <i class="ti ti-tree" style="font-size:22px;color:var(--accent);flex-shrink:0"></i>
+    <div class="sb-header">
+      <i class="ti ti-tree" style="font-size:18px;color:var(--accent);flex-shrink:0"></i>
       <span class="logo">Research<span>Tree</span></span>
-      <span class="plan-badge plan-free" id="plan-badge-sidebar">Free</span>
+      <span class="plan-badge plan-free" id="plan-badge">Free</span>
+      <div class="sync-dot" id="sync-dot"></div>
     </div>
-    <div class="search-wrap">
-      <i class="ti ti-search search-icon"></i>
-      <input class="search-input" id="search-input" placeholder="Search trees..." oninput="filterTrees(this.value)">
-    </div>
-    <div class="sidebar-section-label">Your Trees</div>
+    <div class="sb-search"><i class="ti ti-search"></i><input placeholder="Search trees..." oninput="filterTrees(this.value)"></div>
+    <div class="sec-lbl">Your Trees</div>
     <div class="trees-list" id="trees-list"></div>
-    <button class="btn-new-tree" onclick="handleNewTree()"><i class="ti ti-plus"></i> New Research Tree</button>
-    <div class="sidebar-upgrade" id="upgrade-prompt" onclick="openPaywall('plus')">
-      <div class="su-label">Upgrade</div>
-      <div class="su-title">Unlock unlimited trees, exports & more</div>
-      <div class="su-btn"><i class="ti ti-arrow-up-circle"></i> View plans →</div>
+    <button class="btn-new-tree" onclick="handleNewTree()"><i class="ti ti-plus"></i> New Tree</button>
+    <div class="sb-upgrade" id="sb-upgrade" onclick="openPW('plus')" style="display:none">
+      <div class="su-lbl">Upgrade</div>
+      <div class="su-title">Unlimited trees, exports & more</div>
+      <div class="su-cta"><i class="ti ti-arrow-up-circle"></i> View plans →</div>
+    </div>
+    <div class="sb-user" id="sb-user">
+      <div class="u-avatar" id="u-avatar"></div>
+      <div class="u-info"><div class="u-name" id="u-name">—</div><div class="u-email" id="u-email"></div></div>
+      <button class="signout-btn" onclick="doSignOut()" title="Sign out"><i class="ti ti-logout"></i></button>
     </div>
   </div>
 
   <!-- MAIN -->
   <div id="main">
     <div id="topbar">
-      <button class="icon-btn" onclick="toggleSidebar()" title="Toggle sidebar"><i class="ti ti-layout-sidebar"></i></button>
+      <button class="icon-btn" id="btn-menu" onclick="toggleSB()"><i class="ti ti-layout-sidebar"></i></button>
       <div class="breadcrumb" id="breadcrumb"></div>
-      <div class="topbar-actions">
+      <div class="tb-right">
         <button class="icon-btn" onclick="expandAll()" title="Expand all"><i class="ti ti-arrows-maximize"></i></button>
         <button class="icon-btn" onclick="collapseAll()" title="Collapse all"><i class="ti ti-arrows-minimize"></i></button>
-        <button class="icon-btn" id="btn-detail" onclick="toggleDetailPanel()" title="Info panel"><i class="ti ti-layout-sidebar-right"></i></button>
-        <button class="icon-btn" id="btn-search-nodes" onclick="handleNodeSearch()" title="Search nodes">
-          <i class="ti ti-search"></i>
-          <span class="lock-dot" id="search-lock" title="Plus feature">+</span>
-        </button>
-        <div style="position:relative">
-          <button class="icon-btn" id="btn-export" onclick="handleExport()" title="Export tree">
-            <i class="ti ti-download"></i>
-            <span class="lock-dot" id="export-lock" title="Plus feature">+</span>
-          </button>
-          <div class="export-menu" id="export-menu" style="display:none">
-            <div class="export-item" onclick="exportJSON()"><i class="ti ti-file-code"></i> Export JSON</div>
-            <div class="export-item" onclick="exportMarkdown()"><i class="ti ti-markdown"></i> Export Markdown</div>
-            <div class="export-item" onclick="exportCSV()"><i class="ti ti-table"></i> Export CSV</div>
-            <div class="export-item" onclick="printTree()"><i class="ti ti-printer"></i> Print / PDF</div>
+        <button class="icon-btn" id="btn-dp" onclick="toggleDP()" title="Info panel"><i class="ti ti-layout-sidebar-right"></i></button>
+        <button class="icon-btn" id="btn-ns" onclick="handleNodeSearch()"><i class="ti ti-search"></i><span class="lock-dot" id="ns-lock">+</span></button>
+        <div class="export-wrap">
+          <button class="icon-btn" id="btn-exp" onclick="handleExport()"><i class="ti ti-download"></i><span class="lock-dot" id="exp-lock">+</span></button>
+          <div class="export-menu" id="exp-menu">
+            <div class="em-item" onclick="doExportJSON()"><i class="ti ti-file-code"></i> JSON</div>
+            <div class="em-item" onclick="doExportMD()"><i class="ti ti-markdown"></i> Markdown</div>
+            <div class="em-item" onclick="doExportCSV()"><i class="ti ti-table"></i> CSV</div>
+            <div class="em-item" onclick="window.print()"><i class="ti ti-printer"></i> Print</div>
           </div>
         </div>
-        <button class="icon-btn" onclick="openTreeSettingsModal()" id="btn-settings" title="Tree settings"><i class="ti ti-settings"></i></button>
-        <button class="icon-btn" onclick="openPaywall('plus')" title="Upgrade plan" id="btn-upgrade" style="border-color:#3d3870;color:var(--accent)"><i class="ti ti-crown"></i></button>
+        <button class="icon-btn" id="btn-settings" onclick="openTreeSettings()" style="display:none"><i class="ti ti-settings"></i></button>
+        <button class="icon-btn" id="btn-upgrade" onclick="openPW('plus')" style="border-color:#3d3870;color:var(--accent)"><i class="ti ti-crown"></i></button>
       </div>
     </div>
-    <div id="stats-bar" class="stats-bar" style="display:none"></div>
-    <div id="node-search-bar" style="display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px">
-      <input id="node-search-input" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 14px;outline:none" placeholder="Search nodes in this tree..." oninput="searchNodes(this.value)">
-    </div>
+    <div id="stats-bar"></div>
+    <div id="ns-bar"><input id="ns-input" placeholder="Search nodes in this tree..." oninput="searchNodes(this.value)"></div>
     <div id="canvas-wrap"><div id="canvas"></div></div>
   </div>
 
   <!-- DETAIL PANEL -->
   <div id="detail-panel" class="hidden">
-    <div class="detail-inner" id="detail-inner">
-      <div class="empty-state" style="min-height:300px">
-        <div style="font-size:40px;color:var(--text3)"><i class="ti ti-info-circle"></i></div>
-        <p>Click a node's Info button to see details here.</p>
+    <div class="dp-inner" id="dp-inner">
+      <div class="empty-state" style="min-height:260px">
+        <div style="font-size:36px;color:var(--text3)"><i class="ti ti-info-circle"></i></div>
+        <p style="font-size:13px">Click a node's <i class="ti ti-info-circle"></i> button to view details here.</p>
       </div>
     </div>
   </div>
+
+  <!-- BOTTOM NAV -->
+  <div id="bottom-nav">
+    <button class="bnav active" id="bnav-trees" onclick="mobileNav('trees')"><i class="ti ti-trees"></i><span>Trees</span></button>
+    <button class="bnav" id="bnav-canvas" onclick="mobileNav('canvas')"><i class="ti ti-git-branch"></i><span>Canvas</span></button>
+    <button class="bnav" id="bnav-add" onclick="handleNewTree()"><i class="ti ti-circle-plus" style="font-size:24px"></i><span>New</span></button>
+    <button class="bnav" id="bnav-info" onclick="mobileNav('info')"><i class="ti ti-info-circle"></i><span>Info</span></button>
+    <button class="bnav" id="bnav-acct" onclick="mobileNav('acct')"><i class="ti ti-user-circle"></i><span>Account</span></button>
+  </div>
 </div>
 
-<!-- MAIN MODAL -->
-<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-header">
       <span class="modal-title" id="modal-title"></span>
@@ -322,709 +442,787 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   </div>
 </div>
 
-<!-- PAYWALL MODAL -->
-<div class="paywall-overlay" id="paywall-overlay" onclick="if(event.target===this)closePaywall()">
-  <div class="paywall-modal">
-    <div class="paywall-header">
-      <h2 id="pw-headline">Unlock more with ResearchTree</h2>
-      <p id="pw-subhead">Choose the plan that fits your research workflow.</p>
+<!-- PAYWALL -->
+<div class="pw-overlay" id="pw-overlay" onclick="if(event.target===this)closePW()">
+  <div class="pw-modal">
+    <div class="pw-head">
+      <h2 id="pw-title">Unlock more with ResearchTree</h2>
+      <p id="pw-sub">Choose the plan that fits your research workflow.</p>
     </div>
-    <div class="paywall-plans">
-      <div class="plan-col">
-        <div class="plan-name" style="color:var(--plus)">Plus</div>
-        <div class="plan-price" style="color:var(--text)">$9<span>/mo</span></div>
-        <div class="plan-tagline">For serious researchers who need more room to think.</div>
-        <ul class="plan-features">
-          <li><i class="ti ti-check feat-check"></i>Unlimited research trees</li>
-          <li><i class="ti ti-check feat-check"></i>Unlimited nodes per tree</li>
-          <li><i class="ti ti-check feat-check"></i>Full-text node search</li>
-          <li><i class="ti ti-check feat-check"></i>Export to JSON, Markdown & CSV</li>
-          <li><i class="ti ti-check feat-check"></i>Print / PDF export</li>
-          <li><i class="ti ti-check feat-check"></i>Node images & video embeds</li>
-          <li><i class="ti ti-check feat-check"></i>Tree import from JSON</li>
-          <li><i class="ti ti-check feat-check"></i>Priority support</li>
+    <div class="pw-plans">
+      <div class="pc">
+        <div class="pc-name" style="color:var(--plus)">Plus — $9/mo</div>
+        <div class="pc-tag">For serious researchers who need more room.</div>
+        <ul class="pc-feats">
+          <li><i class="ti ti-check f-teal"></i>Unlimited trees &amp; nodes</li>
+          <li><i class="ti ti-check f-teal"></i>Full-text node search</li>
+          <li><i class="ti ti-check f-teal"></i>Export JSON / Markdown / CSV</li>
+          <li><i class="ti ti-check f-teal"></i>Images &amp; video embeds</li>
+          <li><i class="ti ti-check f-teal"></i>Import trees from JSON</li>
         </ul>
-        <button class="btn-teal" style="width:100%;justify-content:center" onclick="activatePlan('plus')">
-          <i class="ti ti-arrow-up-circle"></i> Start with Plus
-        </button>
+        <button class="btn-teal" style="width:100%;justify-content:center;font-size:13px" onclick="activatePlan('plus')"><i class="ti ti-arrow-up-circle"></i> Start with Plus</button>
       </div>
-      <div class="plan-col highlighted">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-          <div class="plan-name" style="color:var(--gold)">Pro</div>
-          <span style="font-size:10px;font-weight:600;background:linear-gradient(135deg,#d4a843,#b8892e);color:#1a1200;padding:2px 8px;border-radius:20px">BEST VALUE</span>
+      <div class="pc hl">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
+          <div class="pc-name" style="color:var(--gold)">Pro — $19/mo</div>
+          <span style="font-size:9px;font-weight:700;background:linear-gradient(135deg,#d4a843,#b8892e);color:#1a1200;padding:2px 6px;border-radius:20px">BEST</span>
         </div>
-        <div class="plan-price" style="color:var(--gold)">$19<span>/mo</span></div>
-        <div class="plan-tagline">For power users building deep knowledge systems.</div>
-        <ul class="plan-features">
-          <li><i class="ti ti-check feat-gold"></i>Everything in Plus</li>
-          <li><i class="ti ti-check feat-gold"></i>Node color labels</li>
-          <li><i class="ti ti-check feat-gold"></i>Node tags & filtering</li>
-          <li><i class="ti ti-check feat-gold"></i>Inline node notes (rich text)</li>
-          <li><i class="ti ti-check feat-gold"></i>Tree statistics dashboard</li>
-          <li><i class="ti ti-check feat-gold"></i>AI-powered node suggestions</li>
-          <li><i class="ti ti-check feat-gold"></i>Multiple collaborators</li>
-          <li><i class="ti ti-check feat-gold"></i>Custom node templates</li>
+        <div class="pc-tag">For power users building deep knowledge systems.</div>
+        <ul class="pc-feats">
+          <li><i class="ti ti-check f-gold"></i>Everything in Plus</li>
+          <li><i class="ti ti-check f-gold"></i>Node color labels</li>
+          <li><i class="ti ti-check f-gold"></i>Node tags &amp; filtering</li>
+          <li><i class="ti ti-check f-gold"></i>Extended notes per node</li>
+          <li><i class="ti ti-check f-gold"></i>Tree statistics dashboard</li>
         </ul>
-        <button class="btn-gold" style="width:100%;justify-content:center" onclick="activatePlan('pro')">
-          <i class="ti ti-crown"></i> Go Pro
-        </button>
+        <button class="btn-gold" style="width:100%;justify-content:center;font-size:13px" onclick="activatePlan('pro')"><i class="ti ti-crown"></i> Go Pro</button>
       </div>
     </div>
-    <div class="paywall-footer">
-      <button class="btn-secondary" onclick="closePaywall()">Maybe later — stay on Free</button>
-    </div>
+    <div class="pw-foot"><button class="btn-secondary" style="font-size:12px" onclick="closePW()">Stay on Free</button></div>
   </div>
 </div>
 
 <div id="toast"></div>
 
+<!-- ============================================================
+     SUPABASE SETUP INSTRUCTIONS
+     ============================================================
+     1. Go to https://supabase.com and create a free account
+     2. Click "New Project" — choose a name and strong DB password
+     3. Once the project is ready, go to:
+        Settings → API → copy "Project URL" and "anon public" key
+     4. Replace the two placeholder values below
+     5. Go to SQL Editor in Supabase and run this SQL:
+
+        create table public.trees (
+          id text primary key,
+          user_id uuid references auth.users not null,
+          data jsonb not null,
+          updated_at timestamptz default now()
+        );
+        create index on public.trees(user_id);
+        alter table public.trees enable row level security;
+        create policy "Users own their trees"
+          on public.trees for all
+          using (auth.uid() = user_id)
+          with check (auth.uid() = user_id);
+
+        create table public.profiles (
+          id uuid references auth.users primary key,
+          plan text default 'free',
+          updated_at timestamptz default now()
+        );
+        alter table public.profiles enable row level security;
+        create policy "Users own their profile"
+          on public.profiles for all
+          using (auth.uid() = id)
+          with check (auth.uid() = id);
+
+     6. Go to Authentication → Providers and enable:
+        Email (on by default), Google, GitHub
+        (Apple requires a paid Apple Developer account)
+     7. For Google/GitHub OAuth, add your GitHub Pages URL to
+        Authentication → URL Configuration → Redirect URLs
+        e.g. https://yourusername.github.io/your-repo
+     ============================================================ -->
+
 <script>
-const EMOJIS=['📚','🔬','🎮','🏛️','🌍','⚡','🧬','🎨','🎵','🚀','💡','🏺','🧪','📡','🌿','🔭','⚔️','🎭','🏗️','🌊','🧠','💻','🎬','📰','🔮','🎯','🦠','🌐','🏆','🎪','🦋','🌋','🔑','💎','🌸','🐉'];
-const TREE_COLORS=['#7c6af0','#3dbfa0','#e8715a','#d4a843','#5bc8f5','#e07bb0','#6fd98f','#f0a653'];
-const NODE_COLORS=['none','teal','coral','gold','purple','blue'];
+// ── SUPABASE CONFIG ─────────────────────────────────────────
+const SUPABASE_URL  = 'https://iplsdmdaviuwabtclvsw.supabase.co';   // e.g. https://xyzxyz.supabase.co
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwbHNkbWRhdml1d2FidGNsdnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NzI1NzIsImV4cCI6MjA5NjU0ODU3Mn0.f0X9ox4RCfHvAJqDP-YhCPve6NwADG5Cr3PE_WqHVU4';      // long string starting with eyJ...
+// ────────────────────────────────────────────────────────────
 
-// ===== PLAN LIMITS =====
+// Validate config before doing anything
+if (SUPABASE_URL.startsWith('YOUR_') || SUPABASE_ANON.startsWith('YOUR_')) {
+  document.getElementById('loading-screen').innerHTML = `
+    <div style="max-width:480px;padding:32px;background:#16181f;border:1px solid #3a3e52;border-radius:16px;text-align:center">
+      <div style="font-size:40px;margin-bottom:16px">⚙️</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:12px;color:#e8eaf2">Setup Required</h2>
+      <p style="color:#9099b5;font-size:14px;line-height:1.7;margin-bottom:16px">
+        Open <code style="background:#252832;padding:2px 6px;border-radius:4px;color:#7c6af0">index.html</code> and replace the two placeholder values near the bottom of the file:
+      </p>
+      <div style="background:#1e2028;border:1px solid #2e3140;border-radius:10px;padding:14px;text-align:left;font-size:13px;font-family:monospace;color:#9099b5;line-height:1.8">
+        <span style="color:#5a6280">// Replace these two lines:</span><br>
+        <span style="color:#e8715a">SUPABASE_URL</span>  = <span style="color:#3dbfa0">'https://yourproject.supabase.co'</span><br>
+        <span style="color:#e8715a">SUPABASE_ANON</span> = <span style="color:#3dbfa0">'eyJ...'</span>
+      </div>
+      <p style="color:#5a6280;font-size:12px;margin-top:12px">See the comments in the HTML file for full setup instructions.</p>
+    </div>`;
+  throw new Error('Supabase config not set');
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ── INIT ─────────────────────────────────────────────────────
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── CONSTANTS ────────────────────────────────────────────────
 const PLANS = {
-  free:  { trees: 3, nodes: 20, media: false, export: false, nodeSearch: false, nodeColors: false, nodeTags: false, nodeNotes: false, stats: false, aiSuggest: false },
-  plus:  { trees: Infinity, nodes: Infinity, media: true, export: true, nodeSearch: true, nodeColors: false, nodeTags: false, nodeNotes: false, stats: false, aiSuggest: false },
-  pro:   { trees: Infinity, nodes: Infinity, media: true, export: true, nodeSearch: true, nodeColors: true, nodeTags: true, nodeNotes: true, stats: true, aiSuggest: true }
+  free: {trees:3,nodes:20,media:false,export:false,nodeSearch:false,nodeColors:false,nodeTags:false,nodeNotes:false,stats:false},
+  plus: {trees:Infinity,nodes:Infinity,media:true,export:true,nodeSearch:true,nodeColors:false,nodeTags:false,nodeNotes:false,stats:false},
+  pro:  {trees:Infinity,nodes:Infinity,media:true,export:true,nodeSearch:true,nodeColors:true,nodeTags:true,nodeNotes:true,stats:true}
 };
+const EMOJIS=['📚','🔬','🎮','🏛️','🌍','⚡','🧬','🎨','🎵','🚀','💡','🏺','🧪','📡','🌿','🔭','⚔️','🎭','🏗️','🌊','🧠','💻','🎬','📰','🔮','🎯','🦠','🌐','🏆','🎪','🦋','🌋'];
+const TCOLORS=['#7c6af0','#3dbfa0','#e8715a','#d4a843','#5bc8f5','#e07bb0','#6fd98f','#f0a653'];
+const NCOLORS=['none','teal','coral','gold','purple','blue'];
 
-// ===== STATE =====
-let state = {
-  plan: 'free',
-  trees: [], activeTree: null, collapsed: {}, selectedNode: null, detailOpen: false, sidebarOpen: true
-};
-let _mediaItems = [];
-let exportMenuOpen = false;
+// ── STATE ────────────────────────────────────────────────────
+let currentUser = null;
+let userPlan    = 'free';
+let trees       = [];
+let activeId    = null;
+let collapsed   = {};
+let selNode     = null;
+let dpOpen      = false;
+let sbOpen      = true;
+let _media      = [];
+let _nodeColor  = 'none';
+let expOpen     = false;
 
-function plan() { return PLANS[state.plan] || PLANS.free; }
-function can(feature) { return plan()[feature]; }
+function plan()    { return PLANS[userPlan] || PLANS.free; }
+function can(f)    { return plan()[f]; }
+function uid()     { return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function esc(s)    { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function getTree() { return trees.find(t=>t.id===activeId); }
+function findNode(nodes,id)  { for(const n of nodes){if(n.id===id)return n;const r=findNode(n.children||[],id);if(r)return r;}return null; }
+function delNodeFrom(nodes,id){ const i=nodes.findIndex(n=>n.id===id);if(i>-1){nodes.splice(i,1);return true;}return nodes.some(n=>delNodeFrom(n.children||[],id)); }
+function countNodes(nodes)   { return nodes.reduce((s,n)=>s+1+countNodes(n.children||[]),0); }
+function allNodes(nodes,a=[])  { nodes.forEach(n=>{a.push(n);allNodes(n.children||[],a);});return a; }
+function maxDepth(nodes,d=0)   { if(!nodes.length)return d;return Math.max(...nodes.map(n=>maxDepth(n.children||[],d+1))); }
+function getPath(roots,id,p=[])  { for(const n of roots){const pp=[...p,n];if(n.id===id)return pp;const r=getPath(n.children||[],id,pp);if(r)return r;}return null; }
+function totalNodes() { const t=getTree();return t?countNodes(t.roots||[]):0; }
+function toast(msg,dur=2400){ const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur); }
+function setSyncing(s){ const d=document.getElementById('sync-dot');if(!d)return;d.className='sync-dot'+(s==='syncing'?' syncing':s==='error'?' error':''); }
 
-// ===== PERSISTENCE =====
-function save() { try { localStorage.setItem('rt_v3', JSON.stringify(state)); } catch(e){} }
-function load() { try { const d=localStorage.getItem('rt_v3'); if(d) state={...state,...JSON.parse(d)}; } catch(e){} }
-
-// ===== UTILS =====
-function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
-function toast(msg,dur=2200) {
-  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),dur);
+// ── AUTH HELPERS ─────────────────────────────────────────────
+function switchTab(t){
+  document.getElementById('tab-in').classList.toggle('active',t==='in');
+  document.getElementById('tab-up').classList.toggle('active',t==='up');
+  document.getElementById('form-in').style.display=t==='in'?'block':'none';
+  document.getElementById('form-up').style.display=t==='up'?'block':'none';
+  clearAuthErr();
 }
-function getActiveTree() { return state.trees.find(t=>t.id===state.activeTree); }
-function findNode(nodes,id) {
-  for(const n of nodes){ if(n.id===id) return n; const r=findNode(n.children||[],id); if(r) return r; } return null;
-}
-function countNodes(nodes) { return nodes.reduce((s,n)=>s+1+countNodes(n.children||[]),0); }
-function deleteNodeFrom(nodes,id) {
-  const i=nodes.findIndex(n=>n.id===id); if(i>-1){nodes.splice(i,1);return true;}
-  return nodes.some(n=>deleteNodeFrom(n.children||[],id));
-}
-function getNodePath(roots,id,path=[]) {
-  for(const n of roots){ const p=[...path,n]; if(n.id===id) return p; const r=getNodePath(n.children||[],id,p); if(r) return r; } return null;
-}
-function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function totalNodes() { const t=getActiveTree(); return t ? countNodes(t.roots||[]) : 0; }
-function allNodes(nodes,arr=[]) { nodes.forEach(n=>{arr.push(n);allNodes(n.children||[],arr);}); return arr; }
-function maxDepth(nodes,d=0) { if(!nodes.length) return d; return Math.max(...nodes.map(n=>maxDepth(n.children||[],d+1))); }
+function authErr(msg){ const e=document.getElementById('auth-err');e.textContent=msg;e.classList.add('show'); }
+function clearAuthErr(){ document.getElementById('auth-err').classList.remove('show'); }
+function setAuthBusy(busy){ document.querySelectorAll('.btn-auth,.btn-social').forEach(b=>b.disabled=busy); }
 
-// ===== PLAN UI =====
-function updatePlanUI() {
-  const p = state.plan;
-  const badge = document.getElementById('plan-badge-sidebar');
-  if(p==='free'){badge.className='plan-badge plan-free';badge.textContent='Free';}
-  else if(p==='plus'){badge.className='plan-badge plan-plus';badge.textContent='Plus';}
-  else{badge.className='plan-badge plan-pro';badge.textContent='Pro';}
-
-  // Export lock
-  const elock=document.getElementById('export-lock');
-  if(elock) elock.style.display = can('export')?'none':'flex';
-  // Search lock
-  const slock=document.getElementById('search-lock');
-  if(slock) slock.style.display = can('nodeSearch')?'none':'flex';
-  // Upgrade button
-  const ubtn=document.getElementById('btn-upgrade');
-  if(ubtn) ubtn.style.display = p==='pro'?'none':'flex';
-  // Upgrade prompt
-  const up=document.getElementById('upgrade-prompt');
-  if(up) up.style.display = p==='pro'?'none':'block';
-  // Stats bar
-  document.getElementById('stats-bar').style.display = can('stats')&&getActiveTree()?'flex':'none';
-  if(can('stats')&&getActiveTree()) renderStatsBar();
+async function doSignIn(){
+  clearAuthErr(); setAuthBusy(true);
+  const email=document.getElementById('si-email').value.trim();
+  const pass=document.getElementById('si-pass').value;
+  if(!email||!pass){authErr('Please fill in all fields.');setAuthBusy(false);return;}
+  const {error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){authErr(friendlyErr(error));setAuthBusy(false);}
 }
-
-// ===== STATS BAR =====
-function renderStatsBar() {
-  const tree=getActiveTree(); if(!tree) return;
-  const nodes=allNodes(tree.roots||[]);
-  const withMedia=nodes.filter(n=>(n.media||[]).length).length;
-  const depth=maxDepth(tree.roots||[]);
-  document.getElementById('stats-bar').innerHTML=`
-    <span class="stat-item"><i class="ti ti-git-branch"></i> <span class="stat-val">${nodes.length}</span> nodes</span>
-    <span class="stat-item"><i class="ti ti-photo"></i> <span class="stat-val">${withMedia}</span> with media</span>
-    <span class="stat-item"><i class="ti ti-layers-intersect"></i> Depth: <span class="stat-val">${depth}</span></span>
-    <span class="stat-item"><i class="ti ti-trees"></i> Roots: <span class="stat-val">${(tree.roots||[]).length}</span></span>`;
+async function doSignUp(){
+  clearAuthErr(); setAuthBusy(true);
+  const name=document.getElementById('su-name').value.trim();
+  const email=document.getElementById('su-email').value.trim();
+  const pass=document.getElementById('su-pass').value;
+  if(!name||!email||!pass){authErr('Please fill in all fields.');setAuthBusy(false);return;}
+  if(pass.length<6){authErr('Password must be at least 6 characters.');setAuthBusy(false);return;}
+  const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
+  if(error){authErr(friendlyErr(error));setAuthBusy(false);}
+  else if(data.user&&!data.session){authErr('Check your email to confirm your account, then sign in.');setAuthBusy(false);}
+}
+async function doGoogle(){
+  clearAuthErr();
+  await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
+}
+async function doGitHub(){
+  clearAuthErr();
+  await sb.auth.signInWithOAuth({provider:'github',options:{redirectTo:window.location.href}});
+}
+async function doReset(){
+  const email=document.getElementById('si-email').value.trim();
+  if(!email){authErr('Enter your email first.');return;}
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
+  if(error)authErr(friendlyErr(error));
+  else toast('Password reset email sent!');
+}
+async function doSignOut(){
+  await sb.auth.signOut();
+  currentUser=null; trees=[]; activeId=null; collapsed={}; selNode=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+}
+function friendlyErr(e){
+  const m={'Invalid login credentials':'Incorrect email or password.','User already registered':'That email is already registered.','Email not confirmed':'Please confirm your email first.'};
+  return m[e.message]||e.message||'Something went wrong.';
 }
 
-// ===== PAYWALL =====
-function openPaywall(highlight='plus', reason='') {
-  if(reason){
-    document.getElementById('pw-headline').textContent = reason;
-    document.getElementById('pw-subhead').textContent = 'Upgrade to unlock this and many more features.';
+// ── SUPABASE DATA ─────────────────────────────────────────────
+async function loadData(userId){
+  // Load profile
+  const {data:prof}=await sb.from('profiles').select('plan').eq('id',userId).single();
+  if(prof?.plan) userPlan=prof.plan;
+  // Load trees
+  const {data:rows}=await sb.from('trees').select('id,data').eq('user_id',userId);
+  if(rows){
+    trees=rows.map(r=>({...r.data,id:r.id}));
+    trees.sort((a,b)=>(a.created||0)-(b.created||0));
+    if(trees.length) activeId=trees[0].id;
+  }
+}
+async function saveTree(tree){
+  if(!currentUser)return;
+  setSyncing('syncing');
+  const {error}=await sb.from('trees').upsert({id:tree.id,user_id:currentUser.id,data:tree,updated_at:new Date().toISOString()});
+  setSyncing(error?'error':'ok');
+  if(error)console.error('Save error:',error);
+}
+async function deletTreeDB(id){
+  if(!currentUser)return;
+  await sb.from('trees').delete().eq('id',id).eq('user_id',currentUser.id);
+}
+async function savePlan(p){
+  if(!currentUser)return;
+  await sb.from('profiles').upsert({id:currentUser.id,plan:p,updated_at:new Date().toISOString()});
+}
+
+// ── AUTH STATE ────────────────────────────────────────────────
+sb.auth.onAuthStateChange(async(event,session)=>{
+  document.getElementById('loading-screen').style.display='none';
+  if(session?.user){
+    currentUser=session.user;
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    setAuthBusy(false);
+    updateUserUI(session.user);
+    await loadData(session.user.id);
+    renderSidebar(); renderCanvas(); updatePlanUI();
   } else {
-    document.getElementById('pw-headline').textContent = 'Unlock more with ResearchTree';
-    document.getElementById('pw-subhead').textContent = 'Choose the plan that fits your research workflow.';
+    document.getElementById('app').style.display='none';
+    document.getElementById('auth-screen').style.display='flex';
+    setAuthBusy(false);
   }
-  document.getElementById('paywall-overlay').classList.add('open');
-}
-function closePaywall() { document.getElementById('paywall-overlay').classList.remove('open'); }
-function activatePlan(p) {
-  state.plan = p;
-  save(); closePaywall(); updatePlanUI(); renderSidebar(); renderCanvas(); updateDetailPanel();
-  toast(p==='plus' ? '✓ Welcome to Plus!' : '✓ Welcome to Pro! All features unlocked.');
+});
+
+function updateUserUI(user){
+  const av=document.getElementById('u-avatar');
+  const meta=user.user_metadata||{};
+  const photo=meta.avatar_url||meta.picture||'';
+  if(photo) av.innerHTML=`<img src="${esc(photo)}" alt="">`;
+  else av.textContent=(meta.full_name||meta.name||user.email||'?').charAt(0).toUpperCase();
+  document.getElementById('u-name').textContent=meta.full_name||meta.name||'User';
+  document.getElementById('u-email').textContent=user.email||'';
 }
 
-// ===== FEATURE GUARDS =====
-function requirePlan(feature, reason) {
-  if(can(feature)) return true;
-  const needed = PLANS.plus[feature] ? 'plus' : 'pro';
-  openPaywall(needed, reason);
-  return false;
+// ── PLAN UI ───────────────────────────────────────────────────
+function updatePlanUI(){
+  const p=userPlan;
+  const b=document.getElementById('plan-badge');
+  if(b){b.className='plan-badge plan-'+p;b.textContent=p.charAt(0).toUpperCase()+p.slice(1);}
+  const el=id=>document.getElementById(id);
+  el('exp-lock').style.display   = can('export')     ? 'none':'flex';
+  el('ns-lock').style.display    = can('nodeSearch')  ? 'none':'flex';
+  el('btn-upgrade').style.display= p==='pro' ? 'none':'flex';
+  el('sb-upgrade').style.display = p==='pro' ? 'none':'block';
+  const sb2=document.getElementById('stats-bar');
+  if(sb2) sb2.style.display=can('stats')&&getTree()?'flex':'none';
+  if(can('stats')&&getTree()) renderStats();
 }
 
-// ===== SIDEBAR =====
-function filterTrees(q) { renderSidebar(q); }
-function renderSidebar(filter='') {
+// ── SIDEBAR ───────────────────────────────────────────────────
+function filterTrees(q){ renderSidebar(q); }
+function renderSidebar(q=''){
   const list=document.getElementById('trees-list');
-  const trees=state.trees.filter(t=>!filter||t.name.toLowerCase().includes(filter.toLowerCase()));
-  if(!trees.length){
-    list.innerHTML=`<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;line-height:1.7">${filter?'No matching trees.':'No trees yet.<br>Create your first research tree.'}</div>`;
-    return;
-  }
+  const arr=trees.filter(t=>!q||t.name.toLowerCase().includes(q.toLowerCase()));
+  if(!arr.length){list.innerHTML=`<div style="padding:18px;text-align:center;color:var(--text3);font-size:13px;line-height:1.7">${q?'No matching trees.':'No trees yet.<br>Create your first tree!'}</div>`;return;}
   list.innerHTML='';
-  trees.forEach(tree=>{
+  arr.forEach(tree=>{
     const div=document.createElement('div');
-    div.className='tree-item'+(state.activeTree===tree.id?' active':'');
+    div.className='tree-item'+(activeId===tree.id?' active':'');
     div.innerHTML=`<div class="tree-icon" style="background:${tree.color}22">${tree.emoji}</div>
-      <span class="tree-name">${escHtml(tree.name)}</span>
+      <span class="tree-name">${esc(tree.name)}</span>
       <span class="tree-count">${countNodes(tree.roots||[])}n</span>
-      <button class="tree-del-btn" onclick="deleteTree('${tree.id}',event)"><i class="ti ti-trash"></i></button>`;
-    div.onclick=()=>activateTree(tree.id);
+      <button class="tree-del" onclick="confirmDelTree('${tree.id}',event)"><i class="ti ti-trash"></i></button>`;
+    div.onclick=()=>{activateTree(tree.id);closeMobileSB();};
     list.appendChild(div);
   });
-  // Show free limit warning
-  if(state.plan==='free' && state.trees.length>=PLANS.free.trees){
-    const warn=document.createElement('div');
-    warn.style.cssText='margin:8px 12px;padding:8px 12px;background:#1e1a3a;border:1px solid #3d3870;border-radius:8px;font-size:12px;color:var(--text2);line-height:1.5;cursor:pointer';
-    warn.innerHTML=`<i class="ti ti-lock" style="color:var(--accent)"></i> Free plan: ${PLANS.free.trees} trees max. <span style="color:var(--accent);font-weight:500">Upgrade →</span>`;
-    warn.onclick=()=>openPaywall('plus','You\'ve reached the free tree limit');
-    list.appendChild(warn);
+  if(userPlan==='free'&&trees.length>=PLANS.free.trees){
+    const w=document.createElement('div');
+    w.style.cssText='margin:5px;padding:8px 10px;background:#1e1a3a;border:1px solid #3d3870;border-radius:8px;font-size:11px;color:var(--text2);cursor:pointer';
+    w.innerHTML=`<i class="ti ti-lock" style="color:var(--accent)"></i> ${PLANS.free.trees}-tree limit. <span style="color:var(--accent);font-weight:600">Upgrade →</span>`;
+    w.onclick=()=>openPW('plus','You\'ve reached the free tree limit');
+    list.appendChild(w);
   }
 }
-function toggleSidebar() { state.sidebarOpen=!state.sidebarOpen; document.getElementById('sidebar').classList.toggle('collapsed',!state.sidebarOpen); save(); }
-
-// ===== TREE OPS =====
-function handleNewTree() {
-  if(state.plan==='free' && state.trees.length>=PLANS.free.trees){
-    openPaywall('plus',`Free plan is limited to ${PLANS.free.trees} trees`); return;
-  }
-  openNewTreeModal();
+function toggleSB(){
+  const mobile=window.innerWidth<768;
+  if(mobile){openMobileSB();}
+  else{sbOpen=!sbOpen;document.getElementById('sidebar').classList.toggle('collapsed',!sbOpen);}
 }
-function activateTree(id) { state.activeTree=id; state.selectedNode=null; save(); renderSidebar(); renderCanvas(); updateDetailPanel(); updatePlanUI(); }
-function deleteTree(id,e) {
+function openMobileSB(){ document.getElementById('sidebar').classList.add('m-open');document.getElementById('sb-overlay').style.display='block'; }
+function closeMobileSB(){ document.getElementById('sidebar').classList.remove('m-open');document.getElementById('sb-overlay').style.display='none'; }
+function activateTree(id){
+  activeId=id;selNode=null;
+  renderSidebar();renderCanvas();updateDetailPanel();updatePlanUI();
+  document.getElementById('btn-settings').style.display=id?'flex':'none';
+}
+function confirmDelTree(id,e){
   e.stopPropagation();
-  const tree=state.trees.find(t=>t.id===id);
-  if(!confirm(`Delete "${tree.name}" and all its nodes?`)) return;
-  state.trees=state.trees.filter(t=>t.id!==id);
-  if(state.activeTree===id){state.activeTree=state.trees[0]?.id||null;state.selectedNode=null;}
-  save(); renderSidebar(); renderCanvas(); updateDetailPanel(); toast('Tree deleted');
+  const tree=trees.find(t=>t.id===id);if(!tree)return;
+  if(!confirm(`Delete "${tree.name}" and all nodes?`))return;
+  trees=trees.filter(t=>t.id!==id);
+  if(activeId===id){activeId=trees[0]?.id||null;selNode=null;}
+  deletTreeDB(id);renderSidebar();renderCanvas();updateDetailPanel();updatePlanUI();toast('Tree deleted');
 }
 
-// ===== BREADCRUMB =====
-function buildBreadcrumb(items) {
-  const bc=document.getElementById('breadcrumb'); bc.innerHTML='';
+// ── BREADCRUMB ────────────────────────────────────────────────
+function buildBC(items){
+  const bc=document.getElementById('breadcrumb');bc.innerHTML='';
   items.forEach((item,i)=>{
-    if(i>0){const sep=document.createElement('span');sep.className='bc-sep';sep.textContent='›';bc.appendChild(sep);}
-    const el=document.createElement('span');
-    el.className='breadcrumb-item'+(i===items.length-1?' current':'');
-    el.textContent=item.label;
-    if(item.onClick) el.onclick=item.onClick;
-    bc.appendChild(el);
+    if(i>0){const s=document.createElement('span');s.className='bc-sep';s.textContent='›';bc.appendChild(s);}
+    const el=document.createElement('span');el.className='bc-item'+(i===items.length-1?' cur':'');
+    el.textContent=item.label;if(item.fn)el.onclick=item.fn;bc.appendChild(el);
   });
 }
 
-// ===== RENDER CANVAS =====
-function renderCanvas() {
+// ── CANVAS ────────────────────────────────────────────────────
+function renderCanvas(){
   const canvas=document.getElementById('canvas');
-  document.getElementById('btn-settings').style.display=getActiveTree()?'flex':'none';
-  const tree=getActiveTree();
+  const tree=getTree();
+  document.getElementById('btn-settings').style.display=tree?'flex':'none';
   if(!tree){
     canvas.innerHTML='';
-    const es=document.createElement('div'); es.className='empty-state'; es.style.minHeight='60vh';
-    es.innerHTML=`<div style="font-size:72px;color:var(--accent)"><i class="ti ti-trees"></i></div>
+    const es=document.createElement('div');es.className='empty-state';
+    es.innerHTML=`<div style="font-size:60px;color:var(--accent)"><i class="ti ti-trees"></i></div>
       <h2>Welcome to ResearchTree</h2>
-      <p>Organize any topic into deep, expandable research trees with notes, images, videos, and links.</p>
-      <button class="btn-primary" onclick="handleNewTree()"><i class="ti ti-plus"></i> Create your first tree</button>`;
+      <p>Organize any topic into deep, expandable research trees.</p>
+      <button class="btn-primary" style="margin-top:8px" onclick="handleNewTree()"><i class="ti ti-plus"></i> Create first tree</button>`;
     canvas.appendChild(es);
-    buildBreadcrumb([{label:'Research Trees'}]);
+    buildBC([{label:'Research Trees'}]);
     return;
   }
-  buildBreadcrumb([{label:'Research Trees'},{label:tree.emoji+' '+tree.name}]);
+  buildBC([{label:'Research Trees'},{label:tree.emoji+' '+tree.name}]);
   canvas.innerHTML='';
-  (tree.roots||[]).forEach(node=>canvas.appendChild(buildNodeEl(node,true,tree)));
-  // Node limit banner for free
-  if(state.plan==='free' && totalNodes()>=PLANS.free.nodes){
-    const banner=makeLimitBanner('You\'ve reached 20 nodes on the free plan','Upgrade to Plus for unlimited nodes and media attachments.','plus','Upgrade to Plus');
-    canvas.appendChild(banner);
+  (tree.roots||[]).forEach(root=>{
+    canvas.appendChild(buildNodeTree(root,true,tree));
+  });
+  if(userPlan==='free'&&totalNodes()>=PLANS.free.nodes){
+    canvas.appendChild(makeLimBanner('20-node limit reached','Upgrade to Plus for unlimited nodes.','plus','Upgrade'));
   } else {
-    const addBtn=document.createElement('button');
-    addBtn.className='add-root-btn';
-    addBtn.innerHTML='<i class="ti ti-plus"></i> Add root node';
-    addBtn.onclick=()=>handleAddNode({parentId:null,treeId:tree.id});
-    canvas.appendChild(addBtn);
+    const btn=document.createElement('button');btn.className='add-root-btn';
+    btn.innerHTML='<i class="ti ti-plus"></i> Add root node';
+    btn.onclick=()=>handleAddNode({parentId:null,treeId:tree.id});
+    canvas.appendChild(btn);
   }
-  updatePlanUI();
 }
 
-function makeLimitBanner(title,desc,plan,btnLabel) {
-  const div=document.createElement('div'); div.className='limit-banner';
-  div.innerHTML=`<div class="lb-icon"><i class="ti ti-lock" style="color:var(--accent);font-size:20px"></i></div>
-    <div class="lb-text"><div class="lb-title">${escHtml(title)}</div><div class="lb-desc">${escHtml(desc)}</div></div>
-    <button class="lb-btn ${plan==='pro'?'btn-gold':'btn-teal'}" onclick="openPaywall('${plan}','${escHtml(title)}')">${escHtml(btnLabel)}</button>`;
-  return div;
-}
+function buildNodeTree(node,isRoot,tree){
+  const hasKids=(node.children||[]).length>0;
+  const isCollapsed=collapsed[node.id];
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;flex-direction:row;align-items:flex-start';
 
-function buildNodeEl(node,isRoot,tree) {
-  const collapsed=state.collapsed[node.id];
-  const hasChildren=(node.children||[]).length>0;
-  const isSelected=state.selectedNode===node.id;
-
-  const wrap=document.createElement('div'); wrap.style.cssText='display:flex;flex-direction:column';
-  const card=document.createElement('div');
-  let cls='node-card'+(isRoot?' root-card':'')+(isSelected?' selected':'');
-  if(can('nodeColors')&&node.color&&node.color!=='none') cls+=` color-${node.color}`;
-  card.className=cls; card.dataset.id=node.id;
-
-  const imgs=(node.media||[]).filter(m=>m.type==='image');
-  const vids=(node.media||[]).filter(m=>m.type==='video');
-  const links=(node.media||[]).filter(m=>m.type==='link');
-
-  let thumbsHTML='';
-  if(imgs.length && can('media')){
-    thumbsHTML=`<div class="media-thumbs">${imgs.slice(0,4).map(m=>`<div class="media-thumb"><img src="${escHtml(m.url)}" alt="${escHtml(m.name||'')}" onerror="this.parentNode.innerHTML='🖼️'"></div>`).join('')}</div>`;
-  }
-
-  const tags=[
-    imgs.length&&can('media')?`<span class="node-tag tag-img">🖼️ ${imgs.length}</span>`:'',
-    vids.length&&can('media')?`<span class="node-tag tag-vid">🎬 ${vids.length}</span>`:'',
-    links.length?`<span class="node-tag tag-link">🔗 ${links.length}</span>`:'',
-    (node.tags||[]).map(t=>`<span class="node-tag" style="background:#1e2028;color:var(--text2);border:1px solid var(--border2)">#${escHtml(t)}</span>`).join('')
-  ].filter(Boolean).join('');
-
-  const hasDetail=node.desc||(node.media||[]).length;
-
-  card.innerHTML=`
-    <div class="node-header">
-      <div style="flex:1;min-width:0">
-        <div class="node-title">${escHtml(node.title)}</div>
-        ${node.desc?`<div class="node-desc">${escHtml(node.desc.slice(0,130))}${node.desc.length>130?'…':''}</div>`:''}
-      </div>
-      ${hasChildren?`<button class="expand-btn" onclick="toggleCollapse('${node.id}',event)"><i class="ti ti-chevron-${collapsed?'right':'down'}"></i></button>`:''}
-    </div>
-    ${thumbsHTML}
-    ${tags?`<div class="node-meta">${tags}</div>`:''}
-    ${node.note&&can('nodeNotes')?`<div class="node-note">${escHtml(node.note.slice(0,200))}${(node.note||'').length>200?'…':''}</div>`:''}
-    <div class="node-actions">
-      <button class="node-btn btn-child" onclick="handleAddNode({parentId:'${node.id}',treeId:'${tree.id}'},event)"><i class="ti ti-plus"></i> Add child</button>
-      <button class="node-btn btn-edit-node" onclick="openNodeModal({editId:'${node.id}',treeId:'${tree.id}'},event)"><i class="ti ti-pencil"></i> Edit</button>
-      <button class="node-btn btn-del-node" onclick="confirmDeleteNode('${node.id}','${tree.id}',event)"><i class="ti ti-trash"></i></button>
-      ${hasDetail?`<button class="node-btn btn-detail" onclick="selectNode('${node.id}','${tree.id}',event)"><i class="ti ti-info-circle"></i> Info</button>`:''}
-    </div>`;
-  card.onclick=(e)=>{if(e.target===card)selectNode(node.id,tree.id,e);};
+  const card=buildNodeCard(node,isRoot,tree);
   wrap.appendChild(card);
 
-  if(hasChildren&&!collapsed){
-    const cw=document.createElement('div'); cw.className='children-wrap';
-    (node.children||[]).forEach(child=>cw.appendChild(buildNodeEl(child,false,tree)));
-    const sib=document.createElement('button'); sib.className='add-sibling-btn';
-    sib.innerHTML='<i class="ti ti-plus"></i> Add sibling';
-    sib.onclick=(e)=>{e.stopPropagation();handleAddNode({siblingOf:node.id,treeId:tree.id},e);};
-    cw.appendChild(sib); wrap.appendChild(cw);
+  if(hasKids&&!isCollapsed){
+    const hline=document.createElement('div');hline.style.cssText='height:1px;background:var(--border2);width:18px;margin-top:25px;flex-shrink:0';
+    const col=document.createElement('div');col.style.cssText='display:flex;flex-direction:column;border-left:1px solid var(--border2)';
+    (node.children||[]).forEach(child=>{
+      const crow=document.createElement('div');crow.style.cssText='display:flex;flex-direction:row;align-items:flex-start';
+      const hl=document.createElement('div');hl.style.cssText='height:1px;background:var(--border2);width:18px;margin-top:25px;flex-shrink:0';
+      crow.appendChild(hl);crow.appendChild(buildNodeTree(child,false,tree));
+      col.appendChild(crow);
+    });
+    const sibBtn=document.createElement('button');sibBtn.className='add-sib-btn';
+    sibBtn.innerHTML='<i class="ti ti-plus"></i> Add sibling';
+    sibBtn.onclick=e=>{e.stopPropagation();handleAddNode({siblingOf:node.id,treeId:tree.id},e);};
+    col.appendChild(sibBtn);
+    wrap.appendChild(hline);wrap.appendChild(col);
   }
   return wrap;
 }
 
-function handleAddNode(opts,e) {
-  if(e) e.stopPropagation();
-  if(state.plan==='free' && totalNodes()>=PLANS.free.nodes){
-    openPaywall('plus',`Free plan is limited to ${PLANS.free.nodes} nodes`); return;
-  }
-  openNodeModal(opts,e);
-}
+function buildNodeCard(node,isRoot,tree){
+  const isSelected=selNode===node.id;
+  const hasKids=(node.children||[]).length>0;
+  const card=document.createElement('div');
+  let cls='node-card'+(isRoot?' root-card':'')+(isSelected?' selected':'');
+  if(can('nodeColors')&&node.color&&node.color!=='none') cls+=` c-${node.color}`;
+  card.className=cls;
 
-// ===== COLLAPSE =====
-function toggleCollapse(id,e) { e.stopPropagation(); state.collapsed[id]=!state.collapsed[id]; save(); renderCanvas(); }
-function expandAll() { state.collapsed={}; save(); renderCanvas(); toast('All nodes expanded'); }
-function collapseAll() {
-  const tree=getActiveTree(); if(!tree) return;
-  function col(nodes){nodes.forEach(n=>{state.collapsed[n.id]=true;col(n.children||[]);});}
-  col(tree.roots||[]); save(); renderCanvas(); toast('All nodes collapsed');
-}
-
-// ===== NODE SEARCH =====
-function handleNodeSearch() {
-  if(!requirePlan('nodeSearch','Node search is a Plus feature')) return;
-  const bar=document.getElementById('node-search-bar');
-  bar.style.display=bar.style.display==='none'?'block':'none';
-  if(bar.style.display==='block') document.getElementById('node-search-input').focus();
-  else { renderCanvas(); }
-}
-function searchNodes(q) {
-  if(!q.trim()){renderCanvas();return;}
-  const tree=getActiveTree(); if(!tree) return;
-  const canvas=document.getElementById('canvas'); canvas.innerHTML='';
-  const nodes=allNodes(tree.roots||[]).filter(n=>n.title.toLowerCase().includes(q.toLowerCase())||(n.desc||'').toLowerCase().includes(q.toLowerCase()));
-  if(!nodes.length){canvas.innerHTML=`<div style="padding:40px;text-align:center;color:var(--text3);font-size:14px">No matching nodes found.</div>`;return;}
-  nodes.forEach(node=>{
-    const card=document.createElement('div'); card.className='node-card'; card.style.marginBottom='8px';
-    card.innerHTML=`<div class="node-title">${escHtml(node.title)}</div>${node.desc?`<div class="node-desc">${escHtml(node.desc.slice(0,200))}</div>`:''}`;
-    card.onclick=()=>{document.getElementById('node-search-input').value='';searchNodes('');selectNode(node.id,tree.id,null);};
-    canvas.appendChild(card);
-  });
-}
-
-// ===== DETAIL PANEL =====
-function toggleDetailPanel() {
-  state.detailOpen=!state.detailOpen;
-  document.getElementById('detail-panel').classList.toggle('hidden',!state.detailOpen);
-  document.getElementById('btn-detail').classList.toggle('active',state.detailOpen);
-  save();
-}
-function selectNode(nodeId,treeId,e) {
-  if(e) e.stopPropagation();
-  state.selectedNode=nodeId;
-  if(!state.detailOpen){state.detailOpen=true;document.getElementById('detail-panel').classList.remove('hidden');document.getElementById('btn-detail').classList.add('active');}
-  save(); renderCanvas(); updateDetailPanel();
-}
-function updateDetailPanel() {
-  const inner=document.getElementById('detail-inner');
-  const tree=getActiveTree();
-  if(!tree||!state.selectedNode){
-    inner.innerHTML=`<div class="empty-state" style="min-height:300px"><div style="font-size:40px;color:var(--text3)"><i class="ti ti-info-circle"></i></div><p>Click a node's Info button to see details here.</p></div>`;
-    return;
-  }
-  const node=findNode(tree.roots||[],state.selectedNode); if(!node) return;
-  const path=getNodePath(tree.roots||[],state.selectedNode);
-  const pathStr=path?path.map(n=>n.title).join(' › '):'';
   const imgs=(node.media||[]).filter(m=>m.type==='image');
   const vids=(node.media||[]).filter(m=>m.type==='video');
-  const links=(node.media||[]).filter(m=>m.type==='link');
-
-  let html=`
-    <div class="detail-close">
-      <span class="detail-path" title="${escHtml(pathStr)}">${escHtml(pathStr.length>50?pathStr.slice(0,50)+'…':pathStr)}</span>
-      <button class="icon-btn" onclick="closeDetail()"><i class="ti ti-x"></i></button>
+  const lnks=(node.media||[]).filter(m=>m.type==='link');
+  let thumbs='';
+  if(imgs.length&&can('media')) thumbs=`<div class="media-thumbs">${imgs.slice(0,3).map(m=>`<div class="m-thumb"><img src="${esc(m.url)}" alt="" onerror="this.parentNode.innerHTML='🖼️'"></div>`).join('')}</div>`;
+  const tags=[
+    imgs.length&&can('media')?`<span class="ntag t-img">🖼️ ${imgs.length}</span>`:'',
+    vids.length&&can('media')?`<span class="ntag t-vid">🎬 ${vids.length}</span>`:'',
+    lnks.length?`<span class="ntag t-lnk">🔗 ${lnks.length}</span>`:''
+  ].filter(Boolean).join('');
+  const hasDetail=node.desc||(node.media||[]).length;
+  card.innerHTML=`
+    <div class="node-header">
+      <div style="flex:1;min-width:0">
+        <div class="node-title">${esc(node.title)}</div>
+        ${node.desc?`<div class="node-desc">${esc(node.desc.slice(0,100))}${node.desc.length>100?'…':''}</div>`:''}
+      </div>
+      ${hasKids?`<button class="xbtn" onclick="toggleCollapse('${node.id}',event)"><i class="ti ti-chevron-${collapsed[node.id]?'right':'down'}"></i></button>`:''}
     </div>
-    <h2 class="detail-title">${escHtml(node.title)}</h2>
-    ${node.desc?`<p class="detail-desc">${escHtml(node.desc)}</p>`:''}
-    ${node.note&&can('nodeNotes')?`<div class="detail-section"><div class="detail-section-title"><i class="ti ti-notebook"></i> Notes</div><div class="node-note" style="margin:0">${escHtml(node.note)}</div></div>`:''}
-    <div style="display:flex;gap:6px;margin-bottom:20px">
-      <button class="node-btn btn-edit-node" onclick="openNodeModal({editId:'${node.id}',treeId:'${tree.id}'},null)"><i class="ti ti-pencil"></i> Edit</button>
-      <button class="node-btn btn-child" onclick="handleAddNode({parentId:'${node.id}',treeId:'${tree.id}'},null)"><i class="ti ti-plus"></i> Add child</button>
+    ${thumbs}
+    ${tags?`<div class="node-meta">${tags}</div>`:''}
+    ${node.note&&can('nodeNotes')?`<div class="node-note-box" style="font-size:10px;margin:4px 0">${esc(node.note.slice(0,80))}${(node.note||'').length>80?'…':''}</div>`:''}
+    <div class="node-actions">
+      <button class="nb nb-add" onclick="handleAddNode({parentId:'${node.id}',treeId:'${tree.id}'},event)"><i class="ti ti-plus"></i></button>
+      <button class="nb nb-edit" onclick="openNodeModal({editId:'${node.id}',treeId:'${tree.id}'},event)"><i class="ti ti-pencil"></i></button>
+      <button class="nb nb-del" onclick="confirmDelNode('${node.id}','${tree.id}',event)"><i class="ti ti-trash"></i></button>
+      ${hasDetail?`<button class="nb nb-info" onclick="selectNode('${node.id}','${tree.id}',event)"><i class="ti ti-info-circle"></i></button>`:''}
     </div>`;
+  card.onclick=e=>{if(e.target===card)selectNode(node.id,tree.id,e);};
+  return card;
+}
 
+function toggleCollapse(id,e){ e.stopPropagation();collapsed[id]=!collapsed[id];renderCanvas(); }
+function expandAll(){ collapsed={};renderCanvas();toast('Expanded'); }
+function collapseAll(){ const t=getTree();if(!t)return;function c(ns){ns.forEach(n=>{collapsed[n.id]=true;c(n.children||[]);});}c(t.roots||[]);renderCanvas();toast('Collapsed'); }
+
+// ── STATS ─────────────────────────────────────────────────────
+function renderStats(){
+  const tree=getTree();if(!tree)return;
+  const ns=allNodes(tree.roots||[]);
+  const wm=ns.filter(n=>(n.media||[]).length).length;
+  const d=maxDepth(tree.roots||[]);
+  document.getElementById('stats-bar').innerHTML=`
+    <span class="si"><i class="ti ti-git-branch"></i><span class="sv">${ns.length}</span> nodes</span>
+    <span class="si"><i class="ti ti-photo"></i><span class="sv">${wm}</span> with media</span>
+    <span class="si"><i class="ti ti-layers-intersect"></i>depth <span class="sv">${d}</span></span>
+    <span class="si"><i class="ti ti-trees"></i><span class="sv">${(tree.roots||[]).length}</span> roots</span>`;
+}
+
+// ── DETAIL PANEL ──────────────────────────────────────────────
+function toggleDP(){
+  dpOpen=!dpOpen;
+  const panel=document.getElementById('detail-panel');
+  const mobile=window.innerWidth<768;
+  if(mobile){panel.classList.toggle('m-open',dpOpen);panel.classList.toggle('hidden',!dpOpen);}
+  else panel.classList.toggle('hidden',!dpOpen);
+  document.getElementById('btn-dp').classList.toggle('active',dpOpen);
+}
+function selectNode(nid,tid,e){
+  if(e)e.stopPropagation();
+  selNode=nid;
+  if(!dpOpen){dpOpen=true;const p=document.getElementById('detail-panel');p.classList.remove('hidden');if(window.innerWidth<768)p.classList.add('m-open');document.getElementById('btn-dp').classList.add('active');}
+  renderCanvas();updateDetailPanel();
+}
+function updateDetailPanel(){
+  const inner=document.getElementById('dp-inner');
+  const tree=getTree();
+  if(!tree||!selNode){inner.innerHTML=`<div class="empty-state" style="min-height:260px"><div style="font-size:36px;color:var(--text3)"><i class="ti ti-info-circle"></i></div><p style="font-size:13px">Select a node to view details.</p></div>`;return;}
+  const node=findNode(tree.roots||[],selNode);if(!node)return;
+  const path=getPath(tree.roots||[],selNode);
+  const ps=path?path.map(n=>n.title).join(' › '):'';
+  const imgs=(node.media||[]).filter(m=>m.type==='image');
+  const vids=(node.media||[]).filter(m=>m.type==='video');
+  const lnks=(node.media||[]).filter(m=>m.type==='link');
+  let h=`<div class="dp-close-row">
+    <span class="dp-path">${esc(ps.length>50?ps.slice(0,50)+'…':ps)}</span>
+    <button class="icon-btn" onclick="closeDetail()"><i class="ti ti-x"></i></button>
+  </div>
+  <h2 class="dp-title">${esc(node.title)}</h2>
+  ${node.desc?`<p class="dp-desc">${esc(node.desc)}</p>`:''}
+  ${node.note&&can('nodeNotes')?`<div class="dp-sec"><div class="dp-sec-title"><i class="ti ti-notebook"></i> Notes</div><div class="node-note-box">${esc(node.note)}</div></div>`:''}
+  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px">
+    <button class="nb nb-edit" onclick="openNodeModal({editId:'${node.id}',treeId:'${tree.id}'},null)"><i class="ti ti-pencil"></i> Edit</button>
+    <button class="nb nb-add" onclick="handleAddNode({parentId:'${node.id}',treeId:'${tree.id}'},null)"><i class="ti ti-plus"></i> Add child</button>
+  </div>`;
   if(imgs.length&&can('media')){
-    html+=`<div class="detail-section"><div class="detail-section-title"><i class="ti ti-photo"></i> Images (${imgs.length})</div>`;
-    imgs.forEach(m=>{html+=`<div class="detail-media-item"><img class="detail-media-img" src="${escHtml(m.url)}" alt="${escHtml(m.name||'')}" onerror="this.style.display='none'">${m.name?`<div class="detail-media-caption">${escHtml(m.name)}</div>`:''}</div>`;});
-    html+='</div>';
+    h+=`<div class="dp-sec"><div class="dp-sec-title"><i class="ti ti-photo"></i> Images</div>`;
+    imgs.forEach(m=>{h+=`<div class="dp-media-item"><img class="dp-img" src="${esc(m.url)}" alt="" onerror="this.style.display='none'">${m.name?`<div class="dp-caption">${esc(m.name)}</div>`:''}</div>`;});
+    h+='</div>';
   }
   if(vids.length&&can('media')){
-    html+=`<div class="detail-section"><div class="detail-section-title"><i class="ti ti-video"></i> Videos (${vids.length})</div>`;
+    h+=`<div class="dp-sec"><div class="dp-sec-title"><i class="ti ti-video"></i> Videos</div>`;
     vids.forEach(m=>{
       let eu=m.url;
       const yt=m.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s?]+)/);
       const vi=m.url.match(/vimeo\.com\/(\d+)/);
-      if(yt) eu=`https://www.youtube.com/embed/${yt[1]}`;
-      else if(vi) eu=`https://player.vimeo.com/video/${vi[1]}`;
-      html+=`<div class="detail-media-item"><div class="detail-video-wrap"><iframe src="${escHtml(eu)}" allowfullscreen loading="lazy"></iframe></div>${m.name?`<div class="detail-media-caption">${escHtml(m.name)}</div>`:''}</div>`;
+      if(yt)eu=`https://www.youtube.com/embed/${yt[1]}`;
+      else if(vi)eu=`https://player.vimeo.com/video/${vi[1]}`;
+      h+=`<div class="dp-media-item"><div class="dp-vid"><iframe src="${esc(eu)}" allowfullscreen loading="lazy"></iframe></div>${m.name?`<div class="dp-caption">${esc(m.name)}</div>`:''}</div>`;
     });
-    html+='</div>';
+    h+='</div>';
   }
-  if(links.length){
-    html+=`<div class="detail-section"><div class="detail-section-title"><i class="ti ti-link"></i> Links (${links.length})</div>`;
-    links.forEach(m=>{html+=`<a class="detail-link" href="${escHtml(m.url)}" target="_blank" rel="noopener"><i class="ti ti-external-link" style="flex-shrink:0;font-size:15px"></i><div style="flex:1;min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--text)">${escHtml(m.name||m.url)}</div><div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(m.url)}</div></div></a>`;});
-    html+='</div>';
+  if(lnks.length){
+    h+=`<div class="dp-sec"><div class="dp-sec-title"><i class="ti ti-link"></i> Links</div>`;
+    lnks.forEach(m=>{h+=`<a class="dp-link" href="${esc(m.url)}" target="_blank" rel="noopener"><i class="ti ti-external-link" style="flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${esc(m.name||m.url)}</div><div style="font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.url)}</div></div></a>`;});
+    h+='</div>';
   }
-  if(!can('media')&&((node.media||[]).length)){
-    html+=`<div class="limit-banner" style="margin:0"><div class="lb-icon"><i class="ti ti-photo" style="font-size:18px;color:var(--plus)"></i></div><div class="lb-text"><div class="lb-title">Media requires Plus</div><div class="lb-desc">Upgrade to view and add images & videos.</div></div><button class="lb-btn btn-teal" onclick="openPaywall('plus','Media is a Plus feature')">Upgrade</button></div>`;
+  if(!can('media')&&(node.media||[]).length){
+    h+=`<div class="lim-banner" style="margin:0"><div class="lb-ic"><i class="ti ti-photo" style="color:var(--plus)"></i></div><div class="lb-txt"><div class="lb-t">Media requires Plus</div><div class="lb-d">Upgrade to view images &amp; videos.</div></div><button class="lb-btn btn-teal" style="font-size:11px" onclick="openPW('plus')">Upgrade</button></div>`;
   }
-  inner.innerHTML=html;
+  inner.innerHTML=h;
 }
-function closeDetail(){state.selectedNode=null;state.detailOpen=false;document.getElementById('detail-panel').classList.add('hidden');document.getElementById('btn-detail').classList.remove('active');save();renderCanvas();updateDetailPanel();}
+function closeDetail(){ selNode=null;dpOpen=false;const p=document.getElementById('detail-panel');p.classList.add('hidden');p.classList.remove('m-open');document.getElementById('btn-dp').classList.remove('active');renderCanvas();updateDetailPanel(); }
 
-// ===== EXPORT =====
-function handleExport() {
-  if(!requirePlan('export','Export is a Plus feature')) return;
-  exportMenuOpen=!exportMenuOpen;
-  document.getElementById('export-menu').style.display=exportMenuOpen?'block':'none';
+// ── ADD/NEW GUARDS ────────────────────────────────────────────
+function handleNewTree(){
+  if(userPlan==='free'&&trees.length>=PLANS.free.trees){openPW('plus',`Free plan limited to ${PLANS.free.trees} trees`);return;}
+  openNewTreeModal();
 }
-document.addEventListener('click',e=>{
-  if(!document.getElementById('btn-export').contains(e.target)){
-    document.getElementById('export-menu').style.display='none'; exportMenuOpen=false;
-  }
-});
-function exportJSON() {
-  const tree=getActiveTree(); if(!tree) return;
-  const blob=new Blob([JSON.stringify(tree,null,2)],{type:'application/json'});
-  downloadBlob(blob,tree.name.replace(/\s+/g,'_')+'.json');
-  document.getElementById('export-menu').style.display='none';
+function handleAddNode(opts,e){
+  if(e)e.stopPropagation();
+  if(userPlan==='free'&&totalNodes()>=PLANS.free.nodes){openPW('plus',`Free plan limited to ${PLANS.free.nodes} nodes`);return;}
+  openNodeModal(opts,e);
 }
-function exportMarkdown() {
-  const tree=getActiveTree(); if(!tree) return;
-  function nodeToMd(node,depth){
-    const indent='  '.repeat(depth);
-    let md=`${indent}${'#'.repeat(Math.min(depth+1,6))} ${node.title}\n`;
-    if(node.desc) md+=`${node.desc}\n`;
-    (node.children||[]).forEach(c=>md+=nodeToMd(c,depth+1));
-    return md+'\n';
-  }
-  const md=`# ${tree.name}\n\n${(tree.roots||[]).map(n=>nodeToMd(n,1)).join('')}`;
-  const blob=new Blob([md],{type:'text/markdown'});
-  downloadBlob(blob,tree.name.replace(/\s+/g,'_')+'.md');
-  document.getElementById('export-menu').style.display='none';
+
+// ── NODE SEARCH ───────────────────────────────────────────────
+function handleNodeSearch(){
+  if(!can('nodeSearch')){openPW('plus','Node search is a Plus feature');return;}
+  const bar=document.getElementById('ns-bar');bar.style.display=bar.style.display==='none'?'block':'none';
+  if(bar.style.display==='block')document.getElementById('ns-input').focus();else renderCanvas();
 }
-function exportCSV() {
-  const tree=getActiveTree(); if(!tree) return;
+function searchNodes(q){
+  if(!q.trim()){renderCanvas();return;}
+  const tree=getTree();if(!tree)return;
+  const canvas=document.getElementById('canvas');canvas.innerHTML='';
+  const nodes=allNodes(tree.roots||[]).filter(n=>n.title.toLowerCase().includes(q.toLowerCase())||(n.desc||'').toLowerCase().includes(q.toLowerCase()));
+  if(!nodes.length){canvas.innerHTML=`<div style="padding:36px;text-align:center;color:var(--text3);font-size:13px">No matching nodes.</div>`;return;}
+  nodes.forEach(node=>{
+    const c=document.createElement('div');c.className='node-card';c.style.marginBottom='7px';
+    c.innerHTML=`<div class="node-title">${esc(node.title)}</div>${node.desc?`<div class="node-desc">${esc(node.desc.slice(0,180))}</div>`:''}`;
+    c.onclick=()=>{document.getElementById('ns-input').value='';searchNodes('');selectNode(node.id,getTree().id,null);};
+    canvas.appendChild(c);
+  });
+}
+
+// ── EXPORT ────────────────────────────────────────────────────
+function handleExport(){
+  if(!can('export')){openPW('plus','Export is a Plus feature');return;}
+  expOpen=!expOpen;document.getElementById('exp-menu').classList.toggle('open',expOpen);
+}
+document.addEventListener('click',e=>{if(!document.getElementById('btn-exp').contains(e.target)){document.getElementById('exp-menu').classList.remove('open');expOpen=false;}});
+function dl(blob,fn){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;a.click();URL.revokeObjectURL(a.href);toast('✓ Exported: '+fn);}
+function doExportJSON(){ const t=getTree();if(!t)return;dl(new Blob([JSON.stringify(t,null,2)],{type:'application/json'}),t.name.replace(/\s+/g,'_')+'.json');document.getElementById('exp-menu').classList.remove('open'); }
+function doExportMD(){
+  const t=getTree();if(!t)return;
+  function nm(n,d){let m=`${'#'.repeat(Math.min(d+1,6))} ${n.title}\n${n.desc?n.desc+'\n':''}\n`;(n.children||[]).forEach(c=>m+=nm(c,d+1));return m;}
+  dl(new Blob([`# ${t.name}\n\n${(t.roots||[]).map(n=>nm(n,1)).join('')}`],{type:'text/markdown'}),t.name.replace(/\s+/g,'_')+'.md');
+  document.getElementById('exp-menu').classList.remove('open');
+}
+function doExportCSV(){
+  const t=getTree();if(!t)return;
   const rows=[['Title','Description','Depth','Parent']];
-  function walk(nodes,depth,parent){
-    nodes.forEach(n=>{rows.push([`"${(n.title||'').replace(/"/g,'""')}"`,`"${(n.desc||'').replace(/"/g,'""')}"`,depth,`"${parent}"`]);walk(n.children||[],depth+1,n.title);});
-  }
-  walk(tree.roots||[],0,'');
-  const blob=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});
-  downloadBlob(blob,tree.name.replace(/\s+/g,'_')+'.csv');
-  document.getElementById('export-menu').style.display='none';
-}
-function printTree() {
-  document.getElementById('export-menu').style.display='none';
-  window.print();
-}
-function downloadBlob(blob,filename){
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);
-  toast('✓ Exported: '+filename);
+  function w(ns,d,p){ns.forEach(n=>{rows.push([`"${(n.title||'').replace(/"/g,'""')}"`,`"${(n.desc||'').replace(/"/g,'""')}"`,d,`"${p}"`]);w(n.children||[],d+1,n.title);});}
+  w(t.roots||[],0,'');
+  dl(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}),t.name.replace(/\s+/g,'_')+'.csv');
+  document.getElementById('exp-menu').classList.remove('open');
 }
 
-// ===== NEW TREE MODAL =====
-function openNewTreeModal() {
-  const eOpts=EMOJIS.map((e,i)=>`<div class="emoji-opt${i===0?' selected':''}" onclick="selectPickerItem(this,'nt-emoji-row')" data-val="${e}">${e}</div>`).join('');
-  const cOpts=TREE_COLORS.map((c,i)=>`<div class="color-opt${i===state.trees.length%TREE_COLORS.length?' selected':''}" onclick="selectPickerItem(this,'nt-color-row')" data-val="${c}" style="background:${c}"></div>`).join('');
+// ── NEW TREE MODAL ─────────────────────────────────────────────
+function openNewTreeModal(){
+  const eOpts=EMOJIS.map((e,i)=>`<div class="ep${i===0?' sel':''}" onclick="sp(this,'nt-er')" data-v="${e}">${e}</div>`).join('');
+  const cOpts=TCOLORS.map((c,i)=>`<div class="cp${i===trees.length%TCOLORS.length?' sel':''}" onclick="sp(this,'nt-cr')" data-v="${c}" style="background:${c}"></div>`).join('');
   openModal('New Research Tree',`
-    <div class="field"><label>Tree Name</label><input id="nt-name" placeholder="e.g. History of Video Games" autofocus></div>
-    <div class="field"><label>Icon</label><div class="emoji-row" id="nt-emoji-row">${eOpts}</div></div>
-    <div class="field"><label>Color</label><div class="color-row" id="nt-color-row">${cOpts}</div></div>
-    <div class="field"><label>Description (optional)</label><textarea id="nt-desc" placeholder="What is this research about?"></textarea></div>`,
+    <div class="field"><label>Name</label><input id="nt-name" placeholder="e.g. History of Video Games" autofocus></div>
+    <div class="field"><label>Icon</label><div class="emoji-row" id="nt-er">${eOpts}</div></div>
+    <div class="field"><label>Color</label><div class="color-row" id="nt-cr">${cOpts}</div></div>
+    <div class="field"><label>Description (optional)</label><textarea id="nt-desc"></textarea></div>`,
     `<button class="btn-secondary" onclick="closeModal()">Cancel</button>
-     <button class="btn-primary" onclick="createTree()"><i class="ti ti-plus"></i> Create Tree</button>`);
+     <button class="btn-primary" onclick="createTree()"><i class="ti ti-plus"></i> Create</button>`);
 }
-function selectPickerItem(el,rowId){document.querySelectorAll(`#${rowId} .emoji-opt,#${rowId} .color-opt`).forEach(x=>x.classList.remove('selected'));el.classList.add('selected');}
-function createTree(){
-  const name=document.getElementById('nt-name').value.trim(); if(!name){toast('Please enter a name');return;}
-  const emoji=document.querySelector('#nt-emoji-row .selected')?.dataset.val||'📚';
-  const color=document.querySelector('#nt-color-row .selected')?.dataset.val||TREE_COLORS[0];
+function sp(el,rowId){ document.querySelectorAll(`#${rowId} .ep,#${rowId} .cp`).forEach(x=>x.classList.remove('sel'));el.classList.add('sel'); }
+async function createTree(){
+  const name=document.getElementById('nt-name').value.trim();if(!name){toast('Enter a name');return;}
+  const emoji=document.querySelector('#nt-er .sel')?.dataset.v||'📚';
+  const color=document.querySelector('#nt-cr .sel')?.dataset.v||TCOLORS[0];
   const tree={id:uid(),name,emoji,color,desc:document.getElementById('nt-desc').value.trim(),roots:[],created:Date.now()};
-  state.trees.push(tree); state.activeTree=tree.id;
-  save();closeModal();renderSidebar();renderCanvas();updatePlanUI();toast('✓ Tree created!');
+  trees.push(tree);activeId=tree.id;
+  closeModal();renderSidebar();renderCanvas();updatePlanUI();
+  await saveTree(tree);toast('✓ Tree created!');
 }
 
-// ===== TREE SETTINGS =====
-function openTreeSettingsModal(){
-  const tree=getActiveTree(); if(!tree) return;
-  const eOpts=EMOJIS.map(e=>`<div class="emoji-opt${tree.emoji===e?' selected':''}" onclick="selectPickerItem(this,'ts-emoji-row')" data-val="${e}">${e}</div>`).join('');
-  const cOpts=TREE_COLORS.map(c=>`<div class="color-opt${tree.color===c?' selected':''}" onclick="selectPickerItem(this,'ts-color-row')" data-val="${c}" style="background:${c}"></div>`).join('');
+// ── TREE SETTINGS ──────────────────────────────────────────────
+function openTreeSettings(){
+  const tree=getTree();if(!tree)return;
+  const eOpts=EMOJIS.map(e=>`<div class="ep${tree.emoji===e?' sel':''}" onclick="sp(this,'ts-er')" data-v="${e}">${e}</div>`).join('');
+  const cOpts=TCOLORS.map(c=>`<div class="cp${tree.color===c?' sel':''}" onclick="sp(this,'ts-cr')" data-v="${c}" style="background:${c}"></div>`).join('');
   openModal('Tree Settings',`
-    <div class="field"><label>Name</label><input id="ts-name" value="${escHtml(tree.name)}"></div>
-    <div class="field"><label>Icon</label><div class="emoji-row" id="ts-emoji-row">${eOpts}</div></div>
-    <div class="field"><label>Color</label><div class="color-row" id="ts-color-row">${cOpts}</div></div>
-    <div class="field"><label>Description</label><textarea id="ts-desc">${escHtml(tree.desc||'')}</textarea></div>`,
-    `<button class="btn-danger" onclick="deleteTree('${tree.id}',{stopPropagation:()=>{}});closeModal()">Delete Tree</button>
+    <div class="field"><label>Name</label><input id="ts-name" value="${esc(tree.name)}"></div>
+    <div class="field"><label>Icon</label><div class="emoji-row" id="ts-er">${eOpts}</div></div>
+    <div class="field"><label>Color</label><div class="color-row" id="ts-cr">${cOpts}</div></div>
+    <div class="field"><label>Description</label><textarea id="ts-desc">${esc(tree.desc||'')}</textarea></div>`,
+    `<button class="btn-danger" onclick="confirmDelTree('${tree.id}',{stopPropagation:()=>{}});closeModal()">Delete</button>
      <div style="flex:1"></div>
      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
      <button class="btn-primary" onclick="saveTreeSettings('${tree.id}')">Save</button>`);
 }
-function saveTreeSettings(id){
-  const tree=state.trees.find(t=>t.id===id); if(!tree) return;
-  const name=document.getElementById('ts-name').value.trim(); if(!name){toast('Name required');return;}
-  tree.name=name; tree.emoji=document.querySelector('#ts-emoji-row .selected')?.dataset.val||tree.emoji;
-  tree.color=document.querySelector('#ts-color-row .selected')?.dataset.val||tree.color; tree.desc=document.getElementById('ts-desc').value.trim();
-  save();closeModal();renderSidebar();renderCanvas();toast('✓ Saved');
+async function saveTreeSettings(id){
+  const tree=trees.find(t=>t.id===id);if(!tree)return;
+  const name=document.getElementById('ts-name').value.trim();if(!name){toast('Name required');return;}
+  tree.name=name;tree.emoji=document.querySelector('#ts-er .sel')?.dataset.v||tree.emoji;
+  tree.color=document.querySelector('#ts-cr .sel')?.dataset.v||tree.color;tree.desc=document.getElementById('ts-desc').value.trim();
+  closeModal();renderSidebar();renderCanvas();await saveTree(tree);toast('✓ Saved');
 }
 
-// ===== NODE MODAL =====
+// ── NODE MODAL ─────────────────────────────────────────────────
 function openNodeModal(opts,e){
-  if(e) e.stopPropagation();
-  const tree=state.trees.find(t=>t.id===opts.treeId);
+  if(e)e.stopPropagation();
+  const tree=trees.find(t=>t.id===opts.treeId);
   const node=opts.editId?findNode(tree.roots||[],opts.editId):null;
-  _mediaItems=node?.media?JSON.parse(JSON.stringify(node.media)):[];
+  _media=node?.media?JSON.parse(JSON.stringify(node.media)):[];
+  _nodeColor=node?.color||'none';
 
-  const mediaSection = can('media') ? `
-    <div class="field">
-      <label>Media & Links</label>
+  const mediaSec=can('media')?`
+    <div class="field"><label>Media &amp; Links</label>
       <div class="media-list" id="media-list"></div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:8px">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Add media</div>
-        <div style="display:grid;grid-template-columns:130px 1fr;gap:6px;margin-bottom:6px">
-          <select id="m-type" style="background:var(--surface3);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none">
-            <option value="link">🔗 Web Link</option>
-            <option value="image">🖼️ Image URL</option>
-            <option value="video">🎬 Video URL</option>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px;margin-top:6px">
+        <div style="display:grid;grid-template-columns:110px 1fr;gap:5px;margin-bottom:5px">
+          <select id="m-type" style="background:var(--surface3);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;padding:7px;outline:none">
+            <option value="link">🔗 Link</option><option value="image">🖼️ Image</option><option value="video">🎬 Video</option>
           </select>
           <input id="m-url" placeholder="https://...">
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;gap:6px">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:5px">
           <input id="m-name" placeholder="Label (optional)">
-          <button class="btn-primary" style="padding:8px 14px;font-size:13px" onclick="addMediaItem()"><i class="ti ti-plus"></i> Add</button>
+          <button class="btn-primary" style="padding:7px 11px;font-size:12px" onclick="addMedia()"><i class="ti ti-plus"></i></button>
         </div>
       </div>
-    </div>` : `<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:10px;padding:14px;margin-bottom:18px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openPaywall('plus','Media attachments require Plus')">
-      <i class="ti ti-photo-plus" style="font-size:20px;color:var(--text3)"></i>
-      <div><div style="font-size:13px;font-weight:500;margin-bottom:2px">Add images, videos & links</div><div style="font-size:12px;color:var(--text3)">Available on Plus & Pro plans</div></div>
-      <span class="feat-locked locked-plus" style="margin-left:auto"><i class="ti ti-lock"></i> Plus</span>
+    </div>`:`<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:9px;padding:11px;margin-bottom:13px;display:flex;align-items:center;gap:9px;cursor:pointer" onclick="openPW('plus','Media requires Plus')">
+      <i class="ti ti-photo-plus" style="font-size:18px;color:var(--text3)"></i>
+      <div><div style="font-size:13px;font-weight:500">Images, videos &amp; links</div><div style="font-size:11px;color:var(--text3)">Plus &amp; Pro plans</div></div>
+      <span class="feat-locked fl-plus" style="margin-left:auto"><i class="ti ti-lock"></i> Plus</span>
     </div>`;
 
-  const colorSection = can('nodeColors') ? `
-    <div class="field"><label>Node Color Label</label>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
-        ${NODE_COLORS.map(c=>`<div onclick="selectNodeColor(this,'${c}')" data-color="${c}" style="width:28px;height:28px;border-radius:50%;border:2px solid ${node?.color===c?'var(--text)':'transparent'};background:${c==='none'?'var(--surface3)':c==='teal'?'var(--teal)':c==='coral'?'var(--coral)':c==='gold'?'var(--gold)':c==='purple'?'var(--accent)':'#5bc8f5'};cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center" title="${c}">${c==='none'?'<i class="ti ti-ban" style="font-size:12px;color:var(--text3)"></i>':''}</div>`).join('')}
+  const colorSec=can('nodeColors')?`
+    <div class="field"><label>Color Label</label>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:3px">
+        ${NCOLORS.map(c=>`<div onclick="setNC(this,'${c}')" data-nc="${c}" style="width:24px;height:24px;border-radius:50%;border:2px solid ${_nodeColor===c?'var(--text)':'transparent'};background:${c==='none'?'var(--surface3)':c==='teal'?'var(--teal)':c==='coral'?'var(--coral)':c==='gold'?'var(--gold)':c==='purple'?'var(--accent)':'#5bc8f5'};cursor:pointer;display:flex;align-items:center;justify-content:center">${c==='none'?`<i class="ti ti-ban" style="font-size:10px;color:var(--text3)"></i>`:''}</div>`).join('')}
       </div>
-    </div>` : `<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;cursor:pointer" onclick="openPaywall('pro','Node color labels require Pro')">
-      <span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.6px">Node Color</span>
-      <span class="feat-locked locked-pro"><i class="ti ti-lock"></i> Pro</span>
-    </div>`;
+    </div>`:`<div style="display:flex;align-items:center;gap:7px;margin-bottom:13px;cursor:pointer" onclick="openPW('pro','Node colors require Pro')"><span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Color Label</span><span class="feat-locked fl-pro"><i class="ti ti-lock"></i> Pro</span></div>`;
 
-  const noteSection = can('nodeNotes') ? `
-    <div class="field"><label>Extended Note (rich context)</label>
-      <textarea id="n-note" placeholder="Add detailed notes, analysis, or raw research...">${escHtml(node?.note||'')}</textarea>
-    </div>` : `<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;cursor:pointer" onclick="openPaywall('pro','Extended notes require Pro')">
-      <span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.6px">Extended Note</span>
-      <span class="feat-locked locked-pro"><i class="ti ti-lock"></i> Pro</span>
-    </div>`;
+  const noteSec=can('nodeNotes')?`<div class="field"><label>Extended Note</label><textarea id="n-note" placeholder="Detailed notes...">${esc(node?.note||'')}</textarea></div>`
+    :`<div style="display:flex;align-items:center;gap:7px;margin-bottom:13px;cursor:pointer" onclick="openPW('pro','Extended notes require Pro')"><span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Extended Note</span><span class="feat-locked fl-pro"><i class="ti ti-lock"></i> Pro</span></div>`;
 
-  const tagsSection = can('nodeTags') ? `
-    <div class="field"><label>Tags (comma separated)</label>
-      <input id="n-tags" value="${escHtml((node?.tags||[]).join(', '))}" placeholder="e.g. important, todo, verified">
-    </div>` : '';
+  const tagSec=can('nodeTags')?`<div class="field"><label>Tags (comma separated)</label><input id="n-tags" value="${esc((node?.tags||[]).join(', '))}" placeholder="e.g. important, todo"></div>`:'' ;
 
   openModal(opts.editId?'Edit Node':'Add Node',`
-    <div class="field"><label>Title *</label><input id="n-title" value="${escHtml(node?.title||'')}" placeholder="Node title" autofocus></div>
-    <div class="field"><label>Description / Notes</label><textarea id="n-desc" placeholder="Add research notes, context, analysis...">${escHtml(node?.desc||'')}</textarea></div>
-    ${colorSection}${tagsSection}${noteSection}${mediaSection}`,
+    <div class="field"><label>Title *</label><input id="n-title" value="${esc(node?.title||'')}" placeholder="Node title" autofocus></div>
+    <div class="field"><label>Description</label><textarea id="n-desc" placeholder="Research notes...">${esc(node?.desc||'')}</textarea></div>
+    ${colorSec}${tagSec}${noteSec}${mediaSec}`,
     `<button class="btn-secondary" onclick="closeModal()">Cancel</button>
      <button class="btn-primary" onclick="saveNode(${JSON.stringify(JSON.stringify(opts))})">
-       ${opts.editId?'<i class="ti ti-check"></i> Save':'<i class="ti ti-plus"></i> Add Node'}
+       ${opts.editId?'<i class="ti ti-check"></i> Save':'<i class="ti ti-plus"></i> Add'}
      </button>`);
   renderMediaList();
 }
-
-let _selectedNodeColor='none';
-function selectNodeColor(el,color){
-  _selectedNodeColor=color;
-  document.querySelectorAll('[data-color]').forEach(x=>x.style.borderColor='transparent');
-  el.style.borderColor='var(--text)';
-}
-
+function setNC(el,c){ _nodeColor=c;document.querySelectorAll('[data-nc]').forEach(x=>x.style.borderColor='transparent');el.style.borderColor='var(--text)'; }
 function renderMediaList(){
-  const list=document.getElementById('media-list'); if(!list) return;
-  if(!_mediaItems.length){list.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0">No media added.</div>';return;}
-  list.innerHTML=_mediaItems.map((m,i)=>`<div class="media-item-row">
-    <div class="mi-icon">${m.type==='image'?'🖼️':m.type==='video'?'🎬':'🔗'}</div>
-    <div class="mi-info"><div class="mi-name">${escHtml(m.name||m.url)}</div><div class="mi-url">${escHtml(m.url)}</div></div>
-    <button class="mi-del" onclick="removeMediaItem(${i})"><i class="ti ti-trash"></i></button>
+  const list=document.getElementById('media-list');if(!list)return;
+  if(!_media.length){list.innerHTML='<div style="font-size:11px;color:var(--text3)">No media yet.</div>';return;}
+  list.innerHTML=_media.map((m,i)=>`<div class="mi-row">
+    <div class="mi-ic">${m.type==='image'?'🖼️':m.type==='video'?'🎬':'🔗'}</div>
+    <div class="mi-info"><div class="mi-name">${esc(m.name||m.url)}</div><div class="mi-url">${esc(m.url)}</div></div>
+    <button class="mi-del" onclick="delMedia(${i})"><i class="ti ti-trash"></i></button>
   </div>`).join('');
 }
-function addMediaItem(){
-  const url=document.getElementById('m-url').value.trim(); if(!url){toast('Enter a URL');return;}
-  const type=document.getElementById('m-type').value;
-  const name=document.getElementById('m-name').value.trim();
-  _mediaItems.push({url,type,name:name||url.split('/').pop().split('?')[0]||url});
-  document.getElementById('m-url').value=''; document.getElementById('m-name').value='';
-  renderMediaList(); toast('Media added');
-}
-function removeMediaItem(i){_mediaItems.splice(i,1);renderMediaList();}
+function addMedia(){ const url=document.getElementById('m-url').value.trim();if(!url){toast('Enter a URL');return;}const type=document.getElementById('m-type').value;const name=document.getElementById('m-name').value.trim();_media.push({url,type,name:name||url.split('/').pop().split('?')[0]||url});document.getElementById('m-url').value='';document.getElementById('m-name').value='';renderMediaList(); }
+function delMedia(i){ _media.splice(i,1);renderMediaList(); }
 
-function saveNode(optsStr){
+async function saveNode(optsStr){
   const opts=JSON.parse(optsStr);
-  const title=document.getElementById('n-title').value.trim(); if(!title){toast('Please enter a title');return;}
+  const title=document.getElementById('n-title').value.trim();if(!title){toast('Title required');return;}
   const desc=document.getElementById('n-desc').value.trim();
   const note=can('nodeNotes')&&document.getElementById('n-note')?document.getElementById('n-note').value.trim():'';
   const tags=can('nodeTags')&&document.getElementById('n-tags')?document.getElementById('n-tags').value.split(',').map(t=>t.trim()).filter(Boolean):[];
-  const media=[..._mediaItems];
-  const color=_selectedNodeColor||'none';
-  const tree=state.trees.find(t=>t.id===opts.treeId);
-
+  const media=[..._media];
+  const tree=trees.find(t=>t.id===opts.treeId);
   if(opts.editId){
     const node=findNode(tree.roots||[],opts.editId);
-    if(node){node.title=title;node.desc=desc;node.media=media;if(can('nodeNotes'))node.note=note;if(can('nodeTags'))node.tags=tags;if(can('nodeColors'))node.color=color;}
-    toast('✓ Node updated');
+    if(node) Object.assign(node,{title,desc,media,note,tags,color:_nodeColor});
+    toast('✓ Updated');
   } else {
-    const newNode={id:uid(),title,desc,media,note,tags,color,children:[],created:Date.now()};
-    if(opts.parentId){
-      const parent=findNode(tree.roots||[],opts.parentId);
-      if(parent){parent.children=parent.children||[];parent.children.push(newNode);state.collapsed[opts.parentId]=false;}
-    } else if(opts.siblingOf){
-      function addSib(nodes){for(let i=0;i<nodes.length;i++){if(nodes[i].id===opts.siblingOf){nodes.push(newNode);return true;}if(addSib(nodes[i].children||[]))return true;}return false;}
+    const newNode={id:uid(),title,desc,media,note,tags,color:_nodeColor,children:[],created:Date.now()};
+    if(opts.parentId){ const p=findNode(tree.roots||[],opts.parentId);if(p){p.children=p.children||[];p.children.push(newNode);collapsed[opts.parentId]=false;} }
+    else if(opts.siblingOf){
+      function addSib(ns){for(let i=0;i<ns.length;i++){if(ns[i].id===opts.siblingOf){ns.push(newNode);return true;}if(addSib(ns[i].children||[]))return true;}return false;}
       addSib(tree.roots);
-    } else {
-      tree.roots=tree.roots||[];tree.roots.push(newNode);
-    }
+    } else { tree.roots=tree.roots||[];tree.roots.push(newNode); }
     toast('✓ Node added');
   }
-  save();closeModal();renderSidebar();renderCanvas();
-  if(state.selectedNode===opts.editId)updateDetailPanel();
+  closeModal();renderSidebar();renderCanvas();
+  if(selNode===opts.editId) updateDetailPanel();
+  await saveTree(tree);
 }
 
-function confirmDeleteNode(nodeId,treeId,e){
+function confirmDelNode(nid,tid,e){
   e.stopPropagation();
-  const tree=state.trees.find(t=>t.id===treeId);
-  const node=findNode(tree.roots||[],nodeId);
+  const tree=trees.find(t=>t.id===tid);const node=findNode(tree.roots||[],nid);
   const cc=countNodes(node.children||[]);
-  if(!confirm(cc>0?`Delete "${node.title}" and its ${cc} child${cc>1?'ren':''}?`:`Delete "${node.title}"?`)) return;
-  deleteNodeFrom(tree.roots||[],nodeId);
-  if(state.selectedNode===nodeId){state.selectedNode=null;updateDetailPanel();}
-  save();renderSidebar();renderCanvas();toast('Node deleted');
+  if(!confirm(cc>0?`Delete "${node.title}" and its ${cc} child${cc>1?'ren':''}?`:`Delete "${node.title}"?`))return;
+  delNodeFrom(tree.roots||[],nid);
+  if(selNode===nid){selNode=null;updateDetailPanel();}
+  renderSidebar();renderCanvas();
+  saveTree(tree).then(()=>toast('Deleted'));
 }
 
-// ===== MODAL HELPERS =====
+// ── PAYWALL ────────────────────────────────────────────────────
+function openPW(plan='plus',reason=''){
+  document.getElementById('pw-title').textContent=reason||'Unlock more with ResearchTree';
+  document.getElementById('pw-sub').textContent=reason?'Upgrade to unlock this feature.':'Choose the plan that fits your workflow.';
+  document.getElementById('pw-overlay').classList.add('open');
+}
+function closePW(){ document.getElementById('pw-overlay').classList.remove('open'); }
+async function activatePlan(p){ userPlan=p;await savePlan(p);closePW();updatePlanUI();renderSidebar();renderCanvas();toast(p==='plus'?'✓ Welcome to Plus!':'✓ Welcome to Pro!'); }
+
+// ── LIMIT BANNER ───────────────────────────────────────────────
+function makeLimBanner(title,desc,plan,btnLabel){
+  const div=document.createElement('div');div.className='lim-banner';
+  div.innerHTML=`<div class="lb-ic"><i class="ti ti-lock" style="color:var(--accent)"></i></div>
+    <div class="lb-txt"><div class="lb-t">${esc(title)}</div><div class="lb-d">${esc(desc)}</div></div>
+    <button class="lb-btn ${plan==='pro'?'btn-gold':'btn-teal'}" style="font-size:12px" onclick="openPW('${plan}')">${esc(btnLabel)}</button>`;
+  return div;
+}
+
+// ── MODAL ──────────────────────────────────────────────────────
 function openModal(title,body,footer){
   document.getElementById('modal-title').textContent=title;
   document.getElementById('modal-body').innerHTML=body;
   document.getElementById('modal-footer').innerHTML=footer;
   document.getElementById('modal-overlay').classList.add('open');
-  _selectedNodeColor='none';
+  _media=[];
   setTimeout(()=>{const f=document.querySelector('#modal-body input[autofocus]');if(f)f.focus();},50);
 }
-function closeModal(){document.getElementById('modal-overlay').classList.remove('open');_mediaItems=[];}
-function handleOverlayClick(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closePaywall();}});
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open');_media=[]; }
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closePW();}});
 
-// ===== INIT =====
-load();
-if(!state.trees.length){
-  const id1=uid(),id2=uid(),id3=uid(),id4=uid(),id5=uid(),id6=uid(),id7=uid(),id8=uid();
-  const demo={id:uid(),name:'History of Video Games',emoji:'🎮',color:'#7c6af0',desc:'A comprehensive research tree.',created:Date.now(),roots:[
-    {id:id1,title:'The First Video Games',desc:'The earliest electronic games that started the industry.',media:[{type:'link',url:'https://en.wikipedia.org/wiki/Video_game_history',name:'Video Game History – Wikipedia'}],tags:[],note:'',color:'none',children:[
-      {id:id2,title:'Tennis for Two (1958)',desc:'Created by William Higinbotham at Brookhaven National Laboratory.',media:[{type:'link',url:'https://en.wikipedia.org/wiki/Tennis_for_Two',name:'Wikipedia'},{type:'image',url:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Tennis_for_two_%28Brookhaven%29.jpg/640px-Tennis_for_two_%28Brookhaven%29.jpg',name:'Original setup'}],tags:[],note:'',color:'none',children:[]},
-      {id:id3,title:'Spacewar! (1962)',desc:'Developed at MIT, one of the most influential early games.',media:[],tags:[],note:'',color:'none',children:[]}
-    ]},
-    {id:id4,title:'The Console Era',desc:'The rise of dedicated home video game consoles.',media:[],tags:[],note:'',color:'none',children:[
-      {id:id5,title:'Atari & Pong (1972)',desc:"Atari's Pong was the first commercially successful arcade game.",media:[],tags:[],note:'',color:'none',children:[]},
-      {id:id6,title:'Nintendo NES (1983)',desc:'Nintendo revitalized the industry after the 1983 crash.',media:[],tags:[],note:'',color:'none',children:[]}
-    ]},
-    {id:id7,title:'Modern Gaming',desc:'PC, mobile, cloud, VR, and competitive esports.',media:[],tags:[],note:'',color:'none',children:[
-      {id:id8,title:'Online & Mobile',desc:'The internet and smartphones opened gaming to billions.',media:[],tags:[],note:'',color:'none',children:[]}
-    ]}
-  ]};
-  state.trees.push(demo); state.activeTree=demo.id; save();
+// ── MOBILE NAV ─────────────────────────────────────────────────
+function mobileNav(tab){
+  ['trees','canvas','info','acct'].forEach(t=>document.getElementById('bnav-'+t)?.classList.remove('active'));
+  document.getElementById('bnav-'+tab)?.classList.add('active');
+  if(tab==='trees') openMobileSB();
+  else if(tab==='info') toggleDP();
+  else if(tab==='acct') openAcctModal();
+  else closeMobileSB();
 }
-renderSidebar(); renderCanvas(); updateDetailPanel(); updatePlanUI();
+function openAcctModal(){
+  if(!currentUser)return;
+  const meta=currentUser.user_metadata||{};
+  openModal('Account',`
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;color:#fff;margin:0 auto 10px">${(meta.full_name||meta.name||currentUser.email||'?').charAt(0).toUpperCase()}</div>
+      <div style="font-size:15px;font-weight:600">${esc(meta.full_name||meta.name||'User')}</div>
+      <div style="font-size:12px;color:var(--text2)">${esc(currentUser.email||'')}</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:13px;margin-bottom:14px">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Current Plan</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span class="plan-badge plan-${userPlan}">${userPlan.charAt(0).toUpperCase()+userPlan.slice(1)}</span>
+        ${userPlan!=='pro'?`<button class="btn-teal" style="font-size:12px;padding:6px 13px" onclick="closeModal();openPW('plus')">Upgrade</button>`:'<span style="font-size:12px;color:var(--gold)">✓ Pro active</span>'}
+      </div>
+    </div>`,
+    `<button class="btn-secondary" onclick="closeModal()">Close</button>
+     <button class="btn-danger" onclick="closeModal();doSignOut()"><i class="ti ti-logout"></i> Sign Out</button>`);
+}
+
+// Initial breadcrumb
+buildBC([{label:'Research Trees'}]);
 </script>
 </body>
 </html>
