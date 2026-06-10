@@ -6,7 +6,6 @@
 <title>ResearchTree</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
 /* ─── CSS Variables ─── */
 :root {
@@ -288,7 +287,7 @@ h1,h2,h3,h4 { font-family: 'Playfair Display', serif; }
   display: flex; align-items: center; justify-content: center; color: var(--text3);
 }
 .node-btn:hover { background: var(--bg4); color: var(--text); }
-.node-desc { font-size: 12px; color: var(--text2); margin-top: 4px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* .node-desc moved to additions below */
 .node-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .node-tag { font-size: 10px; padding: 2px 6px; background: var(--bg4); border-radius: 20px; color: var(--text3); }
 .node-media-thumb { margin-top: 8px; }
@@ -618,6 +617,144 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 }
 .limit-banner i { font-size: 16px; }
 .limit-banner a { color: var(--yellow); font-weight: 600; }
+
+/* ─── Node Description on Card ─── */
+.node-desc {
+  font-size: 11.5px; color: var(--text2); margin-top: 5px;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical; line-height: 1.45;
+}
+.node-has-notes {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; color: var(--text3); margin-top: 5px;
+  padding: 2px 6px; background: var(--bg4); border-radius: 20px;
+}
+.node-has-notes i { font-size: 11px; }
+
+/* ─── Extended Notes Dialog ─── */
+.ext-notes-modal { max-width: 660px; }
+.ext-notes-modal .modal-body { padding: 0; }
+.ext-notes-toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+.ext-notes-toolbar span { font-size: 13px; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ext-notes-body {
+  padding: 20px; display: flex; flex-direction: column; gap: 12px;
+}
+#ext-notes-textarea {
+  width: 100%; min-height: 340px; max-height: 60vh;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px;
+  color: var(--text); outline: none; font-size: 14px;
+  line-height: 1.7; resize: vertical; font-family: 'DM Sans', sans-serif;
+}
+#ext-notes-textarea:focus { border-color: var(--accent); }
+.ext-notes-footer {
+  padding: 12px 16px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--text3);
+}
+.word-count { font-size: 12px; color: var(--text3); }
+
+/* ─── Account Modal Tabs ─── */
+.acct-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 0; }
+.acct-tab {
+  flex: 1; padding: 12px; text-align: center; font-size: 13px; font-weight: 500;
+  color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent;
+  transition: var(--transition);
+}
+.acct-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.acct-pane { display: none; padding: 20px; flex-direction: column; gap: 16px; }
+.acct-pane.active { display: flex; }
+
+/* ─── Profile Info Rows ─── */
+.profile-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; background: var(--bg3); border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.profile-row-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.profile-row-icon i { font-size: 16px; color: var(--accent); }
+.profile-row-info { flex: 1; min-width: 0; }
+.profile-row-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
+.profile-row-value { font-size: 14px; font-weight: 500; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-row-action { flex-shrink: 0; }
+
+/* ─── Usage Bar ─── */
+.usage-bar-wrap { display: flex; flex-direction: column; gap: 6px; }
+.usage-bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); }
+.usage-bar-track { height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
+.usage-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; background: var(--accent); }
+.usage-bar-fill.warn { background: var(--yellow); }
+.usage-bar-fill.full { background: var(--red); }
+
+/* ─── Plan Management ─── */
+.current-plan-card {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; display: flex; align-items: center; gap: 14px;
+}
+.current-plan-icon { font-size: 28px; }
+.current-plan-info { flex: 1; }
+.current-plan-name { font-size: 16px; font-weight: 700; }
+.current-plan-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.plan-action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* ─── Danger Zone ─── */
+.danger-zone { background: rgba(248,113,113,0.05); border: 1px solid rgba(248,113,113,0.2); border-radius: var(--radius-sm); padding: 14px; }
+.danger-zone-title { font-size: 12px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+.danger-zone p { font-size: 12px; color: var(--text3); margin-bottom: 10px; }
+
+/* ─── Keyboard Shortcut Hint ─── */
+.kbd {
+  display: inline-block; background: var(--bg4); border: 1px solid var(--border2);
+  border-radius: 4px; padding: 1px 5px; font-size: 11px; color: var(--text3);
+  font-family: monospace;
+}
+
+/* ─── Node card hover — show desc expand button ─── */
+.node-desc-expand {
+  font-size: 10px; color: var(--accent); cursor: pointer; margin-top: 3px;
+  display: inline-block;
+}
+.node-desc-expand:hover { text-decoration: underline; }
+
+/* ─── Stats panel (Pro) ─── */
+.tree-stats-bar {
+  display: flex; gap: 1px; background: var(--border); border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tree-stat {
+  flex: 1; padding: 8px 12px; background: var(--bg2); text-align: center;
+}
+.tree-stat-val { font-size: 18px; font-weight: 700; color: var(--accent); }
+.tree-stat-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+
+
+/* ─── Toggle Switch ─── */
+.toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0; background: var(--bg4); border-radius: 11px;
+  border: 1px solid var(--border2); transition: var(--transition);
+}
+.toggle-track::after {
+  content: ''; position: absolute; width: 16px; height: 16px; background: var(--text3);
+  border-radius: 50%; top: 2px; left: 2px; transition: var(--transition);
+}
+.toggle-switch input:checked + .toggle-track { background: var(--accent); border-color: var(--accent); }
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); background: #fff; }
+
+
+/* ─── SVG Icon fixes ─── */
+[class^="ti ti-"], [class*=" ti ti-"] {
+  display: inline-flex; align-items: center; justify-content: center;
+  line-height: 1; vertical-align: middle; flex-shrink: 0;
+}
+[class^="ti ti-"] svg, [class*=" ti ti-"] svg {
+  width: 1em; height: 1em;
+}
 </style>
 </head>
 <body>
@@ -729,6 +866,15 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
         </div>
       </div>
     </div>
+
+  <!-- Stats Bar (Pro) -->
+  <div id="stats-bar" class="tree-stats-bar" style="display:none;">
+    <div class="tree-stat"><div class="tree-stat-val" id="stat-nodes">0</div><div class="tree-stat-lbl">Nodes</div></div>
+    <div class="tree-stat"><div class="tree-stat-val" id="stat-roots">0</div><div class="tree-stat-lbl">Root Nodes</div></div>
+    <div class="tree-stat"><div class="tree-stat-val" id="stat-depth">0</div><div class="tree-stat-lbl">Max Depth</div></div>
+    <div class="tree-stat"><div class="tree-stat-val" id="stat-media">0</div><div class="tree-stat-lbl">Media</div></div>
+    <div class="tree-stat"><div class="tree-stat-val" id="stat-links">0</div><div class="tree-stat-lbl">Links</div></div>
+  </div>
   </div>
 
   <!-- Detail Panel -->
@@ -846,26 +992,132 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
 <!-- Account Modal -->
 <div class="modal-overlay hidden" id="account-modal">
-  <div class="modal">
+  <div class="modal" style="max-width:500px;">
     <div class="modal-header">
-      <h3>Account</h3>
+      <h3>Account &amp; Settings</h3>
       <button class="icon-btn" onclick="closeModal('account-modal')"><i class="ti ti-x"></i></button>
     </div>
-    <div class="modal-body">
-      <div class="account-section">
-        <div style="font-weight:600;font-size:15px;" id="acct-email">Loading...</div>
-        <div style="font-size:13px;color:var(--text3);margin-top:4px;" id="acct-plan-label">Free Plan</div>
-      </div>
-      <div class="account-section">
-        <div style="font-weight:600;margin-bottom:10px;">Upgrade Plan</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:12px;">Unlock unlimited trees, media attachments, export, and Pro features.</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn-sm btn-outline" id="acct-plus-btn" onclick="openPaywall('plus')"><i class="ti ti-star"></i> Upgrade to Plus — $9/mo</button>
-          <button class="btn-sm btn-accent" id="acct-pro-btn" onclick="openPaywall('pro')"><i class="ti ti-crown"></i> Go Pro — $19/mo</button>
+    <div class="acct-tabs">
+      <div class="acct-tab active" onclick="switchAcctTab('profile')"><i class="ti ti-user" style="margin-right:5px;"></i>Profile</div>
+      <div class="acct-tab" onclick="switchAcctTab('plan')"><i class="ti ti-credit-card" style="margin-right:5px;"></i>Plan</div>
+      <div class="acct-tab" onclick="switchAcctTab('usage')"><i class="ti ti-chart-bar" style="margin-right:5px;"></i>Usage</div>
+      <div class="acct-tab" onclick="switchAcctTab('settings')"><i class="ti ti-settings" style="margin-right:5px;"></i>Settings</div>
+    </div>
+
+    <!-- Profile Tab -->
+    <div class="acct-pane active" id="acct-pane-profile">
+      <div class="profile-row">
+        <div class="profile-row-icon"><i class="ti ti-user"></i></div>
+        <div class="profile-row-info">
+          <div class="profile-row-label">Email</div>
+          <div class="profile-row-value" id="acct-email">Loading...</div>
         </div>
       </div>
-      <div class="account-section">
-        <button class="btn-danger" onclick="signOut()"><i class="ti ti-logout"></i> Sign Out</button>
+      <div class="profile-row">
+        <div class="profile-row-icon"><i class="ti ti-calendar"></i></div>
+        <div class="profile-row-info">
+          <div class="profile-row-label">Member Since</div>
+          <div class="profile-row-value" id="acct-joined">—</div>
+        </div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon"><i class="ti ti-crown"></i></div>
+        <div class="profile-row-info">
+          <div class="profile-row-label">Current Plan</div>
+          <div class="profile-row-value" id="acct-plan-label">Free</div>
+        </div>
+        <div class="profile-row-action">
+          <button class="btn-sm btn-accent" id="acct-upgrade-shortcut" onclick="switchAcctTab('plan')" style="display:none"><i class="ti ti-arrow-up"></i> Upgrade</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn-danger" style="flex:1;" onclick="signOut()"><i class="ti ti-logout"></i> Sign Out</button>
+        <button class="btn-sm btn-outline" style="flex:1;" onclick="openChangePassword()"><i class="ti ti-lock"></i> Change Password</button>
+      </div>
+    </div>
+
+    <!-- Plan Tab -->
+    <div class="acct-pane" id="acct-pane-plan">
+      <div class="current-plan-card" id="current-plan-card">
+        <div class="current-plan-icon" id="current-plan-icon">🌱</div>
+        <div class="current-plan-info">
+          <div class="current-plan-name" id="current-plan-name">Free Plan</div>
+          <div class="current-plan-desc" id="current-plan-desc">Basic access · 3 trees · 20 nodes</div>
+        </div>
+      </div>
+      <div class="plan-action-row" id="plan-action-row"></div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">All Plans</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="profile-row" style="cursor:pointer;" onclick="openPaywall('plus')">
+            <div class="profile-row-icon" style="background:rgba(251,191,36,0.12);"><i class="ti ti-star" style="color:var(--yellow);"></i></div>
+            <div class="profile-row-info">
+              <div class="profile-row-label">Plus — $9/mo</div>
+              <div class="profile-row-value" style="font-size:13px;">Unlimited trees &amp; nodes, media, export, search</div>
+            </div>
+            <i class="ti ti-chevron-right" style="color:var(--text3);"></i>
+          </div>
+          <div class="profile-row" style="cursor:pointer;" onclick="openPaywall('pro')">
+            <div class="profile-row-icon" style="background:rgba(108,142,255,0.12);"><i class="ti ti-crown" style="color:var(--accent2);"></i></div>
+            <div class="profile-row-info">
+              <div class="profile-row-label">Pro — $19/mo</div>
+              <div class="profile-row-value" style="font-size:13px;">Everything in Plus + colors, tags, extended notes, stats</div>
+            </div>
+            <i class="ti ti-chevron-right" style="color:var(--text3);"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usage Tab -->
+    <div class="acct-pane" id="acct-pane-usage">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:4px;">Your usage across all trees.</div>
+      <div class="usage-bar-wrap" id="usage-trees-wrap">
+        <div class="usage-bar-label"><span>Trees</span><span id="usage-trees-txt">0 / 3</span></div>
+        <div class="usage-bar-track"><div class="usage-bar-fill" id="usage-trees-bar" style="width:0%"></div></div>
+      </div>
+      <div class="usage-bar-wrap" id="usage-nodes-wrap">
+        <div class="usage-bar-label"><span>Nodes</span><span id="usage-nodes-txt">0 / 20</span></div>
+        <div class="usage-bar-track"><div class="usage-bar-fill" id="usage-nodes-bar" style="width:0%"></div></div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:8px;" id="usage-detail"></div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="acct-pane" id="acct-pane-settings">
+      <div style="font-size:13px;font-weight:600;margin-bottom:2px;">Preferences</div>
+      <div class="profile-row">
+        <div class="profile-row-icon"><i class="ti ti-layout-sidebar"></i></div>
+        <div class="profile-row-info">
+          <div class="profile-row-label">Auto-open detail panel</div>
+          <div class="profile-row-value" style="font-size:13px;">Open details when selecting a node</div>
+        </div>
+        <div class="profile-row-action">
+          <label class="toggle-switch">
+            <input type="checkbox" id="pref-auto-detail" onchange="savePref('autoDetail',this.checked)" checked>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon"><i class="ti ti-arrows-maximize"></i></div>
+        <div class="profile-row-info">
+          <div class="profile-row-label">Wide node cards</div>
+          <div class="profile-row-value" style="font-size:13px;">Increase node card width to 280px</div>
+        </div>
+        <div class="profile-row-action">
+          <label class="toggle-switch">
+            <input type="checkbox" id="pref-wide-nodes" onchange="savePref('wideNodes',this.checked)">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;">
+        <div class="danger-zone">
+          <div class="danger-zone-title"><i class="ti ti-alert-triangle"></i> Danger Zone</div>
+          <p>Permanently delete your account and all data. This cannot be undone.</p>
+          <button class="btn-danger" onclick="confirmDeleteAccount()"><i class="ti ti-trash"></i> Delete Account</button>
+        </div>
       </div>
     </div>
   </div>
@@ -932,6 +1184,29 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
+
+<!-- Extended Notes Dialog -->
+<div class="modal-overlay hidden" id="ext-notes-modal">
+  <div class="modal ext-notes-modal">
+    <div class="modal-header">
+      <h3><i class="ti ti-notes" style="color:var(--accent);margin-right:6px;"></i>Extended Notes</h3>
+      <button class="icon-btn" onclick="closeExtNotes()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="ext-notes-body">
+      <div id="ext-notes-node-title" style="font-size:13px;color:var(--text3);margin-bottom:4px;"></div>
+      <textarea id="ext-notes-textarea" placeholder="Write detailed notes, references, analysis, quotes...&#10;&#10;Supports plain text. Auto-saves as you type."></textarea>
+      <div style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;">
+        <i class="ti ti-device-floppy" style="font-size:14px;color:var(--green);"></i>
+        Auto-saves · <span id="ext-notes-wordcount">0 words</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span class="word-count" id="ext-notes-saved-status"></span>
+      <button class="btn-accent btn-sm" onclick="closeExtNotes()"><i class="ti ti-check"></i> Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- Context Menu -->
 <div id="context-menu">
   <div class="ctx-item" id="ctx-add-child" onclick="ctxAddChild()"><i class="ti ti-plus"></i> Add Child Node</div>
@@ -946,6 +1221,49 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 <!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+
+// ─── Inline SVG Icon System ───
+const SVG_ICONS = {'alert-triangle': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.871l-8.106 -13.534a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" />', 'arrow-up': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M18 11l-6 -6" /><path d="M6 11l6 -6" />', 'arrows-maximize': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M16 4l4 0l0 4" /><path d="M14 10l6 -6" /><path d="M8 20l-4 0l0 -4" /><path d="M4 20l6 -6" /><path d="M16 20l4 0l0 -4" /><path d="M14 14l6 6" /><path d="M8 4l-4 0l0 4" /><path d="M4 4l6 6" />', 'brand-github': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />', 'brand-google': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20.945 11a9 9 0 1 1 -3.284 -5.997l-2.655 2.392a5.5 5.5 0 1 0 2.119 6.605h-4.125v-3h7.945z" />', 'calendar': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M4 11h16" /><path d="M11 15h1" /><path d="M12 15v3" />', 'chart-bar': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M9 8m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M15 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M4 20l14 0" />', 'check': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" />', 'chevron-left': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6" />', 'chevron-right': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" />', 'circle-check': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 12l2 2l4 -4" />', 'credit-card': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 5m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z" /><path d="M3 10l18 0" /><path d="M7 15l.01 0" /><path d="M11 15l2 0" />', 'crown': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6l4 6l5 -4l-2 10h-14l-2 -10l5 4z" />', 'device-floppy': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" />', 'download': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" /><path d="M7 11l5 5l5 -5" /><path d="M12 4l0 12" />', 'edit': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" />', 'external-link': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6" /><path d="M11 13l9 -9" /><path d="M15 4h5v5" />', 'file-code': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M10 13l-1 2l1 2" /><path d="M14 13l1 2l-1 2" />', 'info-circle': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" />', 'layout-kanban': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4l6 0l0 8l-6 0l0 -8z" /><path d="M4 16l6 0l0 4l-6 0l0 -4z" /><path d="M14 12l6 0l0 8l-6 0l0 -8z" /><path d="M14 4l6 0l0 4l-6 0l0 -4z" />', 'layout-sidebar': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" /><path d="M9 4l0 16" />', 'loader': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6l0 -3" /><path d="M16.25 7.75l2.125 -2.125" /><path d="M18 12l3 0" /><path d="M16.25 16.25l2.125 2.125" /><path d="M12 18l0 3" /><path d="M7.75 16.25l-2.125 2.125" /><path d="M6 12l-3 0" /><path d="M7.75 7.75l-2.125 -2.125" />', 'lock': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M8 11v-4a4 4 0 1 1 8 0v4" />', 'logout': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" /><path d="M9 12h12l-3 -3" /><path d="M18 15l3 -3" />', 'mail': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z" /><path d="M3 7l9 6l9 -6" />', 'markdown': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 5m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M7 15v-6l2 2l2 -2v6" /><path d="M14 13l2 2l2 -2" /><path d="M16 15v-6" />', 'menu-2': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 6l16 0" /><path d="M4 12l16 0" /><path d="M4 18l16 0" />', 'notes': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 3m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" /><path d="M9 7l6 0" /><path d="M9 11l6 0" /><path d="M9 15l4 0" />', 'plus': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" />', 'printer': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2" /><path d="M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4" /><path d="M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z" />', 'search': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" />', 'settings': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />', 'star': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z" />', 'table': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14z" /><path d="M3 10h18" /><path d="M10 3v18" />', 'trash': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />', 'tree': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 3l4 4l-2 0l0 3l3 0l0 -2l4 4l-4 4l0 -2l-3 0l0 3l2 0l-4 4l-4 -4l2 0l0 -3l-3 0l0 2l-4 -4l4 -4l0 2l3 0l0 -3l-2 0z" />', 'user': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />', 'x': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" />', 'alert-circle': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 8v4" /><path d="M12 16h.01" />'};
+
+function renderIcons(root) {
+  const els = (root || document).querySelectorAll('[class*="ti ti-"]');
+  els.forEach(el => {
+    // Skip if already has SVG child
+    if (el.querySelector('svg')) return;
+    const classes = Array.from(el.classList);
+    const iconClass = classes.find(c => c.startsWith('ti-') && c !== 'ti');
+    if (!iconClass) return;
+    const name = iconClass.replace('ti-', '');
+    const paths = SVG_ICONS[name];
+    if (!paths) return;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.style.width = '1em';
+    svg.style.height = '1em';
+    svg.style.verticalAlign = '-0.125em';
+    svg.style.flexShrink = '0';
+    svg.innerHTML = paths;
+    el.appendChild(svg);
+    el.style.display = 'inline-flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+  });
+}
+
+// Run on load and observe DOM mutations for dynamically added icons
+document.addEventListener('DOMContentLoaded', () => renderIcons());
+const _iconObserver = new MutationObserver(muts => {
+  muts.forEach(m => m.addedNodes.forEach(n => {
+    if (n.nodeType === 1) renderIcons(n);
+  }));
+});
+_iconObserver.observe(document.body, { childList: true, subtree: true });
+
 // ─── Config ───
 const SUPABASE_URL = 'https://iplsdmdaviuwabtclvsw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwbHNkbWRhdml1d2FidGNsdnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NzI1NzIsImV4cCI6MjA5NjU0ODU3Mn0.f0X9ox4RCfHvAJqDP-YhCPve6NwADG5Cr3PE_WqHVU4';
@@ -1125,15 +1443,171 @@ function updateUserUI() {
   const badge = document.getElementById('plan-badge');
   badge.textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
   badge.className = 'plan-badge ' + currentPlan;
-  // Account modal
-  document.getElementById('acct-email').textContent = email;
-  document.getElementById('acct-plan-label').textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1) + ' Plan';
-  // Show/hide upgrade buttons
-  const plusBtn = document.getElementById('acct-plus-btn');
-  const proBtn = document.getElementById('acct-pro-btn');
-  if (currentPlan === 'pro') { plusBtn.style.display = 'none'; proBtn.style.display = 'none'; }
-  else if (currentPlan === 'plus') { plusBtn.style.display = 'none'; proBtn.style.display = ''; }
-  else { plusBtn.style.display = ''; proBtn.style.display = ''; }
+
+  // Profile tab
+  const emailEl = document.getElementById('acct-email');
+  if (emailEl) emailEl.textContent = email;
+  const planLabel = document.getElementById('acct-plan-label');
+  if (planLabel) {
+    const planNames = { free: 'Free Plan', plus: 'Plus Plan — $9/mo', pro: 'Pro Plan — $19/mo' };
+    planLabel.textContent = planNames[currentPlan] || 'Free Plan';
+  }
+  const joinedEl = document.getElementById('acct-joined');
+  if (joinedEl && currentUser.created_at) {
+    joinedEl.textContent = new Date(currentUser.created_at).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  }
+  const upgradeShortcut = document.getElementById('acct-upgrade-shortcut');
+  if (upgradeShortcut) upgradeShortcut.style.display = currentPlan === 'pro' ? 'none' : '';
+
+  // Plan tab
+  const planIcons = { free: '🌱', plus: '⭐', pro: '👑' };
+  const planDescs = {
+    free: 'Basic access · 3 trees · 20 nodes',
+    plus: 'Unlimited trees & nodes · Media · Export · Search',
+    pro: 'All Plus features · Colors · Tags · Extended notes · Stats'
+  };
+  const planIconEl = document.getElementById('current-plan-icon');
+  const planNameEl = document.getElementById('current-plan-name');
+  const planDescEl = document.getElementById('current-plan-desc');
+  if (planIconEl) planIconEl.textContent = planIcons[currentPlan] || '🌱';
+  if (planNameEl) planNameEl.textContent = (currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)) + ' Plan';
+  if (planDescEl) planDescEl.textContent = planDescs[currentPlan] || '';
+
+  // Plan action buttons
+  const actionRow = document.getElementById('plan-action-row');
+  if (actionRow) {
+    if (currentPlan === 'free') {
+      actionRow.innerHTML = `
+        <button class="btn-sm btn-outline" onclick="openPaywall('plus')"><i class="ti ti-star"></i> Upgrade to Plus — $9/mo</button>
+        <button class="btn-sm btn-accent" onclick="openPaywall('pro')"><i class="ti ti-crown"></i> Go Pro — $19/mo</button>`;
+    } else if (currentPlan === 'plus') {
+      actionRow.innerHTML = `
+        <button class="btn-sm btn-accent" onclick="openPaywall('pro')"><i class="ti ti-crown"></i> Upgrade to Pro — $19/mo</button>
+        <button class="btn-sm btn-outline" onclick="showToast('To cancel, visit your Stripe billing portal.','info')"><i class="ti ti-x"></i> Cancel Plan</button>`;
+    } else if (currentPlan === 'pro') {
+      actionRow.innerHTML = `
+        <div style="font-size:13px;color:var(--green);display:flex;align-items:center;gap:6px;"><i class="ti ti-circle-check"></i> You're on the highest plan!</div>
+        <button class="btn-sm btn-outline" onclick="showToast('To cancel, visit your Stripe billing portal.','info')"><i class="ti ti-x"></i> Cancel Plan</button>`;
+    }
+  }
+}
+
+function switchAcctTab(tab) {
+  document.querySelectorAll('.acct-tab').forEach((t,i) => {
+    const tabs = ['profile','plan','usage','settings'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.acct-pane').forEach(p => p.classList.remove('active'));
+  const pane = document.getElementById('acct-pane-' + tab);
+  if (pane) pane.classList.add('active');
+  if (tab === 'usage') renderUsageTab();
+}
+
+function renderUsageTab() {
+  const treeCount = trees.length;
+  const nodeCount = countAllNodes();
+  const maxTrees = currentPlan === 'free' ? 3 : '∞';
+  const maxNodes = currentPlan === 'free' ? 20 : '∞';
+
+  const treePct = currentPlan === 'free' ? Math.min(100, (treeCount/3)*100) : (treeCount > 0 ? 20 : 0);
+  const nodePct = currentPlan === 'free' ? Math.min(100, (nodeCount/20)*100) : (nodeCount > 0 ? 10 : 0);
+
+  const treesBar = document.getElementById('usage-trees-bar');
+  const nodesBar = document.getElementById('usage-nodes-bar');
+  const treesTxt = document.getElementById('usage-trees-txt');
+  const nodesTxt = document.getElementById('usage-nodes-txt');
+  if (treesBar) { treesBar.style.width = treePct + '%'; treesBar.className = 'usage-bar-fill' + (treePct>=100?' full':treePct>=80?' warn':''); }
+  if (nodesBar) { nodesBar.style.width = nodePct + '%'; nodesBar.className = 'usage-bar-fill' + (nodePct>=100?' full':nodePct>=80?' warn':''); }
+  if (treesTxt) treesTxt.textContent = treeCount + ' / ' + maxTrees;
+  if (nodesTxt) nodesTxt.textContent = nodeCount + ' / ' + maxNodes;
+
+  // Detail stats
+  const detail = document.getElementById('usage-detail');
+  if (detail) {
+    let mediaCount = 0, linkCount = 0, tagCount = 0;
+    function countDeep(nodes) { for (const n of nodes) { mediaCount += (n.media||[]).length; linkCount += (n.links||[]).length; tagCount += (n.tags||[]).length; countDeep(n.children||[]); } }
+    trees.forEach(t => countDeep(t.nodes||[]));
+    detail.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--accent);">${treeCount}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Trees</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--accent);">${nodeCount}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Total Nodes</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--purple);">${mediaCount}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Media Items</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--green);">${linkCount}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Links</div>
+        </div>
+      </div>`;
+  }
+}
+
+function openChangePassword() {
+  const email = currentUser?.email || '';
+  const d = document.createElement('div');
+  d.className = 'modal-overlay';
+  d.style.zIndex = '600';
+  d.innerHTML = `<div class="modal" style="max-width:400px;">
+    <div class="modal-header"><h3>Change Password</h3><button class="icon-btn" onclick="this.closest('.modal-overlay').remove()"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);">We'll send a password reset link to <strong>${email}</strong>.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      <button class="btn-accent btn-sm" onclick="sendPasswordReset(this,'${email}')"><i class="ti ti-mail"></i> Send Reset Email</button>
+    </div>
+  </div>`;
+  document.body.appendChild(d);
+}
+
+async function sendPasswordReset(btn, email) {
+  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> Sending...';
+  const { error } = await sbClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+  btn.closest('.modal-overlay').remove();
+  if (error) showToast('Failed: ' + error.message, 'error');
+  else showToast('Password reset email sent! Check your inbox.', 'success');
+}
+
+function confirmDeleteAccount() {
+  if (!confirm('This will permanently delete your account and ALL your research trees. This cannot be undone. Are you absolutely sure?')) return;
+  if (!confirm('Last chance — your data will be gone forever. Delete account?')) return;
+  deleteAccount();
+}
+
+async function deleteAccount() {
+  showToast('Deleting account...', 'info');
+  // Delete all trees first
+  await sbClient.from('trees').delete().eq('user_id', currentUser.id);
+  await sbClient.from('profiles').delete().eq('id', currentUser.id);
+  // Note: user deletion from auth requires service role key; sign them out and show message
+  await sbClient.auth.signOut();
+  showToast('Account data deleted. You have been signed out.', 'info');
+}
+
+// Preferences
+let prefs = { autoDetail: true, wideNodes: false };
+function loadPrefs() {
+  try { const p = localStorage.getItem('rt_prefs'); if (p) prefs = {...prefs, ...JSON.parse(p)}; } catch(e) {}
+  applyPrefs();
+}
+function savePref(key, val) {
+  prefs[key] = val;
+  localStorage.setItem('rt_prefs', JSON.stringify(prefs));
+  applyPrefs();
+}
+function applyPrefs() {
+  document.documentElement.style.setProperty('--node-w', prefs.wideNodes ? '280px' : '220px');
+  const wn = document.getElementById('pref-wide-nodes');
+  const ad = document.getElementById('pref-auto-detail');
+  if (wn) wn.checked = prefs.wideNodes;
+  if (ad) ad.checked = prefs.autoDetail;
 }
 
 // ─── Paywall ───
@@ -1319,6 +1793,7 @@ function selectTree(treeId) {
   document.getElementById('export-btn').style.display = canExport() ? '' : 'none';
   renderTreeList();
   renderCanvas();
+  updateStatsBar();
   closeDetailPanel();
   if (isMobile) {
     document.getElementById('sidebar').classList.remove('mobile-open');
@@ -1489,6 +1964,7 @@ function renderCanvas() {
   canvas.innerHTML = '';
   canvas.appendChild(empty);
   canvas.appendChild(container);
+  updateStatsBar();
 }
 
 function renderNodeAndChildren(node, hasConnector) {
@@ -1558,12 +2034,22 @@ function buildNodeCard(node) {
   header.appendChild(btns);
   card.appendChild(header);
 
-  // Description
+  // Description — always show if present
   if (node.desc) {
     const desc = document.createElement('div');
     desc.className = 'node-desc';
     desc.textContent = node.desc;
     card.appendChild(desc);
+  }
+
+  // Extended notes indicator (Pro)
+  if (node.extNotes && node.extNotes.trim()) {
+    const notesHint = document.createElement('div');
+    notesHint.className = 'node-has-notes';
+    notesHint.innerHTML = '<i class="ti ti-notes"></i> Notes';
+    notesHint.title = 'Has extended notes — click to open';
+    notesHint.onclick = (e) => { e.stopPropagation(); openExtNotes(node.id); };
+    card.appendChild(notesHint);
   }
 
   // Tags (Pro)
@@ -1771,13 +2257,23 @@ function renderDetailPanel(nodeId) {
 
   // Extended Notes (Pro)
   html += `<div class="detail-section">
-    <div class="detail-label">Extended Notes ${!canUseProFeatures() ? '<span style="color:var(--accent2);font-size:10px;">PRO</span>' : ''}</div>`;
+    <div class="detail-label" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Extended Notes ${!canUseProFeatures() ? '<span style="color:var(--accent2);font-size:10px;">PRO</span>' : ''}</span>
+      ${canUseProFeatures() ? `<button class="btn-add-sm" onclick="openExtNotes('${nodeId}')" style="padding:3px 8px;font-size:11px;"><i class="ti ti-arrows-maximize" style="font-size:11px;"></i> Full Editor</button>` : ''}
+    </div>`;
   if (!canUseProFeatures()) {
     html += `<div style="font-size:12px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:var(--radius-sm);">
       <a href="#" onclick="openPaywall('pro');return false;" style="color:var(--accent);">Upgrade to Pro</a> for extended notes.
     </div>`;
   } else {
-    html += `<textarea class="detail-input" id="dp-extnotes" rows="5" placeholder="Detailed notes, references, analysis..." onchange="updateNodeField('${nodeId}','extNotes',this.value)">${esc(node.extNotes||'')}</textarea>`;
+    const wordCount = (node.extNotes||'').trim().split(/\s+/).filter(Boolean).length;
+    html += `<div style="position:relative;">
+      <textarea class="detail-input" id="dp-extnotes" rows="4" placeholder="Detailed notes, references, analysis..." onchange="updateNodeField('${nodeId}','extNotes',this.value)">${esc(node.extNotes||'')}</textarea>
+      ${wordCount ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;">${wordCount} word${wordCount!==1?'s':''}</div>` : ''}
+    </div>
+    <button class="btn-add-sm primary" onclick="openExtNotes('${nodeId}')" style="width:100%;justify-content:center;display:flex;align-items:center;gap:6px;margin-top:2px;">
+      <i class="ti ti-arrows-maximize"></i> Open Full Editor
+    </button>`;
   }
   html += `</div>`;
 
@@ -2053,6 +2549,9 @@ function selectEmoji(emoji, type) {
 // ─── Account Modal ───
 function openAccountModal() {
   updateUserUI();
+  applyPrefs();
+  // Reset to profile tab
+  switchAcctTab('profile');
   openModal('account-modal');
 }
 
@@ -2139,7 +2638,90 @@ function setupClickOutside() {
   });
 }
 
+
+// ─── Extended Notes Dialog ───
+let extNotesNodeId = null;
+let extNotesSaveTimer = null;
+
+function openExtNotes(nodeId) {
+  if (!canUseProFeatures()) { openPaywall('pro'); return; }
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  extNotesNodeId = nodeId;
+  const ta = document.getElementById('ext-notes-textarea');
+  const titleEl = document.getElementById('ext-notes-node-title');
+  if (ta) ta.value = node.extNotes || '';
+  if (titleEl) titleEl.textContent = '📝  ' + node.title;
+  updateExtNotesWordCount();
+  openModal('ext-notes-modal');
+  setTimeout(() => { if (ta) ta.focus(); }, 100);
+  // Auto-save on input
+  if (ta) {
+    ta.oninput = () => {
+      updateExtNotesWordCount();
+      clearTimeout(extNotesSaveTimer);
+      extNotesSaveTimer = setTimeout(() => saveExtNotes(), 600);
+    };
+  }
+}
+
+function updateExtNotesWordCount() {
+  const ta = document.getElementById('ext-notes-textarea');
+  const wc = document.getElementById('ext-notes-wordcount');
+  if (!ta || !wc) return;
+  const words = ta.value.trim().split(/\s+/).filter(Boolean).length;
+  wc.textContent = words + ' word' + (words !== 1 ? 's' : '');
+}
+
+function saveExtNotes() {
+  if (!extNotesNodeId) return;
+  const ta = document.getElementById('ext-notes-textarea');
+  if (!ta) return;
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, extNotesNodeId); if (!node) return;
+  node.extNotes = ta.value;
+  debouncedSave(activeTreeId);
+  const status = document.getElementById('ext-notes-saved-status');
+  if (status) { status.textContent = 'Saved ✓'; setTimeout(() => { if(status) status.textContent = ''; }, 2000); }
+  // Update word count in detail panel if open
+  if (selectedNodeId === extNotesNodeId) {
+    const dpNotes = document.getElementById('dp-extnotes');
+    if (dpNotes) dpNotes.value = ta.value;
+  }
+}
+
+function closeExtNotes() {
+  saveExtNotes();
+  extNotesNodeId = null;
+  closeModal('ext-notes-modal');
+  if (selectedNodeId) renderDetailPanel(selectedNodeId);
+  renderCanvas();
+}
+
+// ─── Stats Bar ───
+function updateStatsBar() {
+  const tree = getActiveTree();
+  const bar = document.getElementById('stats-bar');
+  if (!bar) return;
+  if (!tree || !canUseProFeatures()) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  let nodeCount = 0, mediaCount = 0, linkCount = 0;
+  function calcDepth(nodes, d) {
+    let max = d;
+    for (const n of nodes) { nodeCount++; mediaCount += (n.media||[]).length; linkCount += (n.links||[]).length; const cd = calcDepth(n.children||[], d+1); if (cd > max) max = cd; }
+    return max;
+  }
+  const depth = calcDepth(tree.nodes||[], 0);
+  const roots = (tree.nodes||[]).length;
+  document.getElementById('stat-nodes').textContent = nodeCount;
+  document.getElementById('stat-roots').textContent = roots;
+  document.getElementById('stat-depth').textContent = depth;
+  document.getElementById('stat-media').textContent = mediaCount;
+  document.getElementById('stat-links').textContent = linkCount;
+}
+
 // Start
+loadPrefs();
 init();
 </script>
 </body>
