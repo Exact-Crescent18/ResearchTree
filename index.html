@@ -953,6 +953,13 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
         <label>Password</label>
         <input type="password" id="signin-password" placeholder="••••••••">
       </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:-4px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2);">
+          <input type="checkbox" id="remember-me" checked style="accent-color:var(--accent);width:15px;height:15px;">
+          Remember me
+        </label>
+        <button onclick="openForgotPassword()" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;">Forgot password?</button>
+      </div>
       <button class="btn-primary" onclick="signInEmail()">Sign In</button>
       <div class="auth-divider">or continue with</div>
       <div class="social-btns">
@@ -1726,10 +1733,63 @@ function clearAuthError() {
 async function signInEmail() {
   const email = document.getElementById('signin-email').value.trim();
   const password = document.getElementById('signin-password').value;
+  const rememberMe = document.getElementById('remember-me')?.checked !== false;
   if (!email || !password) return showAuthError('Please enter email and password.');
   clearAuthError();
+
+  // Set session persistence based on Remember Me
+  // Supabase JS v2 uses localStorage by default (persistent).
+  // If "remember me" is unchecked we use sessionStorage instead.
+  if (!rememberMe) {
+    // Recreate client with sessionStorage for this sign-in
+    const tempClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { storage: window.sessionStorage, persistSession: true }
+    });
+    const { error } = await tempClient.auth.signInWithPassword({ email, password });
+    if (error) { showAuthError(error.message); return; }
+    // Reload so the session-storage client takes over
+    window.location.reload();
+    return;
+  }
+
   const { error } = await sbClient.auth.signInWithPassword({ email, password });
   if (error) showAuthError(error.message);
+}
+
+function openForgotPassword() {
+  const email = document.getElementById('signin-email').value.trim();
+  const d = document.createElement('div');
+  d.className = 'modal-overlay';
+  d.style.zIndex = '600';
+  d.innerHTML = \`<div class="modal" style="max-width:400px;">
+    <div class="modal-header"><h3>Reset Password</h3><button class="icon-btn" onclick="this.closest('.modal-overlay').remove()"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);">Enter your email and we'll send a reset link.</p>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="forgot-email" value="\${email}" placeholder="you@example.com" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);outline:none;width:100%;">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      <button class="btn-accent btn-sm" onclick="sendForgotPassword(this)"><i class="ti ti-mail"></i> Send Reset Link</button>
+    </div>
+  </div>\`;
+  document.body.appendChild(d);
+  renderIcons(d);
+  setTimeout(() => d.querySelector('#forgot-email').focus(), 100);
+}
+
+async function sendForgotPassword(btn) {
+  const email = document.getElementById('forgot-email')?.value.trim();
+  if (!email) { showToast('Enter your email.', 'error'); return; }
+  btn.disabled = true; btn.textContent = 'Sending...';
+  const { error } = await sbClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  btn.closest('.modal-overlay').remove();
+  if (error) showToast('Error: ' + error.message, 'error');
+  else showToast('Password reset email sent! Check your inbox.', 'success');
 }
 
 async function signUpEmail() {
@@ -1771,17 +1831,50 @@ async function signOut() {
 let currentDisplayName = '';
 
 async function loadUserProfile() {
-  const { data, error } = await sbClient.from('profiles').select('plan, display_name').eq('id', currentUser.id).single();
+  console.log('[ResearchTree] Loading profile for user:', currentUser.id, currentUser.email);
+
+  const { data, error } = await sbClient
+    .from('profiles')
+    .select('plan, display_name')
+    .eq('id', currentUser.id)
+    .single();
+
+  console.log('[ResearchTree] Profile query result:', { data, error });
+
   if (data) {
     currentPlan = data.plan || 'free';
     currentDisplayName = data.display_name || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
-  } else if (error && error.code === 'PGRST116') {
-    // Profile doesn't exist yet, create it
-    const nameFromMeta = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
-    await sbClient.from('profiles').insert({ id: currentUser.id, plan: 'free', display_name: nameFromMeta });
-    currentPlan = 'free';
-    currentDisplayName = nameFromMeta;
+    console.log('[ResearchTree] Plan loaded:', currentPlan, '| Name:', currentDisplayName);
+  } else if (error) {
+    console.warn('[ResearchTree] Profile error:', error.code, error.message);
+    if (error.code === 'PGRST116') {
+      // Row doesn't exist — create it
+      const nameFromMeta = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+      const { error: insertErr } = await sbClient.from('profiles').insert({
+        id: currentUser.id, plan: 'free', display_name: nameFromMeta
+      });
+      console.log('[ResearchTree] Created profile, insertErr:', insertErr);
+      currentPlan = 'free';
+      currentDisplayName = nameFromMeta;
+    } else {
+      // RLS or other error — try upsert to ensure row exists
+      console.warn('[ResearchTree] Unexpected profile error, attempting upsert...');
+      await sbClient.from('profiles').upsert({
+        id: currentUser.id, plan: 'free', updated_at: new Date().toISOString()
+      }, { onConflict: 'id', ignoreDuplicates: true });
+      currentPlan = 'free';
+    }
   }
+}
+
+// Dev helper — call refreshPlan() in browser console to force re-read without logout
+async function refreshPlan() {
+  if (!currentUser) { console.warn('Not logged in'); return; }
+  await loadUserProfile();
+  updateUserUI();
+  renderCanvas();
+  console.log('[ResearchTree] Plan refreshed:', currentPlan);
+  showToast('Plan refreshed: ' + currentPlan, 'success');
 }
 
 async function updatePlanFromStripe(plan) {
