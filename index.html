@@ -2,1227 +2,2145 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ResearchTree</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-:root{
-  --bg:#0d0e12;--surface:#16181f;--surface2:#1e2028;--surface3:#252832;
-  --border:#2e3140;--border2:#3a3e52;--text:#e8eaf2;--text2:#9099b5;--text3:#5a6280;
-  --accent:#7c6af0;--accent2:#5e4fd4;--gold:#d4a843;--teal:#3dbfa0;--coral:#e8715a;
-  --plus:#3dbfa0;--pro:#d4a843;
-  --sidebar-w:300px;--detail-w:360px;--topbar-h:56px;--mobile-nav-h:62px;
+/* ─── CSS Variables ─── */
+:root {
+  --bg: #0f1117;
+  --bg2: #161b27;
+  --bg3: #1e2535;
+  --bg4: #252d3d;
+  --border: #2e3650;
+  --border2: #3a4560;
+  --text: #e8eaf0;
+  --text2: #9aa3b8;
+  --text3: #6b7492;
+  --accent: #6c8eff;
+  --accent2: #8fa8ff;
+  --accent-dim: rgba(108,142,255,0.15);
+  --green: #4ade80;
+  --yellow: #fbbf24;
+  --red: #f87171;
+  --purple: #a78bfa;
+  --orange: #fb923c;
+  --pink: #f472b6;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --sidebar-w: 280px;
+  --detail-w: 340px;
+  --topbar-h: 56px;
+  --node-w: 220px;
+  --node-gap-x: 60px;
+  --node-gap-y: 16px;
+  --transition: 0.18s ease;
 }
-html,body{height:100%;overflow:hidden}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
 
-/* ── LOADING ── */
-#loading-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-.spinner{width:40px;height:40px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-label{font-family:'Playfair Display',serif;font-size:18px;color:var(--text2)}
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+button { cursor: pointer; font-family: inherit; border: none; background: none; }
+input, textarea, select { font-family: inherit; font-size: 14px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1,h2,h3,h4 { font-family: 'Playfair Display', serif; }
 
-/* ── AUTH ── */
-#auth-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0d0e12,#131528,#0d0e12);z-index:8000;display:none;align-items:center;justify-content:center;padding:20px}
-.auth-card{background:var(--surface);border:1px solid var(--border2);border-radius:24px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.6)}
-.auth-header{padding:32px 32px 24px;text-align:center;background:linear-gradient(135deg,#14102e,#0d1a2e);border-bottom:1px solid var(--border)}
-.auth-logo{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;margin-bottom:4px}
-.auth-logo span{color:var(--accent)}
-.auth-tagline{font-size:13px;color:var(--text2)}
-.auth-body{padding:24px 28px 28px}
-.auth-tabs{display:flex;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:20px;border:1px solid var(--border)}
-.auth-tab{flex:1;padding:8px;border-radius:8px;border:none;background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:.15s}
-.auth-tab.active{background:var(--surface3);color:var(--text)}
-.auth-field{margin-bottom:13px}
-.auth-field label{display:block;font-size:11px;font-weight:500;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-.auth-field input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:.15s}
-.auth-field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,106,240,.15)}
-.btn-auth{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:.15s;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px}
-.btn-auth:hover{background:var(--accent2)}
-.btn-auth:disabled{opacity:.5;pointer-events:none}
-.auth-divider{display:flex;align-items:center;gap:10px;margin-bottom:12px;color:var(--text3);font-size:12px}
-.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
-.social-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
-.btn-social{padding:10px 12px;border:1px solid var(--border2);border-radius:9px;background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:8px}
-.btn-social:hover{background:var(--surface3)}
-.btn-social svg{width:16px;height:16px;flex-shrink:0}
-.auth-err{background:#2e1e20;border:1px solid #5a2a2a;color:var(--coral);border-radius:8px;padding:9px 13px;font-size:13px;margin-bottom:12px;display:none}
-.auth-err.show{display:block}
-.auth-note{text-align:center;margin-top:10px;font-size:12px;color:var(--text3)}
-.auth-note a{color:var(--accent);cursor:pointer;text-decoration:none}
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 
-/* ── APP ── */
-#app{display:none;height:100vh;overflow:hidden;position:relative;flex-direction:row}
-#app.visible{display:flex}
-
-/* ── SIDEBAR ── */
-#sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .3s,min-width .3s;z-index:200;flex-shrink:0}
-#sidebar.collapsed{width:0;min-width:0}
-.sb-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;flex-shrink:0;overflow:hidden}
-.logo{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;letter-spacing:-.5px;white-space:nowrap}
-.logo span{color:var(--accent)}
-.plan-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;letter-spacing:.4px;text-transform:uppercase;flex-shrink:0}
-.plan-free{background:#1e2028;color:var(--text3);border:1px solid var(--border2)}
-.plan-plus{background:#0d2420;color:var(--plus);border:1px solid #1a4038}
-.plan-pro{background:#2a1e08;color:var(--pro);border:1px solid #4a3210}
-.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);flex-shrink:0;transition:.3s}
-.sync-dot.syncing{background:var(--gold);animation:pulse 1s infinite}
-.sync-dot.error{background:var(--coral)}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.sb-search{padding:8px 10px;border-bottom:1px solid var(--border);position:relative;flex-shrink:0}
-.sb-search i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
-.sb-search input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 10px 7px 30px;outline:none;transition:.15s}
-.sb-search input:focus{border-color:var(--accent)}
-.sec-lbl{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px 3px;flex-shrink:0}
-.trees-list{flex:1;overflow-y:auto;padding:6px}
-.tree-item{display:flex;align-items:center;gap:7px;padding:9px 10px;border-radius:9px;cursor:pointer;transition:.15s;margin-bottom:2px;border:1px solid transparent}
-.tree-item:hover{background:var(--surface2)}
-.tree-item.active{background:var(--surface3);border-color:var(--border2)}
-.tree-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-.tree-name{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tree-count{font-size:10px;color:var(--text3);flex-shrink:0}
-.tree-del{width:20px;height:20px;background:transparent;border:none;color:var(--text3);cursor:pointer;border-radius:4px;display:none;align-items:center;justify-content:center;font-size:11px;transition:.15s;flex-shrink:0}
-.tree-item:hover .tree-del{display:flex}
-.tree-del:hover{color:var(--coral);background:#2e1e20}
-.btn-new-tree{margin:8px;padding:9px 12px;background:var(--accent);color:#fff;border:none;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;transition:.15s;flex-shrink:0}
-.btn-new-tree:hover{background:var(--accent2)}
-.sb-upgrade{margin:0 8px 8px;padding:11px;background:linear-gradient(135deg,#1e1a3a,#1a2838);border:1px solid #3d3870;border-radius:9px;cursor:pointer;transition:.15s;flex-shrink:0}
-.sb-upgrade:hover{border-color:var(--accent)}
-.su-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
-.su-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px}
-.su-cta{font-size:12px;font-weight:600;color:var(--accent);display:flex;align-items:center;gap:3px}
-.sb-user{margin:0 8px 8px;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;gap:9px;flex-shrink:0}
-.u-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;overflow:hidden}
-.u-avatar img{width:100%;height:100%;object-fit:cover}
-.u-info{flex:1;min-width:0}
-.u-name{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.u-email{font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.signout-btn{width:26px;height:26px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;transition:.15s;flex-shrink:0}
-.signout-btn:hover{color:var(--coral);border-color:#3e2828}
-
-/* ── MAIN ── */
-#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-#topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 14px;height:var(--topbar-h);display:flex;align-items:center;gap:7px;flex-shrink:0}
-.breadcrumb{display:flex;align-items:center;gap:5px;flex:1;overflow:hidden;min-width:0}
-.bc-item{font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap;transition:.15s;overflow:hidden;text-overflow:ellipsis}
-.bc-item:hover{color:var(--text)}
-.bc-item.cur{color:var(--text);font-weight:500}
-.bc-sep{color:var(--text3);font-size:12px;flex-shrink:0}
-.tb-right{display:flex;gap:5px;flex-shrink:0;align-items:center}
-.icon-btn{width:32px;height:32px;border:1px solid var(--border2);border-radius:7px;background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:.15s;position:relative;flex-shrink:0}
-.icon-btn:hover{background:var(--surface2);color:var(--text)}
-.icon-btn.active{background:rgba(124,106,240,.15);border-color:var(--accent);color:var(--accent)}
-.lock-dot{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--gold);border:2px solid var(--bg);font-size:7px;display:flex;align-items:center;justify-content:center;color:#1a1200;font-weight:700}
-#stats-bar{display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:0 18px;height:32px;align-items:center;gap:16px;font-size:11px;color:var(--text3);flex-shrink:0}
-.si{display:flex;align-items:center;gap:4px}
-.sv{color:var(--text2);font-weight:500}
-#ns-bar{display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:7px 14px;flex-shrink:0}
-#ns-bar input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:8px 12px;outline:none}
-#ns-bar input:focus{border-color:var(--accent)}
-
-/* ── CANVAS ── */
-#canvas-wrap{flex:1;overflow:auto;padding:28px 32px;-webkit-overflow-scrolling:touch}
-#canvas{display:flex;flex-direction:column;align-items:flex-start;gap:0}
-.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:55vh;gap:13px;text-align:center;width:100%;padding:20px}
-.empty-state h2{font-family:'Playfair Display',serif;font-size:24px}
-.empty-state p{color:var(--text2);font-size:14px;max-width:300px;line-height:1.7}
-
-/* ── NODE CARDS ── */
-.node-wrap{display:flex;flex-direction:row;align-items:flex-start;margin:5px 0}
-.node-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 15px;width:270px;cursor:default;transition:.2s;position:relative;flex-shrink:0}
-.node-card:hover{border-color:var(--border2);background:var(--surface2)}
-.node-card.root-card{background:linear-gradient(135deg,#1e1a3a,#1a2235);border-color:#3d3870;width:290px}
-.node-card.selected{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,106,240,.15)}
-.node-card.c-teal{border-left:3px solid var(--teal)}
-.node-card.c-coral{border-left:3px solid var(--coral)}
-.node-card.c-gold{border-left:3px solid var(--gold)}
-.node-card.c-purple{border-left:3px solid var(--accent)}
-.node-card.c-blue{border-left:3px solid #5bc8f5}
-.node-header{display:flex;align-items:flex-start;gap:7px;margin-bottom:4px}
-.node-title{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;line-height:1.3;flex:1;min-width:0}
-.root-card .node-title{font-size:16px}
-.node-desc{font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:7px}
-.node-meta{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
-.ntag{font-size:10px;padding:2px 6px;border-radius:20px;font-weight:500}
-.t-img{background:#1a2e28;color:var(--teal);border:1px solid #264038}
-.t-vid{background:#1e1a3a;color:#9a8df8;border:1px solid #3d3870}
-.t-lnk{background:#2e1e20;color:var(--coral);border:1px solid #3e2828}
-.node-actions{display:flex;gap:3px;flex-wrap:wrap}
-.nb{padding:4px 8px;border-radius:5px;font-size:10px;font-weight:500;cursor:pointer;border:1px solid;transition:.15s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:3px;white-space:nowrap}
-.nb-add{background:transparent;border-color:var(--accent);color:var(--accent)}
-.nb-add:hover{background:var(--accent);color:#fff}
-.nb-edit{background:transparent;border-color:var(--border2);color:var(--text2)}
-.nb-edit:hover{background:var(--surface3);color:var(--text)}
-.nb-del{background:transparent;border-color:#3e2828;color:var(--coral)}
-.nb-del:hover{background:#2e1e20}
-.nb-info{background:transparent;border-color:var(--border2);color:var(--text2)}
-.nb-info:hover{background:var(--surface3);color:var(--text)}
-.xbtn{width:19px;height:19px;border-radius:4px;background:var(--surface3);border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;flex-shrink:0;transition:.15s}
-.xbtn:hover{background:var(--border2)}
-.media-thumbs{display:flex;gap:3px;flex-wrap:wrap;margin:4px 0}
-.m-thumb{width:42px;height:30px;border-radius:5px;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;overflow:hidden;flex-shrink:0}
-.m-thumb img{width:100%;height:100%;object-fit:cover}
-
-/* ── TREE CONNECTOR ── */
-.h-line{height:1px;background:var(--border2);width:18px;margin-top:25px;flex-shrink:0}
-.children-col{display:flex;flex-direction:column;border-left:1px solid var(--border2);margin-left:0}
-.child-row{display:flex;flex-direction:row;align-items:flex-start}
-.add-sib-btn{margin:4px 0 10px 20px;padding:4px 9px;border-radius:5px;font-size:10px;font-weight:500;cursor:pointer;border:1px dashed var(--border2);color:var(--text3);background:transparent;display:inline-flex;align-items:center;gap:3px;font-family:'DM Sans',sans-serif;transition:.15s}
-.add-sib-btn:hover{border-color:var(--accent);color:var(--accent)}
-.add-root-btn{margin-top:14px;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;border:1px dashed var(--accent);color:var(--accent);background:transparent;display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;transition:.15s}
-.add-root-btn:hover{background:rgba(124,106,240,.1)}
-
-/* ── DETAIL PANEL ── */
-#detail-panel{width:var(--detail-w);min-width:var(--detail-w);background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;transition:width .3s,min-width .3s;flex-shrink:0}
-#detail-panel.hidden{width:0;min-width:0;overflow:hidden}
-.dp-inner{padding:18px}
-.dp-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:7px;line-height:1.3}
-.dp-desc{font-size:13px;color:var(--text2);line-height:1.75;margin-bottom:14px;white-space:pre-wrap}
-.dp-sec{margin-bottom:14px}
-.dp-sec-title{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;display:flex;align-items:center;gap:5px;padding-bottom:5px;border-bottom:1px solid var(--border)}
-.dp-media-item{border-radius:9px;overflow:hidden;border:1px solid var(--border);margin-bottom:7px;background:var(--surface2)}
-.dp-img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
-.dp-caption{font-size:11px;color:var(--text2);padding:6px 9px}
-.dp-vid{aspect-ratio:16/9;background:var(--surface3)}
-.dp-vid iframe{width:100%;height:100%;border:none;display:block}
-.dp-link{display:flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text2);font-size:12px;margin-bottom:5px;transition:.15s;background:var(--surface2)}
-.dp-link:hover{border-color:var(--border2);color:var(--text)}
-.dp-close-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.dp-path{font-size:10px;color:var(--text3)}
-.node-note-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
-
-/* ── MOBILE SIDEBAR OVERLAY ── */
-#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:199;backdrop-filter:blur(2px)}
-
-/* ── BOTTOM NAV ── */
-#bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:var(--mobile-nav-h);background:var(--surface);border-top:1px solid var(--border);z-index:300;padding:0 4px;align-items:center;justify-content:space-around}
-.bnav{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 10px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:9px;transition:.15s;font-family:'DM Sans',sans-serif;min-width:56px}
-.bnav.active,.bnav:hover{color:var(--accent);background:rgba(124,106,240,.08)}
-.bnav i{font-size:20px}
-.bnav span{font-size:10px;font-weight:500}
-
-/* ── MODAL ── */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;display:none;align-items:center;justify-content:center;padding:14px}
-.modal-overlay.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.5)}
-.modal-header{padding:16px 20px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
-.modal-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:600}
-.modal-body{padding:16px 20px}
-.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:7px;position:sticky;bottom:0;background:var(--surface)}
-.field{margin-bottom:14px}
-.field label{display:block;font-size:11px;font-weight:500;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-.field input,.field textarea,.field select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;transition:.15s;outline:none;-webkit-appearance:none}
-.field input:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,106,240,.15)}
-.field textarea{min-height:80px;resize:vertical;line-height:1.6}
-.field select option{background:var(--surface2)}
-.btn-primary{padding:9px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:5px}
-.btn-primary:hover{background:var(--accent2)}
-.btn-secondary{padding:9px 18px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:.15s}
-.btn-secondary:hover{background:var(--surface2);color:var(--text)}
-.btn-danger{padding:9px 18px;background:transparent;color:var(--coral);border:1px solid #3e2828;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:.15s}
-.btn-danger:hover{background:#2e1e20}
-.btn-teal{padding:9px 18px;background:linear-gradient(135deg,#3dbfa0,#2a9b82);color:#001a14;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:5px}
-.btn-gold{padding:9px 18px;background:linear-gradient(135deg,#d4a843,#b8892e);color:#1a1200;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:5px}
-.emoji-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
-.ep{width:34px;height:34px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;transition:.15s}
-.ep.sel{border-color:var(--accent);background:rgba(124,106,240,.12)}
-.color-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
-.cp{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.15s}
-.cp:hover{transform:scale(1.15)}
-.cp.sel{border-color:var(--text);transform:scale(1.1)}
-.media-list{display:flex;flex-direction:column;gap:5px;margin-bottom:7px}
-.mi-row{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 10px}
-.mi-ic{width:26px;height:26px;border-radius:5px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
-.mi-info{flex:1;min-width:0}
-.mi-name{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mi-url{font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mi-del{width:24px;height:24px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;transition:.15s;flex-shrink:0}
-.mi-del:hover{color:var(--coral);background:#2e1e20}
-
-/* ── PAYWALL ── */
-.pw-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;display:none;align-items:center;justify-content:center;padding:14px}
-.pw-overlay.open{display:flex}
-.pw-modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:620px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.6);max-height:90vh;overflow-y:auto}
-.pw-head{padding:24px 24px 18px;text-align:center;background:linear-gradient(135deg,#14102e,#0d1a2e);border-bottom:1px solid var(--border)}
-.pw-head h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:5px}
-.pw-head p{color:var(--text2);font-size:13px;line-height:1.6;max-width:320px;margin:0 auto}
-.pw-plans{display:grid;grid-template-columns:1fr 1fr}
-.pc{padding:22px 22px 18px;border-right:1px solid var(--border)}
-.pc:last-child{border-right:none}
-.pc.hl{background:linear-gradient(135deg,#1a1408,#12100a)}
-.pc-name{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
-.pc-price{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:3px;line-height:1}
-.pc-price span{font-size:12px;font-weight:400;color:var(--text2);font-family:'DM Sans',sans-serif}
-.pc-tag{font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.5}
-.pc-feats{list-style:none;margin-bottom:14px;display:flex;flex-direction:column;gap:6px}
-.pc-feats li{font-size:12px;color:var(--text2);display:flex;align-items:flex-start;gap:6px;line-height:1.4}
-.pc-feats li i{font-size:12px;margin-top:1px;flex-shrink:0}
-.f-teal{color:var(--teal)}
-.f-gold{color:var(--gold)}
-.pw-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:center}
-.lim-banner{background:linear-gradient(135deg,#1e1a3a,#1a2035);border:1px solid #3d3870;border-radius:10px;padding:12px 14px;margin:14px 0;display:flex;align-items:center;gap:11px}
-.lb-ic{width:34px;height:34px;border-radius:8px;background:rgba(124,106,240,.15);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
-.lb-txt{flex:1}
-.lb-t{font-size:13px;font-weight:500;margin-bottom:2px}
-.lb-d{font-size:11px;color:var(--text2);line-height:1.5}
-.lb-btn{padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:none;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:.15s}
-.feat-locked{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;cursor:pointer}
-.fl-plus{background:#0d2420;color:var(--plus);border:1px solid #1a4038}
-.fl-pro{background:#2a1e08;color:var(--pro);border:1px solid #4a3210}
-.export-wrap{position:relative}
-.export-menu{position:absolute;top:36px;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:9px;padding:4px;min-width:150px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none}
-.export-menu.open{display:block}
-.em-item{padding:7px 11px;border-radius:6px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:7px;color:var(--text2);transition:.15s}
-.em-item:hover{background:var(--surface2);color:var(--text)}
-
-/* ── TOAST ── */
-#toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:8px 15px;font-size:13px;color:var(--text);opacity:0;transition:opacity .3s;pointer-events:none;z-index:3000;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
-#toast.show{opacity:1}
-
-/* ── RESPONSIVE ── */
-@media(max-width:1024px){:root{--sidebar-w:260px;--detail-w:300px}.node-card{width:240px}.root-card{width:260px}#canvas-wrap{padding:20px 24px}}
-@media(max-width:767px){
-  :root{--sidebar-w:280px}
-  #sidebar{position:fixed;top:0;left:0;bottom:0;transform:translateX(-100%);transition:transform .3s;z-index:300;border-right:1px solid var(--border2)}
-  #sidebar.m-open{transform:translateX(0)}
-  #detail-panel{position:fixed;top:0;right:0;bottom:0;width:88vw!important;min-width:0!important;transform:translateX(100%);transition:transform .3s;z-index:300;border-left:1px solid var(--border2)}
-  #detail-panel.m-open{transform:translateX(0)}
-  #bottom-nav{display:flex}
-  #canvas-wrap{padding:14px;padding-bottom:74px}
-  .tb-right .icon-btn:not(#btn-menu):not(#btn-settings){display:none}
-  .node-card{width:230px}.root-card{width:250px}
-  #toast{bottom:70px}
-  .pw-plans{grid-template-columns:1fr}.pc{border-right:none;border-bottom:1px solid var(--border)}.pc:last-child{border-bottom:none}
-  .social-grid{grid-template-columns:1fr}
+/* ─── Loading Screen ─── */
+#loading-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px; z-index: 9999;
 }
-@media(max-width:380px){.node-card,.root-card{width:200px}.auth-body{padding:18px 18px 22px}}
+#loading-screen .logo { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--text); }
+#loading-screen .logo span { color: var(--accent); }
+.spinner {
+  width: 32px; height: 32px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* SCROLLBAR */
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+/* ─── Auth Screen ─── */
+#auth-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: none; align-items: center; justify-content: center;
+  z-index: 999;
+}
+.auth-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 16px; padding: 40px; width: 100%; max-width: 420px;
+  box-shadow: var(--shadow);
+}
+.auth-logo { text-align: center; margin-bottom: 28px; }
+.auth-logo h1 { font-size: 26px; }
+.auth-logo h1 span { color: var(--accent); }
+.auth-logo p { color: var(--text2); font-size: 13px; margin-top: 4px; }
+.auth-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+.auth-tab {
+  flex: 1; padding: 10px; text-align: center; font-size: 14px; font-weight: 500;
+  color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent;
+  transition: var(--transition);
+}
+.auth-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-form.hidden { display: none; }
+.form-field { display: flex; flex-direction: column; gap: 6px; }
+.form-field label { font-size: 13px; font-weight: 500; color: var(--text2); }
+.form-field input {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; color: var(--text); outline: none; transition: var(--transition);
+}
+.form-field input:focus { border-color: var(--accent); }
+.btn-primary {
+  background: var(--accent); color: #fff; padding: 11px;
+  border-radius: var(--radius-sm); font-weight: 600; font-size: 14px;
+  transition: var(--transition); margin-top: 4px;
+}
+.btn-primary:hover { background: var(--accent2); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.auth-divider { text-align: center; color: var(--text3); font-size: 12px; position: relative; }
+.auth-divider::before, .auth-divider::after {
+  content: ''; position: absolute; top: 50%; width: 40%; height: 1px; background: var(--border);
+}
+.auth-divider::before { left: 0; }
+.auth-divider::after { right: 0; }
+.social-btns { display: flex; gap: 10px; }
+.btn-social {
+  flex: 1; padding: 9px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); font-size: 13px; font-weight: 500;
+  background: var(--bg3); display: flex; align-items: center; justify-content: center; gap: 7px;
+  transition: var(--transition);
+}
+.btn-social:hover { border-color: var(--border2); background: var(--bg4); }
+.auth-error {
+  background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3);
+  color: var(--red); border-radius: var(--radius-sm); padding: 10px 12px;
+  font-size: 13px; display: none;
+}
+
+/* ─── App Layout ─── */
+#app { display: flex; height: 100vh; overflow: hidden; }
+#app.hidden { display: none; }
+
+/* ─── Sidebar ─── */
+#sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+  transition: transform var(--transition);
+}
+.sidebar-header {
+  padding: 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sidebar-logo { font-family: 'Playfair Display', serif; font-size: 18px; }
+.sidebar-logo span { color: var(--accent); }
+.sidebar-actions { display: flex; gap: 6px; }
+.icon-btn {
+  width: 30px; height: 30px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text2); transition: var(--transition);
+}
+.icon-btn:hover { background: var(--bg3); color: var(--text); }
+.sidebar-search {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+}
+.search-input-wrap { position: relative; }
+.search-input-wrap i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 16px; }
+.search-input-wrap input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 10px 8px 34px;
+  color: var(--text); outline: none;
+}
+.search-input-wrap input:focus { border-color: var(--accent); }
+.tree-list { flex: 1; overflow-y: auto; padding: 8px; }
+.tree-item {
+  display: flex; align-items: center; gap: 8px; padding: 9px 10px;
+  border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition);
+  margin-bottom: 2px;
+}
+.tree-item:hover { background: var(--bg3); }
+.tree-item.active { background: var(--accent-dim); border: 1px solid rgba(108,142,255,0.2); }
+.tree-item-icon { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
+.tree-item-name { flex: 1; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-item-count { font-size: 11px; color: var(--text3); flex-shrink: 0; }
+.tree-item-menu { opacity: 0; transition: var(--transition); }
+.tree-item:hover .tree-item-menu { opacity: 1; }
+.sidebar-footer {
+  padding: 12px; border-top: 1px solid var(--border);
+}
+.user-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px;
+  border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition);
+}
+.user-row:hover { background: var(--bg3); }
+.user-avatar {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; color: #fff; flex-shrink: 0;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-email { font-size: 12px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-badge {
+  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.plan-badge.free { background: var(--bg4); color: var(--text3); }
+.plan-badge.plus { background: rgba(251,191,36,0.2); color: var(--yellow); }
+.plan-badge.pro { background: rgba(108,142,255,0.2); color: var(--accent2); }
+
+/* ─── Main Area ─── */
+#main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ─── Topbar ─── */
+#topbar {
+  height: var(--topbar-h); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; padding: 0 16px;
+  background: var(--bg2); flex-shrink: 0;
+}
+#tree-title-display {
+  font-family: 'Playfair Display', serif; font-size: 18px;
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#tree-title-display.placeholder { color: var(--text3); font-family: 'DM Sans', sans-serif; font-style: italic; font-size: 14px; }
+.topbar-btns { display: flex; gap: 6px; }
+.btn-sm {
+  padding: 6px 12px; border-radius: var(--radius-sm); font-size: 13px;
+  font-weight: 500; display: flex; align-items: center; gap: 6px; transition: var(--transition);
+}
+.btn-outline { border: 1px solid var(--border); color: var(--text2); }
+.btn-outline:hover { border-color: var(--border2); color: var(--text); background: var(--bg3); }
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover { background: var(--accent2); }
+.sync-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+  transition: background 0.3s;
+}
+.sync-dot.syncing { background: var(--yellow); animation: pulse 0.8s infinite; }
+.sync-dot.error { background: var(--red); }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+/* ─── Canvas ─── */
+#canvas-wrap { flex: 1; overflow: auto; position: relative; }
+#canvas {
+  min-width: 100%; min-height: 100%;
+  padding: 40px; display: flex; flex-direction: column; gap: 0;
+  position: relative;
+}
+#canvas-empty {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px; color: var(--text3);
+  pointer-events: none;
+}
+#canvas-empty i { font-size: 48px; opacity: 0.3; }
+#canvas-empty p { font-size: 15px; }
+#canvas-empty small { font-size: 13px; }
+
+/* ─── Tree Rendering ─── */
+.tree-root-container { display: flex; flex-direction: column; gap: var(--node-gap-y); }
+.tree-row { display: flex; align-items: flex-start; gap: var(--node-gap-x); position: relative; }
+.node-and-children { display: flex; align-items: flex-start; gap: 0; }
+.node-children {
+  display: flex; flex-direction: column; gap: var(--node-gap-y);
+  padding-left: var(--node-gap-x); position: relative; margin-top: 0;
+}
+.node-children::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 1px; background: var(--border); margin-left: 0;
+}
+.node-children.collapsed { display: none; }
+.node-wrap { position: relative; }
+.node-connector {
+  position: absolute; left: calc(-1 * var(--node-gap-x)); top: 50%;
+  width: var(--node-gap-x); height: 1px; background: var(--border);
+}
+
+/* ─── Node Card ─── */
+.node-card {
+  width: var(--node-w); background: var(--bg2);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px; cursor: pointer; transition: var(--transition);
+  position: relative; flex-shrink: 0;
+}
+.node-card:hover { border-color: var(--border2); background: var(--bg3); }
+.node-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+.node-card.has-color-red { border-left: 3px solid var(--red); }
+.node-card.has-color-green { border-left: 3px solid var(--green); }
+.node-card.has-color-yellow { border-left: 3px solid var(--yellow); }
+.node-card.has-color-purple { border-left: 3px solid var(--purple); }
+.node-card.has-color-orange { border-left: 3px solid var(--orange); }
+.node-card.has-color-blue { border-left: 3px solid var(--accent); }
+.node-header { display: flex; align-items: flex-start; gap: 8px; }
+.node-title { font-size: 13px; font-weight: 600; flex: 1; word-break: break-word; }
+.node-btns { display: flex; gap: 2px; opacity: 0; transition: var(--transition); flex-shrink: 0; }
+.node-card:hover .node-btns { opacity: 1; }
+.node-btn {
+  width: 22px; height: 22px; border-radius: 4px; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; color: var(--text3);
+}
+.node-btn:hover { background: var(--bg4); color: var(--text); }
+.node-desc { font-size: 12px; color: var(--text2); margin-top: 4px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.node-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.node-tag { font-size: 10px; padding: 2px 6px; background: var(--bg4); border-radius: 20px; color: var(--text3); }
+.node-media-thumb { margin-top: 8px; }
+.node-media-thumb img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; }
+.node-links { margin-top: 6px; }
+.node-link { font-size: 11px; color: var(--accent); display: flex; align-items: center; gap: 4px; }
+.add-child-btn {
+  margin-top: 6px; width: 100%; padding: 5px; border: 1px dashed var(--border);
+  border-radius: var(--radius-sm); color: var(--text3); font-size: 12px;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  transition: var(--transition);
+}
+.add-child-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.collapse-btn {
+  position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text3); z-index: 2;
+  transition: var(--transition);
+}
+.collapse-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
+
+/* ─── Detail Panel ─── */
+#detail-panel {
+  width: var(--detail-w); min-width: var(--detail-w);
+  background: var(--bg2); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+  transition: var(--transition);
+}
+#detail-panel.hidden { display: none; }
+.detail-header {
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.detail-title { font-size: 14px; font-weight: 600; }
+.detail-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.detail-empty { color: var(--text3); font-size: 13px; text-align: center; margin-top: 40px; }
+.detail-section { display: flex; flex-direction: column; gap: 8px; }
+.detail-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); }
+.detail-input {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 12px; color: var(--text); outline: none; transition: var(--transition); width: 100%;
+}
+.detail-input:focus { border-color: var(--accent); }
+textarea.detail-input { resize: vertical; min-height: 80px; }
+.detail-save-btn {
+  padding: 8px 16px; background: var(--accent); color: #fff;
+  border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; align-self: flex-end;
+  transition: var(--transition);
+}
+.detail-save-btn:hover { background: var(--accent2); }
+.media-list { display: flex; flex-direction: column; gap: 8px; }
+.media-item {
+  background: var(--bg3); border-radius: var(--radius-sm); overflow: hidden;
+  border: 1px solid var(--border);
+}
+.media-item img { width: 100%; height: 120px; object-fit: cover; }
+.media-item-info { padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; }
+.media-item-label { font-size: 12px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-list { display: flex; flex-direction: column; gap: 6px; }
+.link-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border);
+}
+.link-item a { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.add-media-form, .add-link-form { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.add-media-form input, .add-link-form input {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 10px; color: var(--text); outline: none; width: 100%;
+}
+.add-media-form input:focus, .add-link-form input:focus { border-color: var(--accent); }
+.add-row { display: flex; gap: 6px; }
+.btn-add-sm {
+  padding: 7px 12px; background: var(--bg4); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-size: 12px; font-weight: 500;
+  white-space: nowrap; transition: var(--transition);
+}
+.btn-add-sm:hover { border-color: var(--border2); background: var(--bg3); }
+.btn-add-sm.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-add-sm.primary:hover { background: var(--accent2); }
+.color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-swatch {
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: var(--transition);
+}
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch.selected { border-color: var(--text); }
+.tags-input-wrap { position: relative; }
+.tags-display { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.tag-chip {
+  font-size: 11px; padding: 3px 8px; background: var(--accent-dim);
+  border-radius: 20px; color: var(--accent2); display: flex; align-items: center; gap: 4px;
+}
+.tag-chip button { font-size: 10px; color: var(--text3); }
+.tag-chip button:hover { color: var(--red); }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-card {
+  background: var(--bg3); border-radius: var(--radius-sm); padding: 12px;
+  border: 1px solid var(--border); text-align: center;
+}
+.stat-card .stat-val { font-size: 22px; font-weight: 700; color: var(--accent); }
+.stat-card .stat-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* ─── Modals ─── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500; padding: 20px;
+}
+.modal-overlay.hidden { display: none; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; width: 100%; max-width: 440px;
+  box-shadow: var(--shadow); display: flex; flex-direction: column;
+  max-height: 90vh; overflow: hidden;
+}
+.modal-header {
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.modal-header h3 { font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; }
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+.modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 13px; font-weight: 500; color: var(--text2); }
+.form-group input, .form-group textarea, .form-group select {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 12px; color: var(--text); outline: none; transition: var(--transition); width: 100%;
+}
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--accent); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.btn-cancel {
+  padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text2); font-size: 13px; font-weight: 500; transition: var(--transition);
+}
+.btn-cancel:hover { border-color: var(--border2); color: var(--text); background: var(--bg3); }
+
+/* ─── Paywall Modal ─── */
+.paywall-modal { max-width: 580px; }
+.paywall-header { text-align: center; padding: 28px 20px 0; }
+.paywall-header h2 { font-size: 22px; margin-bottom: 6px; }
+.paywall-header p { color: var(--text2); font-size: 14px; }
+.plans-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 20px; }
+.plan-card {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; display: flex; flex-direction: column; gap: 12px; position: relative;
+}
+.plan-card.current-plan { border-color: var(--accent); }
+.plan-card.popular { border-color: var(--yellow); }
+.plan-popular-badge {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  background: var(--yellow); color: #000; font-size: 10px; font-weight: 700;
+  padding: 2px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.plan-name { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; }
+.plan-price { font-size: 24px; font-weight: 700; }
+.plan-price span { font-size: 13px; font-weight: 400; color: var(--text3); }
+.plan-features { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.plan-feature { font-size: 12px; color: var(--text2); display: flex; align-items: flex-start; gap: 6px; }
+.plan-feature i { color: var(--green); font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+.plan-feature.locked { color: var(--text3); }
+.plan-feature.locked i { color: var(--text3); }
+.plan-btn {
+  padding: 9px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+  text-align: center; transition: var(--transition); border: 1px solid var(--border);
+  color: var(--text2);
+}
+.plan-btn:hover { background: var(--bg4); }
+.plan-btn.current { background: var(--bg4); color: var(--text3); cursor: default; }
+.plan-btn.accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+.plan-btn.accent:hover { background: var(--accent2); }
+.plan-btn.gold { background: var(--yellow); color: #000; border-color: var(--yellow); }
+.plan-btn.gold:hover { opacity: 0.9; }
+.paywall-note { text-align: center; font-size: 12px; color: var(--text3); padding: 0 20px 20px; }
+.stripe-badge { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
+.stripe-badge i { font-size: 14px; color: var(--green); }
+
+/* ─── Export Modal ─── */
+.export-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.export-opt {
+  padding: 14px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); text-align: center; cursor: pointer;
+  transition: var(--transition); display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.export-opt:hover { border-color: var(--border2); background: var(--bg4); }
+.export-opt i { font-size: 22px; color: var(--accent); }
+.export-opt span { font-size: 13px; font-weight: 500; }
+
+/* ─── Account Modal ─── */
+.account-section { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 4px; }
+.account-section:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.account-email { font-size: 13px; color: var(--text2); margin-top: 4px; }
+.btn-danger {
+  padding: 8px 16px; border: 1px solid rgba(248,113,113,0.4); border-radius: var(--radius-sm);
+  color: var(--red); font-size: 13px; font-weight: 500; transition: var(--transition);
+}
+.btn-danger:hover { background: rgba(248,113,113,0.1); }
+
+/* ─── Tree Settings Modal ─── */
+.emoji-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.emoji-opt {
+  width: 36px; height: 36px; border-radius: var(--radius-sm); font-size: 20px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  border: 2px solid transparent; transition: var(--transition); background: var(--bg3);
+}
+.emoji-opt:hover { background: var(--bg4); }
+.emoji-opt.selected { border-color: var(--accent); }
+.tree-color-opts { display: flex; gap: 8px; flex-wrap: wrap; }
+.tree-color-opt {
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: var(--transition);
+}
+.tree-color-opt:hover { transform: scale(1.15); }
+.tree-color-opt.selected { border-color: var(--text); }
+
+/* ─── Toast ─── */
+#toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  padding: 12px 18px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text); font-size: 13px;
+  box-shadow: var(--shadow); display: flex; align-items: center; gap: 10px;
+  animation: slideIn 0.2s ease; max-width: 320px;
+}
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error { border-left: 3px solid var(--red); }
+.toast.info { border-left: 3px solid var(--accent); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ─── Context Menu ─── */
+#context-menu {
+  position: fixed; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 4px; z-index: 600;
+  box-shadow: var(--shadow); min-width: 160px; display: none;
+}
+.ctx-item {
+  padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; gap: 8px; color: var(--text);
+  transition: var(--transition);
+}
+.ctx-item:hover { background: var(--bg4); }
+.ctx-item.danger { color: var(--red); }
+.ctx-item.danger:hover { background: rgba(248,113,113,0.1); }
+.ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* ─── Search Results ─── */
+.search-results {
+  position: absolute; top: 100%; left: 0; right: 0;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); margin-top: 4px; z-index: 50;
+  max-height: 200px; overflow-y: auto; box-shadow: var(--shadow);
+}
+.search-result-item {
+  padding: 9px 12px; cursor: pointer; font-size: 13px; transition: var(--transition);
+  border-bottom: 1px solid var(--border);
+}
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover { background: var(--bg4); }
+.search-result-item .sr-tree { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* ─── Responsive ─── */
+@media (max-width: 1024px) {
+  :root { --sidebar-w: 240px; --detail-w: 300px; --node-w: 200px; }
+}
+@media (max-width: 768px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 60px; z-index: 200;
+    transform: translateX(-100%); box-shadow: var(--shadow);
+  }
+  #sidebar.mobile-open { transform: translateX(0); }
+  #detail-panel {
+    position: fixed; right: 0; top: 0; bottom: 60px; z-index: 200;
+    transform: translateX(100%); box-shadow: var(--shadow);
+    min-width: unset; width: 85vw;
+  }
+  #detail-panel.mobile-open { transform: translateX(0); }
+  #detail-panel.hidden { transform: translateX(100%); }
+  #bottom-nav { display: flex; }
+  #main-area { padding-bottom: 60px; }
+  .topbar-btns .btn-outline { display: none; }
+}
+@media (min-width: 769px) {
+  #bottom-nav { display: none; }
+}
+@media (max-width: 380px) {
+  :root { --node-w: 180px; }
+  .auth-card { border-radius: 0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+}
+
+/* ─── Bottom Nav ─── */
+#bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
+  background: var(--bg2); border-top: 1px solid var(--border);
+  align-items: center; justify-content: space-around; z-index: 300;
+}
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 10px; color: var(--text3); padding: 8px 16px;
+  transition: var(--transition); cursor: pointer;
+}
+.nav-btn i { font-size: 20px; }
+.nav-btn.active { color: var(--accent); }
+.nav-btn.new-btn {
+  background: var(--accent); color: #fff; border-radius: 50%;
+  width: 48px; height: 48px; padding: 0; margin-bottom: 8px;
+  justify-content: center;
+}
+.nav-btn.new-btn i { font-size: 22px; }
+
+/* ─── Pro/Plus Gate Overlay ─── */
+.gate-wrap { position: relative; }
+.gate-overlay {
+  position: absolute; inset: 0; background: rgba(15,17,23,0.7);
+  backdrop-filter: blur(2px); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-sm);
+  z-index: 5;
+}
+.gate-overlay i { font-size: 20px; color: var(--accent); }
+.gate-overlay span { font-size: 12px; color: var(--text2); text-align: center; padding: 0 10px; }
+.gate-overlay button { font-size: 12px; padding: 5px 12px; background: var(--accent); color: #fff; border-radius: 20px; font-weight: 600; }
+
+/* ─── Limit Banner ─── */
+.limit-banner {
+  background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3);
+  border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; color: var(--yellow);
+  display: flex; align-items: center; gap: 8px;
+}
+.limit-banner i { font-size: 16px; }
+.limit-banner a { color: var(--yellow); font-weight: 600; }
 </style>
 </head>
 <body>
 
-<!-- LOADING -->
+<!-- Loading -->
 <div id="loading-screen">
+  <div class="logo">Research<span>Tree</span></div>
   <div class="spinner"></div>
-  <div class="loading-label">ResearchTree</div>
 </div>
 
-<!-- AUTH -->
+<!-- Auth Screen -->
 <div id="auth-screen">
   <div class="auth-card">
-    <div class="auth-header">
-      <div class="auth-logo">Research<span>Tree</span></div>
-      <div class="auth-tagline">Build knowledge, one branch at a time.</div>
+    <div class="auth-logo">
+      <h1>Research<span>Tree</span></h1>
+      <p>Organize knowledge. Build connections. Think deeper.</p>
     </div>
-    <div class="auth-body">
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-in" onclick="switchTab('in')">Sign In</button>
-        <button class="auth-tab" id="tab-up" onclick="switchTab('up')">Sign Up</button>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</div>
+      <div class="auth-tab" onclick="switchAuthTab('signup')">Create Account</div>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+    <!-- Sign In -->
+    <div id="signin-form" class="auth-form">
+      <div class="form-field">
+        <label>Email</label>
+        <input type="email" id="signin-email" placeholder="you@example.com">
       </div>
-      <div class="auth-err" id="auth-err"></div>
-      <!-- Sign In -->
-      <div id="form-in">
-        <div class="auth-field"><label>Email</label><input type="email" id="si-email" placeholder="you@example.com" autocomplete="email"></div>
-        <div class="auth-field"><label>Password</label><input type="password" id="si-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doSignIn()"></div>
-        <button class="btn-auth" id="btn-signin" onclick="doSignIn()"><i class="ti ti-login"></i> Sign In</button>
-        <div class="auth-note"><a onclick="doReset()">Forgot password?</a></div>
+      <div class="form-field">
+        <label>Password</label>
+        <input type="password" id="signin-password" placeholder="••••••••">
       </div>
-      <!-- Sign Up -->
-      <div id="form-up" style="display:none">
-        <div class="auth-field"><label>Name</label><input type="text" id="su-name" placeholder="Your name" autocomplete="name"></div>
-        <div class="auth-field"><label>Email</label><input type="email" id="su-email" placeholder="you@example.com" autocomplete="email"></div>
-        <div class="auth-field"><label>Password</label><input type="password" id="su-pass" placeholder="Min 6 characters" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignUp()"></div>
-        <button class="btn-auth" id="btn-signup" onclick="doSignUp()"><i class="ti ti-user-plus"></i> Create Account</button>
+      <button class="btn-primary" onclick="signInEmail()">Sign In</button>
+      <div class="auth-divider">or continue with</div>
+      <div class="social-btns">
+        <button class="btn-social" onclick="signInGoogle()"><i class="ti ti-brand-google"></i> Google</button>
+        <button class="btn-social" onclick="signInGitHub()"><i class="ti ti-brand-github"></i> GitHub</button>
       </div>
-      <div class="auth-divider">or</div>
-      <div class="social-grid">
-        <button class="btn-social" onclick="doGoogle()">
-          <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-          Google
-        </button>
-        <button class="btn-social" onclick="doGitHub()">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
-          GitHub
-        </button>
+    </div>
+    <!-- Sign Up -->
+    <div id="signup-form" class="auth-form hidden">
+      <div class="form-field">
+        <label>Email</label>
+        <input type="email" id="signup-email" placeholder="you@example.com">
+      </div>
+      <div class="form-field">
+        <label>Password</label>
+        <input type="password" id="signup-password" placeholder="At least 6 characters">
+      </div>
+      <button class="btn-primary" onclick="signUpEmail()">Create Account</button>
+      <div class="auth-divider">or continue with</div>
+      <div class="social-btns">
+        <button class="btn-social" onclick="signInGoogle()"><i class="ti ti-brand-google"></i> Google</button>
+        <button class="btn-social" onclick="signInGitHub()"><i class="ti ti-brand-github"></i> GitHub</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- APP -->
-<div id="app">
-  <div id="sb-overlay" onclick="closeMobileSB()"></div>
-  <!-- SIDEBAR -->
+<!-- Main App -->
+<div id="app" class="hidden">
+  <!-- Sidebar -->
   <div id="sidebar">
-    <div class="sb-header">
-      <i class="ti ti-tree" style="font-size:18px;color:var(--accent);flex-shrink:0"></i>
-      <span class="logo">Research<span>Tree</span></span>
-      <span class="plan-badge plan-free" id="plan-badge">Free</span>
-      <div class="sync-dot" id="sync-dot"></div>
+    <div class="sidebar-header">
+      <div class="sidebar-logo">Research<span>Tree</span></div>
+      <div class="sidebar-actions">
+        <button class="icon-btn" onclick="openNewTreeModal()" title="New tree"><i class="ti ti-plus"></i></button>
+        <button class="icon-btn" onclick="openAccountModal()" title="Account"><i class="ti ti-settings"></i></button>
+      </div>
     </div>
-    <div class="sb-search"><i class="ti ti-search"></i><input placeholder="Search trees..." oninput="filterTrees(this.value)"></div>
-    <div class="sec-lbl">Your Trees</div>
-    <div class="trees-list" id="trees-list"></div>
-    <button class="btn-new-tree" onclick="handleNewTree()"><i class="ti ti-plus"></i> New Tree</button>
-    <div class="sb-upgrade" id="sb-upgrade" onclick="openPW('plus')" style="display:none">
-      <div class="su-lbl">Upgrade</div>
-      <div class="su-title">Unlimited trees, exports & more</div>
-      <div class="su-cta"><i class="ti ti-arrow-up-circle"></i> View plans →</div>
+    <div class="sidebar-search">
+      <div class="search-input-wrap" id="search-wrap">
+        <i class="ti ti-search"></i>
+        <input type="text" placeholder="Search nodes..." id="search-input" oninput="handleSearch(this.value)" onfocus="showSearchResults()" autocomplete="off">
+        <div id="search-results" class="search-results" style="display:none;"></div>
+      </div>
     </div>
-    <div class="sb-user" id="sb-user">
-      <div class="u-avatar" id="u-avatar"></div>
-      <div class="u-info"><div class="u-name" id="u-name">—</div><div class="u-email" id="u-email"></div></div>
-      <button class="signout-btn" onclick="doSignOut()" title="Sign out"><i class="ti ti-logout"></i></button>
+    <div class="tree-list" id="tree-list"></div>
+    <div class="sidebar-footer">
+      <div class="user-row" onclick="openAccountModal()">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div id="user-email-display" class="user-email">Loading...</div>
+          <div id="plan-badge" class="plan-badge free">Free</div>
+        </div>
+        <i class="ti ti-chevron-right" style="color:var(--text3);font-size:14px;"></i>
+      </div>
     </div>
   </div>
 
-  <!-- MAIN -->
-  <div id="main">
+  <!-- Main -->
+  <div id="main-area">
     <div id="topbar">
-      <button class="icon-btn" id="btn-menu" onclick="toggleSB()"><i class="ti ti-layout-sidebar"></i></button>
-      <div class="breadcrumb" id="breadcrumb"></div>
-      <div class="tb-right">
-        <button class="icon-btn" onclick="expandAll()" title="Expand all"><i class="ti ti-arrows-maximize"></i></button>
-        <button class="icon-btn" onclick="collapseAll()" title="Collapse all"><i class="ti ti-arrows-minimize"></i></button>
-        <button class="icon-btn" id="btn-dp" onclick="toggleDP()" title="Info panel"><i class="ti ti-layout-sidebar-right"></i></button>
-        <button class="icon-btn" id="btn-ns" onclick="handleNodeSearch()"><i class="ti ti-search"></i><span class="lock-dot" id="ns-lock">+</span></button>
-        <div class="export-wrap">
-          <button class="icon-btn" id="btn-exp" onclick="handleExport()"><i class="ti ti-download"></i><span class="lock-dot" id="exp-lock">+</span></button>
-          <div class="export-menu" id="exp-menu">
-            <div class="em-item" onclick="doExportJSON()"><i class="ti ti-file-code"></i> JSON</div>
-            <div class="em-item" onclick="doExportMD()"><i class="ti ti-markdown"></i> Markdown</div>
-            <div class="em-item" onclick="doExportCSV()"><i class="ti ti-table"></i> CSV</div>
-            <div class="em-item" onclick="window.print()"><i class="ti ti-printer"></i> Print</div>
-          </div>
-        </div>
-        <button class="icon-btn" id="btn-settings" onclick="openTreeSettings()" style="display:none"><i class="ti ti-settings"></i></button>
-        <button class="icon-btn" id="btn-upgrade" onclick="openPW('plus')" style="border-color:#3d3870;color:var(--accent)"><i class="ti ti-crown"></i></button>
+      <button class="icon-btn" id="sidebar-toggle" onclick="toggleSidebar()" style="display:none;"><i class="ti ti-menu-2"></i></button>
+      <div id="tree-title-display" class="placeholder">Select or create a tree</div>
+      <div class="topbar-btns">
+        <div class="sync-dot" id="sync-dot" title="Saved"></div>
+        <button class="btn-sm btn-outline" onclick="openTreeSettings()" id="tree-settings-btn" style="display:none"><i class="ti ti-settings"></i> Settings</button>
+        <button class="btn-sm btn-outline" onclick="openExportModal()" id="export-btn" style="display:none"><i class="ti ti-download"></i> Export</button>
+        <button class="btn-sm btn-accent" onclick="openNewNodeModal(null)" id="add-root-btn" style="display:none"><i class="ti ti-plus"></i> Add Node</button>
       </div>
     </div>
-    <div id="stats-bar"></div>
-    <div id="ns-bar"><input id="ns-input" placeholder="Search nodes in this tree..." oninput="searchNodes(this.value)"></div>
-    <div id="canvas-wrap"><div id="canvas"></div></div>
+    <div id="canvas-wrap">
+      <div id="canvas">
+        <div id="canvas-empty">
+          <i class="ti ti-tree"></i>
+          <p>No tree selected</p>
+          <small>Create a new tree or select one from the sidebar</small>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- DETAIL PANEL -->
+  <!-- Detail Panel -->
   <div id="detail-panel" class="hidden">
-    <div class="dp-inner" id="dp-inner">
-      <div class="empty-state" style="min-height:260px">
-        <div style="font-size:36px;color:var(--text3)"><i class="ti ti-info-circle"></i></div>
-        <p style="font-size:13px">Click a node's <i class="ti ti-info-circle"></i> button to view details here.</p>
-      </div>
+    <div class="detail-header">
+      <div class="detail-title">Node Details</div>
+      <button class="icon-btn" onclick="closeDetailPanel()"><i class="ti ti-x"></i></button>
     </div>
-  </div>
-
-  <!-- BOTTOM NAV -->
-  <div id="bottom-nav">
-    <button class="bnav active" id="bnav-trees" onclick="mobileNav('trees')"><i class="ti ti-trees"></i><span>Trees</span></button>
-    <button class="bnav" id="bnav-canvas" onclick="mobileNav('canvas')"><i class="ti ti-git-branch"></i><span>Canvas</span></button>
-    <button class="bnav" id="bnav-add" onclick="handleNewTree()"><i class="ti ti-circle-plus" style="font-size:24px"></i><span>New</span></button>
-    <button class="bnav" id="bnav-info" onclick="mobileNav('info')"><i class="ti ti-info-circle"></i><span>Info</span></button>
-    <button class="bnav" id="bnav-acct" onclick="mobileNav('acct')"><i class="ti ti-user-circle"></i><span>Account</span></button>
+    <div class="detail-body" id="detail-body">
+      <div class="detail-empty">Select a node to view details</div>
+    </div>
   </div>
 </div>
 
-<!-- MODAL -->
-<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
-  <div class="modal" onclick="event.stopPropagation()">
+<!-- Bottom Nav -->
+<div id="bottom-nav">
+  <div class="nav-btn" id="nav-trees" onclick="mobileNavTrees()"><i class="ti ti-tree"></i><span>Trees</span></div>
+  <div class="nav-btn" id="nav-canvas" onclick="mobileNavCanvas()"><i class="ti ti-layout-kanban"></i><span>Canvas</span></div>
+  <div class="nav-btn new-btn" onclick="openNewTreeModal()"><i class="ti ti-plus"></i></div>
+  <div class="nav-btn" id="nav-info" onclick="mobileNavInfo()"><i class="ti ti-info-circle"></i><span>Info</span></div>
+  <div class="nav-btn" id="nav-account" onclick="openAccountModal()"><i class="ti ti-user"></i><span>Account</span></div>
+</div>
+
+<!-- New Tree Modal -->
+<div class="modal-overlay hidden" id="new-tree-modal">
+  <div class="modal">
     <div class="modal-header">
-      <span class="modal-title" id="modal-title"></span>
-      <button class="icon-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+      <h3>New Research Tree</h3>
+      <button class="icon-btn" onclick="closeModal('new-tree-modal')"><i class="ti ti-x"></i></button>
     </div>
-    <div class="modal-body" id="modal-body"></div>
-    <div class="modal-footer" id="modal-footer"></div>
-  </div>
-</div>
-
-<!-- PAYWALL -->
-<div class="pw-overlay" id="pw-overlay" onclick="if(event.target===this)closePW()">
-  <div class="pw-modal">
-    <div class="pw-head">
-      <h2 id="pw-title">Unlock more with ResearchTree</h2>
-      <p id="pw-sub">Choose the plan that fits your research workflow.</p>
-    </div>
-    <div class="pw-plans">
-      <div class="pc">
-        <div class="pc-name" style="color:var(--plus)">Plus — $9/mo</div>
-        <div class="pc-tag">For serious researchers who need more room.</div>
-        <ul class="pc-feats">
-          <li><i class="ti ti-check f-teal"></i>Unlimited trees &amp; nodes</li>
-          <li><i class="ti ti-check f-teal"></i>Full-text node search</li>
-          <li><i class="ti ti-check f-teal"></i>Export JSON / Markdown / CSV</li>
-          <li><i class="ti ti-check f-teal"></i>Images &amp; video embeds</li>
-          <li><i class="ti ti-check f-teal"></i>Import trees from JSON</li>
-        </ul>
-        <button class="btn-teal" style="width:100%;justify-content:center;font-size:13px" onclick="activatePlan('plus')"><i class="ti ti-arrow-up-circle"></i> Start with Plus</button>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Tree Name</label>
+        <input type="text" id="new-tree-name" placeholder="e.g. Machine Learning Fundamentals" maxlength="80">
       </div>
-      <div class="pc hl">
-        <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
-          <div class="pc-name" style="color:var(--gold)">Pro — $19/mo</div>
-          <span style="font-size:9px;font-weight:700;background:linear-gradient(135deg,#d4a843,#b8892e);color:#1a1200;padding:2px 6px;border-radius:20px">BEST</span>
+      <div class="form-group">
+        <label>Icon (emoji)</label>
+        <div class="emoji-picker" id="emoji-picker">
+          🌳 🔬 📚 💡 🧠 🔭 🎯 🗺️ ⚡ 🌐 🏗️ 🎨 💎 🚀 📊 🔑
         </div>
-        <div class="pc-tag">For power users building deep knowledge systems.</div>
-        <ul class="pc-feats">
-          <li><i class="ti ti-check f-gold"></i>Everything in Plus</li>
-          <li><i class="ti ti-check f-gold"></i>Node color labels</li>
-          <li><i class="ti ti-check f-gold"></i>Node tags &amp; filtering</li>
-          <li><i class="ti ti-check f-gold"></i>Extended notes per node</li>
-          <li><i class="ti ti-check f-gold"></i>Tree statistics dashboard</li>
-        </ul>
-        <button class="btn-gold" style="width:100%;justify-content:center;font-size:13px" onclick="activatePlan('pro')"><i class="ti ti-crown"></i> Go Pro</button>
       </div>
     </div>
-    <div class="pw-foot"><button class="btn-secondary" style="font-size:12px" onclick="closePW()">Stay on Free</button></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('new-tree-modal')">Cancel</button>
+      <button class="btn-accent btn-sm" onclick="createTree()"><i class="ti ti-plus"></i> Create Tree</button>
+    </div>
   </div>
 </div>
 
-<div id="toast"></div>
-
-<!-- ============================================================
-     SUPABASE SETUP INSTRUCTIONS
-     ============================================================
-     1. Go to https://supabase.com and create a free account
-     2. Click "New Project" — choose a name and strong DB password
-     3. Once the project is ready, go to:
-        Settings → API → copy "Project URL" and "anon public" key
-     4. Replace the two placeholder values below
-     5. Go to SQL Editor in Supabase and run this SQL:
-
-        create table public.trees (
-          id text primary key,
-          user_id uuid references auth.users not null,
-          data jsonb not null,
-          updated_at timestamptz default now()
-        );
-        create index on public.trees(user_id);
-        alter table public.trees enable row level security;
-        create policy "Users own their trees"
-          on public.trees for all
-          using (auth.uid() = user_id)
-          with check (auth.uid() = user_id);
-
-        create table public.profiles (
-          id uuid references auth.users primary key,
-          plan text default 'free',
-          updated_at timestamptz default now()
-        );
-        alter table public.profiles enable row level security;
-        create policy "Users own their profile"
-          on public.profiles for all
-          using (auth.uid() = id)
-          with check (auth.uid() = id);
-
-     6. Go to Authentication → Providers and enable:
-        Email (on by default), Google, GitHub
-        (Apple requires a paid Apple Developer account)
-     7. For Google/GitHub OAuth, add your GitHub Pages URL to
-        Authentication → URL Configuration → Redirect URLs
-        e.g. https://yourusername.github.io/your-repo
-     ============================================================ -->
-
-<script>
-// ── SUPABASE CONFIG ─────────────────────────────────────────
-const SUPABASE_URL  = 'https://iplsdmdaviuwabtclvsw.supabase.co';   // e.g. https://xyzxyz.supabase.co
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwbHNkbWRhdml1d2FidGNsdnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NzI1NzIsImV4cCI6MjA5NjU0ODU3Mn0.f0X9ox4RCfHvAJqDP-YhCPve6NwADG5Cr3PE_WqHVU4';      // long string starting with eyJ...
-// ────────────────────────────────────────────────────────────
-
-// Validate config before doing anything
-if (SUPABASE_URL.startsWith('YOUR_') || SUPABASE_ANON.startsWith('YOUR_')) {
-  document.getElementById('loading-screen').innerHTML = `
-    <div style="max-width:480px;padding:32px;background:#16181f;border:1px solid #3a3e52;border-radius:16px;text-align:center">
-      <div style="font-size:40px;margin-bottom:16px">⚙️</div>
-      <h2 style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:12px;color:#e8eaf2">Setup Required</h2>
-      <p style="color:#9099b5;font-size:14px;line-height:1.7;margin-bottom:16px">
-        Open <code style="background:#252832;padding:2px 6px;border-radius:4px;color:#7c6af0">index.html</code> and replace the two placeholder values near the bottom of the file:
-      </p>
-      <div style="background:#1e2028;border:1px solid #2e3140;border-radius:10px;padding:14px;text-align:left;font-size:13px;font-family:monospace;color:#9099b5;line-height:1.8">
-        <span style="color:#5a6280">// Replace these two lines:</span><br>
-        <span style="color:#e8715a">SUPABASE_URL</span>  = <span style="color:#3dbfa0">'https://yourproject.supabase.co'</span><br>
-        <span style="color:#e8715a">SUPABASE_ANON</span> = <span style="color:#3dbfa0">'eyJ...'</span>
+<!-- New/Edit Node Modal -->
+<div class="modal-overlay hidden" id="node-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="node-modal-title">Add Node</h3>
+      <button class="icon-btn" onclick="closeModal('node-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="node-modal-body">
+      <div class="form-group">
+        <label>Title <span style="color:var(--red)">*</span></label>
+        <input type="text" id="node-title-input" placeholder="Node title" maxlength="120">
       </div>
-      <p style="color:#5a6280;font-size:12px;margin-top:12px">See the comments in the HTML file for full setup instructions.</p>
-    </div>`;
-  throw new Error('Supabase config not set');
-}
-</script>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="node-desc-input" placeholder="Add research notes, summary, or description..." rows="4"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('node-modal')">Cancel</button>
+      <button class="btn-accent btn-sm" id="node-save-btn" onclick="saveNodeFromModal()"><i class="ti ti-check"></i> Save Node</button>
+    </div>
+  </div>
+</div>
 
+<!-- Tree Settings Modal -->
+<div class="modal-overlay hidden" id="tree-settings-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Tree Settings</h3>
+      <button class="icon-btn" onclick="closeModal('tree-settings-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Tree Name</label>
+        <input type="text" id="ts-name" placeholder="Tree name" maxlength="80">
+      </div>
+      <div class="form-group">
+        <label>Icon</label>
+        <div class="emoji-picker" id="ts-emoji-picker"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('tree-settings-modal')">Cancel</button>
+      <button class="btn-accent btn-sm" onclick="saveTreeSettings()"><i class="ti ti-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay hidden" id="export-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Export Tree</h3>
+      <button class="icon-btn" onclick="closeModal('export-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="export-options">
+        <div class="export-opt" onclick="exportTree('json')"><i class="ti ti-file-code"></i><span>JSON</span></div>
+        <div class="export-opt" onclick="exportTree('markdown')"><i class="ti ti-markdown"></i><span>Markdown</span></div>
+        <div class="export-opt" onclick="exportTree('csv')"><i class="ti ti-table"></i><span>CSV</span></div>
+        <div class="export-opt" onclick="exportTree('print')"><i class="ti ti-printer"></i><span>Print / PDF</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Account Modal -->
+<div class="modal-overlay hidden" id="account-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Account</h3>
+      <button class="icon-btn" onclick="closeModal('account-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="account-section">
+        <div style="font-weight:600;font-size:15px;" id="acct-email">Loading...</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:4px;" id="acct-plan-label">Free Plan</div>
+      </div>
+      <div class="account-section">
+        <div style="font-weight:600;margin-bottom:10px;">Upgrade Plan</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px;">Unlock unlimited trees, media attachments, export, and Pro features.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-sm btn-outline" id="acct-plus-btn" onclick="openPaywall('plus')"><i class="ti ti-star"></i> Upgrade to Plus — $9/mo</button>
+          <button class="btn-sm btn-accent" id="acct-pro-btn" onclick="openPaywall('pro')"><i class="ti ti-crown"></i> Go Pro — $19/mo</button>
+        </div>
+      </div>
+      <div class="account-section">
+        <button class="btn-danger" onclick="signOut()"><i class="ti ti-logout"></i> Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Paywall Modal -->
+<div class="modal-overlay hidden" id="paywall-modal">
+  <div class="modal paywall-modal">
+    <div class="modal-header">
+      <h3>Upgrade ResearchTree</h3>
+      <button class="icon-btn" onclick="closeModal('paywall-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="plans-grid">
+        <!-- Free -->
+        <div class="plan-card" id="plan-free-card">
+          <div class="plan-name">Free</div>
+          <div class="plan-price">$0<span>/mo</span></div>
+          <div class="plan-features">
+            <div class="plan-feature"><i class="ti ti-check"></i>3 trees</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>20 nodes total</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Unlimited depth</div>
+            <div class="plan-feature locked"><i class="ti ti-lock"></i>No media</div>
+            <div class="plan-feature locked"><i class="ti ti-lock"></i>No export</div>
+            <div class="plan-feature locked"><i class="ti ti-lock"></i>No search</div>
+          </div>
+          <div class="plan-btn current" id="plan-free-btn">Current Plan</div>
+        </div>
+        <!-- Plus -->
+        <div class="plan-card" id="plan-plus-card">
+          <div class="plan-name">Plus</div>
+          <div class="plan-price">$9<span>/mo</span></div>
+          <div class="plan-features">
+            <div class="plan-feature"><i class="ti ti-check"></i>Unlimited trees</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Unlimited nodes</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Image attachments</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Video embeds</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Node search</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>JSON/MD/CSV export</div>
+          </div>
+          <button class="plan-btn accent" id="plan-plus-btn" onclick="goToStripe('plus')"><i class="ti ti-credit-card"></i> Upgrade — $9/mo</button>
+        </div>
+        <!-- Pro -->
+        <div class="plan-card popular" id="plan-pro-card">
+          <div class="plan-popular-badge">Most Popular</div>
+          <div class="plan-name">Pro</div>
+          <div class="plan-price">$19<span>/mo</span></div>
+          <div class="plan-features">
+            <div class="plan-feature"><i class="ti ti-check"></i>Everything in Plus</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Color labels</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Node tags</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Extended notes</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Tree statistics</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Priority support</div>
+          </div>
+          <button class="plan-btn gold" id="plan-pro-btn" onclick="goToStripe('pro')"><i class="ti ti-crown"></i> Go Pro — $19/mo</button>
+        </div>
+      </div>
+    </div>
+    <div class="paywall-note">
+      <div>Payments processed securely by Stripe. Cancel anytime.</div>
+      <div class="stripe-badge"><i class="ti ti-lock"></i> SSL encrypted · No card details stored</div>
+    </div>
+  </div>
+</div>
+
+<!-- Context Menu -->
+<div id="context-menu">
+  <div class="ctx-item" id="ctx-add-child" onclick="ctxAddChild()"><i class="ti ti-plus"></i> Add Child Node</div>
+  <div class="ctx-item" id="ctx-edit" onclick="ctxEdit()"><i class="ti ti-edit"></i> Edit Node</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ctx-delete" onclick="ctxDelete()"><i class="ti ti-trash"></i> Delete Node</div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ── INIT ─────────────────────────────────────────────────────
-const { createClient } = supabase;
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+// ─── Config ───
+const SUPABASE_URL = 'https://iplsdmdaviuwabtclvsw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwbHNkbWRhdml1d2FidGNsdnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NzI1NzIsImV4cCI6MjA5NjU0ODU3Mn0.f0X9ox4RCfHvAJqDP-YhCPve6NwADG5Cr3PE_WqHVU4';
 
-// ── CONSTANTS ────────────────────────────────────────────────
-const PLANS = {
-  free: {trees:3,nodes:20,media:false,export:false,nodeSearch:false,nodeColors:false,nodeTags:false,nodeNotes:false,stats:false},
-  plus: {trees:Infinity,nodes:Infinity,media:true,export:true,nodeSearch:true,nodeColors:false,nodeTags:false,nodeNotes:false,stats:false},
-  pro:  {trees:Infinity,nodes:Infinity,media:true,export:true,nodeSearch:true,nodeColors:true,nodeTags:true,nodeNotes:true,stats:true}
-};
-const EMOJIS=['📚','🔬','🎮','🏛️','🌍','⚡','🧬','🎨','🎵','🚀','💡','🏺','🧪','📡','🌿','🔭','⚔️','🎭','🏗️','🌊','🧠','💻','🎬','📰','🔮','🎯','🦠','🌐','🏆','🎪','🦋','🌋'];
-const TCOLORS=['#7c6af0','#3dbfa0','#e8715a','#d4a843','#5bc8f5','#e07bb0','#6fd98f','#f0a653'];
-const NCOLORS=['none','teal','coral','gold','purple','blue'];
+// ─── Stripe Payment Links ───
+// IMPORTANT: Replace these with your actual Stripe Payment Links
+// In Stripe Dashboard: Products → Create Product → Create Price → Payment Links → Create Link
+// Set success_url on each link to: https://YOUR_GITHUB_PAGES_URL/?plan=plus (or pro)
+const STRIPE_PLUS_LINK = 'https://buy.stripe.com/YOUR_PLUS_LINK_HERE';
+const STRIPE_PRO_LINK = 'https://buy.stripe.com/YOUR_PRO_LINK_HERE';
 
-// ── STATE ────────────────────────────────────────────────────
+// ─── Supabase Client ───
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ─── State ───
 let currentUser = null;
-let userPlan    = 'free';
-let trees       = [];
-let activeId    = null;
-let collapsed   = {};
-let selNode     = null;
-let dpOpen      = false;
-let sbOpen      = true;
-let _media      = [];
-let _nodeColor  = 'none';
-let expOpen     = false;
+let currentPlan = 'free'; // 'free' | 'plus' | 'pro'
+let trees = []; // [{id, name, icon, color, nodes:[]}]
+let activeTreeId = null;
+let selectedNodeId = null;
+let contextNodeId = null;
+let nodeModalParentId = null;
+let nodeModalEditId = null;
+let isMobile = window.innerWidth <= 768;
+let saveDebounceTimer = null;
+let selectedEmoji = '🌳';
+let tsSelectedEmoji = '🌳';
 
-function plan()    { return PLANS[userPlan] || PLANS.free; }
-function can(f)    { return plan()[f]; }
-function uid()     { return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
-function esc(s)    { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function getTree() { return trees.find(t=>t.id===activeId); }
-function findNode(nodes,id)  { for(const n of nodes){if(n.id===id)return n;const r=findNode(n.children||[],id);if(r)return r;}return null; }
-function delNodeFrom(nodes,id){ const i=nodes.findIndex(n=>n.id===id);if(i>-1){nodes.splice(i,1);return true;}return nodes.some(n=>delNodeFrom(n.children||[],id)); }
-function countNodes(nodes)   { return nodes.reduce((s,n)=>s+1+countNodes(n.children||[]),0); }
-function allNodes(nodes,a=[])  { nodes.forEach(n=>{a.push(n);allNodes(n.children||[],a);});return a; }
-function maxDepth(nodes,d=0)   { if(!nodes.length)return d;return Math.max(...nodes.map(n=>maxDepth(n.children||[],d+1))); }
-function getPath(roots,id,p=[])  { for(const n of roots){const pp=[...p,n];if(n.id===id)return pp;const r=getPath(n.children||[],id,pp);if(r)return r;}return null; }
-function totalNodes() { const t=getTree();return t?countNodes(t.roots||[]):0; }
-function toast(msg,dur=2400){ const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur); }
-function setSyncing(s){ const d=document.getElementById('sync-dot');if(!d)return;d.className='sync-dot'+(s==='syncing'?' syncing':s==='error'?' error':''); }
+const EMOJIS = ['🌳','🔬','📚','💡','🧠','🔭','🎯','🗺️','⚡','🌐','🏗️','🎨','💎','🚀','📊','🔑','🔩','🌿','🧩','📝'];
+const COLORS = ['#6c8eff','#4ade80','#fbbf24','#f87171','#a78bfa','#fb923c'];
+const NODE_COLORS = ['blue','green','yellow','red','purple','orange'];
 
-// ── AUTH HELPERS ─────────────────────────────────────────────
-function switchTab(t){
-  document.getElementById('tab-in').classList.toggle('active',t==='in');
-  document.getElementById('tab-up').classList.toggle('active',t==='up');
-  document.getElementById('form-in').style.display=t==='in'?'block':'none';
-  document.getElementById('form-up').style.display=t==='up'?'block':'none';
-  clearAuthErr();
-}
-function authErr(msg){ const e=document.getElementById('auth-err');e.textContent=msg;e.classList.add('show'); }
-function clearAuthErr(){ document.getElementById('auth-err').classList.remove('show'); }
-function setAuthBusy(busy){ document.querySelectorAll('.btn-auth,.btn-social').forEach(b=>b.disabled=busy); }
+// ─── Init ───
+async function init() {
+  // Check for plan update in URL (from Stripe redirect)
+  const params = new URLSearchParams(window.location.search);
+  const planParam = params.get('plan');
 
-async function doSignIn(){
-  clearAuthErr(); setAuthBusy(true);
-  const email=document.getElementById('si-email').value.trim();
-  const pass=document.getElementById('si-pass').value;
-  if(!email||!pass){authErr('Please fill in all fields.');setAuthBusy(false);return;}
-  const {error}=await sb.auth.signInWithPassword({email,password:pass});
-  if(error){authErr(friendlyErr(error));setAuthBusy(false);}
-}
-async function doSignUp(){
-  clearAuthErr(); setAuthBusy(true);
-  const name=document.getElementById('su-name').value.trim();
-  const email=document.getElementById('su-email').value.trim();
-  const pass=document.getElementById('su-pass').value;
-  if(!name||!email||!pass){authErr('Please fill in all fields.');setAuthBusy(false);return;}
-  if(pass.length<6){authErr('Password must be at least 6 characters.');setAuthBusy(false);return;}
-  const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
-  if(error){authErr(friendlyErr(error));setAuthBusy(false);}
-  else if(data.user&&!data.session){authErr('Check your email to confirm your account, then sign in.');setAuthBusy(false);}
-}
-async function doGoogle(){
-  clearAuthErr();
-  await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
-}
-async function doGitHub(){
-  clearAuthErr();
-  await sb.auth.signInWithOAuth({provider:'github',options:{redirectTo:window.location.href}});
-}
-async function doReset(){
-  const email=document.getElementById('si-email').value.trim();
-  if(!email){authErr('Enter your email first.');return;}
-  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
-  if(error)authErr(friendlyErr(error));
-  else toast('Password reset email sent!');
-}
-async function doSignOut(){
-  await sb.auth.signOut();
-  currentUser=null; trees=[]; activeId=null; collapsed={}; selNode=null;
-  document.getElementById('app').style.display='none';
-  document.getElementById('auth-screen').style.display='flex';
-}
-function friendlyErr(e){
-  const m={'Invalid login credentials':'Incorrect email or password.','User already registered':'That email is already registered.','Email not confirmed':'Please confirm your email first.'};
-  return m[e.message]||e.message||'Something went wrong.';
-}
-
-// ── SUPABASE DATA ─────────────────────────────────────────────
-async function loadData(userId){
-  // Load profile
-  const {data:prof}=await sb.from('profiles').select('plan').eq('id',userId).single();
-  if(prof?.plan) userPlan=prof.plan;
-  // Load trees
-  const {data:rows}=await sb.from('trees').select('id,data').eq('user_id',userId);
-  if(rows){
-    trees=rows.map(r=>({...r.data,id:r.id}));
-    trees.sort((a,b)=>(a.created||0)-(b.created||0));
-    if(trees.length) activeId=trees[0].id;
-  }
-}
-async function saveTree(tree){
-  if(!currentUser)return;
-  setSyncing('syncing');
-  const {error}=await sb.from('trees').upsert({id:tree.id,user_id:currentUser.id,data:tree,updated_at:new Date().toISOString()});
-  setSyncing(error?'error':'ok');
-  if(error)console.error('Save error:',error);
-}
-async function deletTreeDB(id){
-  if(!currentUser)return;
-  await sb.from('trees').delete().eq('id',id).eq('user_id',currentUser.id);
-}
-async function savePlan(p){
-  if(!currentUser)return;
-  await sb.from('profiles').upsert({id:currentUser.id,plan:p,updated_at:new Date().toISOString()});
-}
-
-// ── AUTH STATE ────────────────────────────────────────────────
-sb.auth.onAuthStateChange(async(event,session)=>{
-  document.getElementById('loading-screen').style.display='none';
-  if(session?.user){
-    currentUser=session.user;
-    document.getElementById('auth-screen').style.display='none';
-    document.getElementById('app').style.display='flex';
-    setAuthBusy(false);
-    updateUserUI(session.user);
-    await loadData(session.user.id);
-    renderSidebar(); renderCanvas(); updatePlanUI();
+  const { data: { session } } = await sbClient.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await loadUserProfile();
+    if (planParam && (planParam === 'plus' || planParam === 'pro')) {
+      await updatePlanFromStripe(planParam);
+    }
+    showApp();
+    await loadTrees();
   } else {
-    document.getElementById('app').style.display='none';
-    document.getElementById('auth-screen').style.display='flex';
-    setAuthBusy(false);
+    showAuth();
   }
-});
 
-function updateUserUI(user){
-  const av=document.getElementById('u-avatar');
-  const meta=user.user_metadata||{};
-  const photo=meta.avatar_url||meta.picture||'';
-  if(photo) av.innerHTML=`<img src="${esc(photo)}" alt="">`;
-  else av.textContent=(meta.full_name||meta.name||user.email||'?').charAt(0).toUpperCase();
-  document.getElementById('u-name').textContent=meta.full_name||meta.name||'User';
-  document.getElementById('u-email').textContent=user.email||'';
-}
-
-// ── PLAN UI ───────────────────────────────────────────────────
-function updatePlanUI(){
-  const p=userPlan;
-  const b=document.getElementById('plan-badge');
-  if(b){b.className='plan-badge plan-'+p;b.textContent=p.charAt(0).toUpperCase()+p.slice(1);}
-  const el=id=>document.getElementById(id);
-  el('exp-lock').style.display   = can('export')     ? 'none':'flex';
-  el('ns-lock').style.display    = can('nodeSearch')  ? 'none':'flex';
-  el('btn-upgrade').style.display= p==='pro' ? 'none':'flex';
-  el('sb-upgrade').style.display = p==='pro' ? 'none':'block';
-  const sb2=document.getElementById('stats-bar');
-  if(sb2) sb2.style.display=can('stats')&&getTree()?'flex':'none';
-  if(can('stats')&&getTree()) renderStats();
-}
-
-// ── SIDEBAR ───────────────────────────────────────────────────
-function filterTrees(q){ renderSidebar(q); }
-function renderSidebar(q=''){
-  const list=document.getElementById('trees-list');
-  const arr=trees.filter(t=>!q||t.name.toLowerCase().includes(q.toLowerCase()));
-  if(!arr.length){list.innerHTML=`<div style="padding:18px;text-align:center;color:var(--text3);font-size:13px;line-height:1.7">${q?'No matching trees.':'No trees yet.<br>Create your first tree!'}</div>`;return;}
-  list.innerHTML='';
-  arr.forEach(tree=>{
-    const div=document.createElement('div');
-    div.className='tree-item'+(activeId===tree.id?' active':'');
-    div.innerHTML=`<div class="tree-icon" style="background:${tree.color}22">${tree.emoji}</div>
-      <span class="tree-name">${esc(tree.name)}</span>
-      <span class="tree-count">${countNodes(tree.roots||[])}n</span>
-      <button class="tree-del" onclick="confirmDelTree('${tree.id}',event)"><i class="ti ti-trash"></i></button>`;
-    div.onclick=()=>{activateTree(tree.id);closeMobileSB();};
-    list.appendChild(div);
+  // Listen for auth changes
+  sbClient.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      currentUser = session.user;
+      await loadUserProfile();
+      showApp();
+      await loadTrees();
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      currentPlan = 'free';
+      trees = [];
+      activeTreeId = null;
+      showAuth();
+    }
   });
-  if(userPlan==='free'&&trees.length>=PLANS.free.trees){
-    const w=document.createElement('div');
-    w.style.cssText='margin:5px;padding:8px 10px;background:#1e1a3a;border:1px solid #3d3870;border-radius:8px;font-size:11px;color:var(--text2);cursor:pointer';
-    w.innerHTML=`<i class="ti ti-lock" style="color:var(--accent)"></i> ${PLANS.free.trees}-tree limit. <span style="color:var(--accent);font-weight:600">Upgrade →</span>`;
-    w.onclick=()=>openPW('plus','You\'ve reached the free tree limit');
-    list.appendChild(w);
+
+  setupEmojiPickers();
+  setupClickOutside();
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+}
+
+function checkMobile() {
+  isMobile = window.innerWidth <= 768;
+  const toggle = document.getElementById('sidebar-toggle');
+  if (toggle) toggle.style.display = isMobile ? 'flex' : 'none';
+}
+
+// ─── Auth ───
+function showAuth() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').classList.add('hidden');
+}
+
+function showApp() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').classList.remove('hidden');
+  updateUserUI();
+}
+
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0 && tab==='signin')||(i===1 && tab==='signup')));
+  document.getElementById('signin-form').classList.toggle('hidden', tab !== 'signin');
+  document.getElementById('signup-form').classList.toggle('hidden', tab !== 'signup');
+  clearAuthError();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function clearAuthError() {
+  const el = document.getElementById('auth-error');
+  el.style.display = 'none';
+}
+
+async function signInEmail() {
+  const email = document.getElementById('signin-email').value.trim();
+  const password = document.getElementById('signin-password').value;
+  if (!email || !password) return showAuthError('Please enter email and password.');
+  clearAuthError();
+  const { error } = await sbClient.auth.signInWithPassword({ email, password });
+  if (error) showAuthError(error.message);
+}
+
+async function signUpEmail() {
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  if (!email || !password) return showAuthError('Please fill in all fields.');
+  if (password.length < 6) return showAuthError('Password must be at least 6 characters.');
+  clearAuthError();
+  const { error } = await sbClient.auth.signUp({ email, password });
+  if (error) showAuthError(error.message);
+  else showToast('Account created! Check your email to verify.', 'success');
+}
+
+async function signInGoogle() {
+  const { error } = await sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
+  if (error) showAuthError(error.message);
+}
+
+async function signInGitHub() {
+  const { error } = await sbClient.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: window.location.href } });
+  if (error) showAuthError(error.message);
+}
+
+async function signOut() {
+  closeModal('account-modal');
+  await sbClient.auth.signOut();
+  showToast('Signed out.', 'info');
+}
+
+// ─── Profile / Plan ───
+async function loadUserProfile() {
+  const { data, error } = await sbClient.from('profiles').select('plan').eq('id', currentUser.id).single();
+  if (data) {
+    currentPlan = data.plan || 'free';
+  } else if (error && error.code === 'PGRST116') {
+    // Profile doesn't exist yet, create it
+    await sbClient.from('profiles').insert({ id: currentUser.id, plan: 'free' });
+    currentPlan = 'free';
   }
 }
-function toggleSB(){
-  const mobile=window.innerWidth<768;
-  if(mobile){openMobileSB();}
-  else{sbOpen=!sbOpen;document.getElementById('sidebar').classList.toggle('collapsed',!sbOpen);}
-}
-function openMobileSB(){ document.getElementById('sidebar').classList.add('m-open');document.getElementById('sb-overlay').style.display='block'; }
-function closeMobileSB(){ document.getElementById('sidebar').classList.remove('m-open');document.getElementById('sb-overlay').style.display='none'; }
-function activateTree(id){
-  activeId=id;selNode=null;
-  renderSidebar();renderCanvas();updateDetailPanel();updatePlanUI();
-  document.getElementById('btn-settings').style.display=id?'flex':'none';
-}
-function confirmDelTree(id,e){
-  e.stopPropagation();
-  const tree=trees.find(t=>t.id===id);if(!tree)return;
-  if(!confirm(`Delete "${tree.name}" and all nodes?`))return;
-  trees=trees.filter(t=>t.id!==id);
-  if(activeId===id){activeId=trees[0]?.id||null;selNode=null;}
-  deletTreeDB(id);renderSidebar();renderCanvas();updateDetailPanel();updatePlanUI();toast('Tree deleted');
+
+async function updatePlanFromStripe(plan) {
+  // This updates plan after successful Stripe redirect
+  const { error } = await sbClient.from('profiles').upsert({ id: currentUser.id, plan: plan, updated_at: new Date().toISOString() });
+  if (!error) {
+    currentPlan = plan;
+    updateUserUI();
+    showToast(`🎉 You're now on the ${plan.toUpperCase()} plan!`, 'success');
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 }
 
-// ── BREADCRUMB ────────────────────────────────────────────────
-function buildBC(items){
-  const bc=document.getElementById('breadcrumb');bc.innerHTML='';
-  items.forEach((item,i)=>{
-    if(i>0){const s=document.createElement('span');s.className='bc-sep';s.textContent='›';bc.appendChild(s);}
-    const el=document.createElement('span');el.className='bc-item'+(i===items.length-1?' cur':'');
-    el.textContent=item.label;if(item.fn)el.onclick=item.fn;bc.appendChild(el);
-  });
+function updateUserUI() {
+  if (!currentUser) return;
+  const email = currentUser.email || 'User';
+  const initial = email[0].toUpperCase();
+  document.getElementById('user-avatar').textContent = initial;
+  document.getElementById('user-email-display').textContent = email;
+  const badge = document.getElementById('plan-badge');
+  badge.textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
+  badge.className = 'plan-badge ' + currentPlan;
+  // Account modal
+  document.getElementById('acct-email').textContent = email;
+  document.getElementById('acct-plan-label').textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1) + ' Plan';
+  // Show/hide upgrade buttons
+  const plusBtn = document.getElementById('acct-plus-btn');
+  const proBtn = document.getElementById('acct-pro-btn');
+  if (currentPlan === 'pro') { plusBtn.style.display = 'none'; proBtn.style.display = 'none'; }
+  else if (currentPlan === 'plus') { plusBtn.style.display = 'none'; proBtn.style.display = ''; }
+  else { plusBtn.style.display = ''; proBtn.style.display = ''; }
 }
 
-// ── CANVAS ────────────────────────────────────────────────────
-function renderCanvas(){
-  const canvas=document.getElementById('canvas');
-  const tree=getTree();
-  document.getElementById('btn-settings').style.display=tree?'flex':'none';
-  if(!tree){
-    canvas.innerHTML='';
-    const es=document.createElement('div');es.className='empty-state';
-    es.innerHTML=`<div style="font-size:60px;color:var(--accent)"><i class="ti ti-trees"></i></div>
-      <h2>Welcome to ResearchTree</h2>
-      <p>Organize any topic into deep, expandable research trees.</p>
-      <button class="btn-primary" style="margin-top:8px" onclick="handleNewTree()"><i class="ti ti-plus"></i> Create first tree</button>`;
-    canvas.appendChild(es);
-    buildBC([{label:'Research Trees'}]);
+// ─── Paywall ───
+function openPaywall(targetPlan) {
+  closeModal('account-modal');
+  updatePaywallUI();
+  openModal('paywall-modal');
+  // Scroll to appropriate plan
+  setTimeout(() => {
+    const card = targetPlan === 'pro' ? document.getElementById('plan-pro-card') : document.getElementById('plan-plus-card');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
+}
+
+function updatePaywallUI() {
+  // Free btn
+  const freebtn = document.getElementById('plan-free-btn');
+  const plusbtn = document.getElementById('plan-plus-btn');
+  const probtn = document.getElementById('plan-pro-btn');
+  if (currentPlan === 'free') {
+    freebtn.textContent = '✓ Current Plan'; freebtn.className = 'plan-btn current';
+    plusbtn.innerHTML = '<i class="ti ti-credit-card"></i> Upgrade — $9/mo'; plusbtn.className = 'plan-btn accent'; plusbtn.onclick = () => goToStripe('plus');
+    probtn.innerHTML = '<i class="ti ti-crown"></i> Go Pro — $19/mo'; probtn.className = 'plan-btn gold'; probtn.onclick = () => goToStripe('pro');
+  } else if (currentPlan === 'plus') {
+    freebtn.textContent = 'Downgrade'; freebtn.className = 'plan-btn';
+    plusbtn.textContent = '✓ Current Plan'; plusbtn.className = 'plan-btn current'; plusbtn.onclick = null;
+    probtn.innerHTML = '<i class="ti ti-crown"></i> Upgrade to Pro — $19/mo'; probtn.className = 'plan-btn gold'; probtn.onclick = () => goToStripe('pro');
+  } else if (currentPlan === 'pro') {
+    freebtn.textContent = 'Downgrade'; freebtn.className = 'plan-btn';
+    plusbtn.textContent = 'Downgrade'; plusbtn.className = 'plan-btn'; plusbtn.onclick = null;
+    probtn.textContent = '✓ Current Plan'; probtn.className = 'plan-btn current'; probtn.onclick = null;
+  }
+}
+
+function goToStripe(plan) {
+  // Check if Stripe links are configured
+  const link = plan === 'pro' ? STRIPE_PRO_LINK : STRIPE_PLUS_LINK;
+  if (link.includes('YOUR_')) {
+    showToast('⚠️ Stripe Payment Links not configured yet. See setup instructions.', 'error');
+    showStripeSetupInstructions(plan);
     return;
   }
-  buildBC([{label:'Research Trees'},{label:tree.emoji+' '+tree.name}]);
-  canvas.innerHTML='';
-  (tree.roots||[]).forEach(root=>{
-    canvas.appendChild(buildNodeTree(root,true,tree));
-  });
-  if(userPlan==='free'&&totalNodes()>=PLANS.free.nodes){
-    canvas.appendChild(makeLimBanner('20-node limit reached','Upgrade to Plus for unlimited nodes.','plus','Upgrade'));
-  } else {
-    const btn=document.createElement('button');btn.className='add-root-btn';
-    btn.innerHTML='<i class="ti ti-plus"></i> Add root node';
-    btn.onclick=()=>handleAddNode({parentId:null,treeId:tree.id});
-    canvas.appendChild(btn);
+  // Append user email and success URL for Stripe redirect
+  const successUrl = encodeURIComponent(window.location.origin + window.location.pathname + '?plan=' + plan);
+  const emailParam = currentUser?.email ? '&prefilled_email=' + encodeURIComponent(currentUser.email) : '';
+  window.open(link + '?success_url=' + successUrl + emailParam, '_blank');
+  showToast('Opening Stripe checkout...', 'info');
+}
+
+function showStripeSetupInstructions(plan) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.zIndex = '600';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:500px;">
+      <div class="modal-header"><h3>⚠️ Stripe Setup Required</h3><button class="icon-btn" onclick="this.closest('.modal-overlay').remove()"><i class="ti ti-x"></i></button></div>
+      <div class="modal-body" style="gap:10px;">
+        <p style="color:var(--text2);font-size:13px;">To enable real payments, you need to configure Stripe Payment Links. Here's how:</p>
+        <ol style="color:var(--text2);font-size:13px;padding-left:20px;display:flex;flex-direction:column;gap:8px;">
+          <li>Go to <a href="https://dashboard.stripe.com" target="_blank">dashboard.stripe.com</a></li>
+          <li>Products → <b>Add Product</b> → Name: "ResearchTree Plus", Price: $9/mo recurring</li>
+          <li>Payment Links → <b>Create Link</b> for Plus</li>
+          <li>In Link Settings, set <b>Success URL</b> to: <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">${window.location.href}?plan=plus</code></li>
+          <li>Copy the link URL (starts with buy.stripe.com)</li>
+          <li>Repeat for Pro ($19/mo) with <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">?plan=pro</code></li>
+          <li>In <b>index.html</b>, replace <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">STRIPE_PLUS_LINK</code> and <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">STRIPE_PRO_LINK</code> at the top of the JS</li>
+        </ol>
+        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text3);">
+          When a user pays, Stripe redirects them back to your app with <b>?plan=plus</b> or <b>?plan=pro</b> in the URL, which automatically upgrades their plan in Supabase.
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn-accent btn-sm" onclick="this.closest('.modal-overlay').remove()">Got it</button></div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+// Plan limit helpers
+function canCreateTree() {
+  if (currentPlan !== 'free') return true;
+  return trees.length < 3;
+}
+function countAllNodes() {
+  return trees.reduce((sum, t) => sum + countNodes(t.nodes || []), 0);
+}
+function countNodes(nodes) {
+  return nodes.reduce((s, n) => s + 1 + countNodes(n.children || []), 0);
+}
+function canAddNode() {
+  if (currentPlan !== 'free') return true;
+  return countAllNodes() < 20;
+}
+function canUseMedia() { return currentPlan === 'plus' || currentPlan === 'pro'; }
+function canExport() { return currentPlan === 'plus' || currentPlan === 'pro'; }
+function canSearch() { return currentPlan === 'plus' || currentPlan === 'pro'; }
+function canUseProFeatures() { return currentPlan === 'pro'; }
+
+// ─── Tree CRUD ───
+async function loadTrees() {
+  if (!currentUser) return;
+  setSyncState('syncing');
+  const { data, error } = await sbClient.from('trees').select('*').eq('user_id', currentUser.id).order('updated_at', { ascending: false });
+  setSyncState(error ? 'error' : 'saved');
+  if (error) { showToast('Failed to load trees: ' + error.message, 'error'); return; }
+  trees = (data || []).map(row => ({ ...row.data, id: row.id, _db_id: row.id }));
+  renderTreeList();
+}
+
+async function saveTreeToDb(treeId) {
+  if (!currentUser) return;
+  const tree = trees.find(t => t.id === treeId);
+  if (!tree) return;
+  setSyncState('syncing');
+  const { error } = await sbClient.from('trees').upsert({
+    id: tree.id, user_id: currentUser.id,
+    data: { id: tree.id, name: tree.name, icon: tree.icon, color: tree.color, nodes: tree.nodes || [] },
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'id' });
+  setSyncState(error ? 'error' : 'saved');
+  if (error) showToast('Save failed: ' + error.message, 'error');
+}
+
+function debouncedSave(treeId) {
+  clearTimeout(saveDebounceTimer);
+  setSyncState('syncing');
+  saveDebounceTimer = setTimeout(() => saveTreeToDb(treeId), 800);
+}
+
+function setSyncState(state) {
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot ' + (state === 'saved' ? '' : state);
+  dot.title = state === 'saved' ? 'All changes saved' : state === 'syncing' ? 'Saving...' : 'Save failed';
+}
+
+async function createTree() {
+  if (!canCreateTree()) {
+    closeModal('new-tree-modal');
+    showToast('Free plan limit: 3 trees. Upgrade to create more.', 'error');
+    openPaywall('plus');
+    return;
+  }
+  const name = document.getElementById('new-tree-name').value.trim();
+  if (!name) { showToast('Please enter a tree name.', 'error'); return; }
+  const tree = {
+    id: 'tree_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    name, icon: selectedEmoji, color: '#6c8eff', nodes: []
+  };
+  trees.unshift(tree);
+  closeModal('new-tree-modal');
+  document.getElementById('new-tree-name').value = '';
+  await saveTreeToDb(tree.id);
+  renderTreeList();
+  selectTree(tree.id);
+  showToast('Tree created!', 'success');
+}
+
+async function deleteTree(treeId) {
+  if (!confirm('Delete this tree? This cannot be undone.')) return;
+  const { error } = await sbClient.from('trees').delete().eq('id', treeId).eq('user_id', currentUser.id);
+  if (error) { showToast('Delete failed: ' + error.message, 'error'); return; }
+  trees = trees.filter(t => t.id !== treeId);
+  renderTreeList();
+  if (activeTreeId === treeId) {
+    activeTreeId = null; selectedNodeId = null;
+    renderCanvas(); closeDetailPanel();
+    document.getElementById('tree-title-display').textContent = 'Select or create a tree';
+    document.getElementById('tree-title-display').className = 'placeholder';
+    ['tree-settings-btn','export-btn','add-root-btn'].forEach(id => document.getElementById(id).style.display = 'none');
+  }
+  showToast('Tree deleted.', 'info');
+}
+
+function getActiveTree() { return trees.find(t => t.id === activeTreeId); }
+
+function selectTree(treeId) {
+  activeTreeId = treeId;
+  selectedNodeId = null;
+  const tree = getActiveTree();
+  if (!tree) return;
+  const title = document.getElementById('tree-title-display');
+  title.textContent = (tree.icon || '🌳') + '  ' + tree.name;
+  title.className = '';
+  ['tree-settings-btn','add-root-btn'].forEach(id => document.getElementById(id).style.display = '');
+  document.getElementById('export-btn').style.display = canExport() ? '' : 'none';
+  renderTreeList();
+  renderCanvas();
+  closeDetailPanel();
+  if (isMobile) {
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    setMobileTab('canvas');
   }
 }
 
-function buildNodeTree(node,isRoot,tree){
-  const hasKids=(node.children||[]).length>0;
-  const isCollapsed=collapsed[node.id];
-  const wrap=document.createElement('div');
-  wrap.style.cssText='display:flex;flex-direction:row;align-items:flex-start';
-
-  const card=buildNodeCard(node,isRoot,tree);
-  wrap.appendChild(card);
-
-  if(hasKids&&!isCollapsed){
-    const hline=document.createElement('div');hline.style.cssText='height:1px;background:var(--border2);width:18px;margin-top:25px;flex-shrink:0';
-    const col=document.createElement('div');col.style.cssText='display:flex;flex-direction:column;border-left:1px solid var(--border2)';
-    (node.children||[]).forEach(child=>{
-      const crow=document.createElement('div');crow.style.cssText='display:flex;flex-direction:row;align-items:flex-start';
-      const hl=document.createElement('div');hl.style.cssText='height:1px;background:var(--border2);width:18px;margin-top:25px;flex-shrink:0';
-      crow.appendChild(hl);crow.appendChild(buildNodeTree(child,false,tree));
-      col.appendChild(crow);
-    });
-    const sibBtn=document.createElement('button');sibBtn.className='add-sib-btn';
-    sibBtn.innerHTML='<i class="ti ti-plus"></i> Add sibling';
-    sibBtn.onclick=e=>{e.stopPropagation();handleAddNode({siblingOf:node.id,treeId:tree.id},e);};
-    col.appendChild(sibBtn);
-    wrap.appendChild(hline);wrap.appendChild(col);
+function renderTreeList() {
+  const list = document.getElementById('tree-list');
+  if (!trees.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">No trees yet.<br>Click + to create one.</div>';
+    return;
   }
+  list.innerHTML = trees.map(t => {
+    const nodeCount = countNodes(t.nodes || []);
+    return `<div class="tree-item ${t.id === activeTreeId ? 'active' : ''}" onclick="selectTree('${t.id}')">
+      <div class="tree-item-icon">${t.icon || '🌳'}</div>
+      <div class="tree-item-name">${esc(t.name)}</div>
+      <div class="tree-item-count">${nodeCount}</div>
+      <button class="icon-btn tree-item-menu" onclick="event.stopPropagation();deleteTree('${t.id}')" title="Delete tree" style="width:24px;height:24px;">
+        <i class="ti ti-trash" style="font-size:13px;color:var(--red);"></i>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+// ─── Node CRUD ───
+function generateNodeId() {
+  return 'node_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+}
+
+function findNode(nodes, id) {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    const found = findNode(n.children || [], id);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findParentArray(nodes, id) {
+  for (const n of nodes) {
+    if ((n.children || []).some(c => c.id === id)) return n.children;
+    const found = findParentArray(n.children || [], id);
+    if (found) return found;
+  }
+  return null;
+}
+
+function deleteNode(nodes, id) {
+  const idx = nodes.findIndex(n => n.id === id);
+  if (idx !== -1) { nodes.splice(idx, 1); return true; }
+  for (const n of nodes) {
+    if (deleteNode(n.children || [], id)) return true;
+  }
+  return false;
+}
+
+function openNewNodeModal(parentId) {
+  if (!activeTreeId) { showToast('Select a tree first.', 'error'); return; }
+  if (!canAddNode()) {
+    showToast('Free plan limit: 20 nodes. Upgrade to add more.', 'error');
+    openPaywall('plus'); return;
+  }
+  nodeModalParentId = parentId;
+  nodeModalEditId = null;
+  document.getElementById('node-modal-title').textContent = parentId ? 'Add Child Node' : 'Add Root Node';
+  document.getElementById('node-title-input').value = '';
+  document.getElementById('node-desc-input').value = '';
+  document.getElementById('node-save-btn').textContent = 'Save Node';
+  openModal('node-modal');
+  setTimeout(() => document.getElementById('node-title-input').focus(), 100);
+}
+
+function openEditNodeModal(nodeId) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes || [], nodeId); if (!node) return;
+  nodeModalParentId = null;
+  nodeModalEditId = nodeId;
+  document.getElementById('node-modal-title').textContent = 'Edit Node';
+  document.getElementById('node-title-input').value = node.title || '';
+  document.getElementById('node-desc-input').value = node.desc || '';
+  document.getElementById('node-save-btn').innerHTML = '<i class="ti ti-check"></i> Save Changes';
+  openModal('node-modal');
+  setTimeout(() => document.getElementById('node-title-input').focus(), 100);
+}
+
+function saveNodeFromModal() {
+  const title = document.getElementById('node-title-input').value.trim();
+  if (!title) { showToast('Node title is required.', 'error'); document.getElementById('node-title-input').focus(); return; }
+  const desc = document.getElementById('node-desc-input').value.trim();
+  const tree = getActiveTree(); if (!tree) return;
+
+  if (nodeModalEditId) {
+    // Edit existing
+    const node = findNode(tree.nodes, nodeModalEditId);
+    if (node) { node.title = title; node.desc = desc; }
+    closeModal('node-modal');
+    debouncedSave(activeTreeId);
+    renderCanvas();
+    if (selectedNodeId === nodeModalEditId) renderDetailPanel(nodeModalEditId);
+    showToast('Node updated.', 'success');
+  } else {
+    // Create new
+    const newNode = {
+      id: generateNodeId(),
+      title, desc,
+      children: [], media: [], links: [],
+      tags: [], color: null, extNotes: '',
+      collapsed: false
+    };
+    if (nodeModalParentId) {
+      const parent = findNode(tree.nodes, nodeModalParentId);
+      if (parent) {
+        if (!parent.children) parent.children = [];
+        parent.children.push(newNode);
+      }
+    } else {
+      if (!tree.nodes) tree.nodes = [];
+      tree.nodes.push(newNode);
+    }
+    closeModal('node-modal');
+    debouncedSave(activeTreeId);
+    renderCanvas();
+    selectNode(newNode.id);
+    showToast('Node added!', 'success');
+  }
+}
+
+function deleteNodeById(nodeId) {
+  const tree = getActiveTree(); if (!tree) return;
+  if (!confirm('Delete this node and all its children?')) return;
+  deleteNode(tree.nodes, nodeId);
+  if (selectedNodeId === nodeId) { selectedNodeId = null; closeDetailPanel(); }
+  debouncedSave(activeTreeId);
+  renderCanvas();
+  showToast('Node deleted.', 'info');
+}
+
+// ─── Canvas Rendering ───
+function renderCanvas() {
+  const canvas = document.getElementById('canvas');
+  const empty = document.getElementById('canvas-empty');
+  const tree = getActiveTree();
+
+  if (!tree) {
+    canvas.innerHTML = ''; canvas.appendChild(empty);
+    empty.style.display = 'flex';
+    empty.querySelector('p').textContent = 'No tree selected';
+    empty.querySelector('small').textContent = 'Create a new tree or select one from the sidebar';
+    return;
+  }
+  if (!tree.nodes || tree.nodes.length === 0) {
+    canvas.innerHTML = ''; canvas.appendChild(empty);
+    empty.style.display = 'flex';
+    empty.querySelector('p').textContent = 'This tree is empty';
+    empty.querySelector('small').textContent = 'Click "Add Node" to get started';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Render horizontally: root nodes in a column, children branch right
+  const container = document.createElement('div');
+  container.className = 'tree-root-container';
+  for (const node of tree.nodes) {
+    container.appendChild(renderNodeAndChildren(node, false));
+  }
+  canvas.innerHTML = '';
+  canvas.appendChild(empty);
+  canvas.appendChild(container);
+}
+
+function renderNodeAndChildren(node, hasConnector) {
+  const wrap = document.createElement('div');
+  wrap.className = 'node-and-children';
+  wrap.style.alignItems = 'flex-start';
+
+  const nodeWrap = document.createElement('div');
+  nodeWrap.className = 'node-wrap';
+
+  if (hasConnector) {
+    const conn = document.createElement('div');
+    conn.className = 'node-connector';
+    nodeWrap.appendChild(conn);
+  }
+
+  nodeWrap.appendChild(buildNodeCard(node));
+  wrap.appendChild(nodeWrap);
+
+  const children = node.children || [];
+  if (children.length > 0) {
+    const childCol = document.createElement('div');
+    childCol.className = 'node-children' + (node.collapsed ? ' collapsed' : '');
+    childCol.id = 'children_' + node.id;
+    for (const child of children) {
+      childCol.appendChild(renderNodeAndChildren(child, true));
+    }
+    wrap.appendChild(childCol);
+  }
+
   return wrap;
 }
 
-function buildNodeCard(node,isRoot,tree){
-  const isSelected=selNode===node.id;
-  const hasKids=(node.children||[]).length>0;
-  const card=document.createElement('div');
-  let cls='node-card'+(isRoot?' root-card':'')+(isSelected?' selected':'');
-  if(can('nodeColors')&&node.color&&node.color!=='none') cls+=` c-${node.color}`;
-  card.className=cls;
+function buildNodeCard(node) {
+  const card = document.createElement('div');
+  card.className = 'node-card' + (node.id === selectedNodeId ? ' selected' : '') + (node.color ? ' has-color-' + node.color : '');
+  card.id = 'node_' + node.id;
+  card.onclick = (e) => { e.stopPropagation(); selectNode(node.id); };
+  card.oncontextmenu = (e) => { e.preventDefault(); showContextMenu(e, node.id); };
 
-  const imgs=(node.media||[]).filter(m=>m.type==='image');
-  const vids=(node.media||[]).filter(m=>m.type==='video');
-  const lnks=(node.media||[]).filter(m=>m.type==='link');
-  let thumbs='';
-  if(imgs.length&&can('media')) thumbs=`<div class="media-thumbs">${imgs.slice(0,3).map(m=>`<div class="m-thumb"><img src="${esc(m.url)}" alt="" onerror="this.parentNode.innerHTML='🖼️'"></div>`).join('')}</div>`;
-  const tags=[
-    imgs.length&&can('media')?`<span class="ntag t-img">🖼️ ${imgs.length}</span>`:'',
-    vids.length&&can('media')?`<span class="ntag t-vid">🎬 ${vids.length}</span>`:'',
-    lnks.length?`<span class="ntag t-lnk">🔗 ${lnks.length}</span>`:''
-  ].filter(Boolean).join('');
-  const hasDetail=node.desc||(node.media||[]).length;
-  card.innerHTML=`
-    <div class="node-header">
-      <div style="flex:1;min-width:0">
-        <div class="node-title">${esc(node.title)}</div>
-        ${node.desc?`<div class="node-desc">${esc(node.desc.slice(0,100))}${node.desc.length>100?'…':''}</div>`:''}
-      </div>
-      ${hasKids?`<button class="xbtn" onclick="toggleCollapse('${node.id}',event)"><i class="ti ti-chevron-${collapsed[node.id]?'right':'down'}"></i></button>`:''}
-    </div>
-    ${thumbs}
-    ${tags?`<div class="node-meta">${tags}</div>`:''}
-    ${node.note&&can('nodeNotes')?`<div class="node-note-box" style="font-size:10px;margin:4px 0">${esc(node.note.slice(0,80))}${(node.note||'').length>80?'…':''}</div>`:''}
-    <div class="node-actions">
-      <button class="nb nb-add" onclick="handleAddNode({parentId:'${node.id}',treeId:'${tree.id}'},event)"><i class="ti ti-plus"></i></button>
-      <button class="nb nb-edit" onclick="openNodeModal({editId:'${node.id}',treeId:'${tree.id}'},event)"><i class="ti ti-pencil"></i></button>
-      <button class="nb nb-del" onclick="confirmDelNode('${node.id}','${tree.id}',event)"><i class="ti ti-trash"></i></button>
-      ${hasDetail?`<button class="nb nb-info" onclick="selectNode('${node.id}','${tree.id}',event)"><i class="ti ti-info-circle"></i></button>`:''}
-    </div>`;
-  card.onclick=e=>{if(e.target===card)selectNode(node.id,tree.id,e);};
+  // Header
+  const header = document.createElement('div');
+  header.className = 'node-header';
+  const title = document.createElement('div');
+  title.className = 'node-title';
+  title.textContent = node.title;
+  header.appendChild(title);
+
+  const btns = document.createElement('div');
+  btns.className = 'node-btns';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'node-btn';
+  addBtn.title = 'Add child node';
+  addBtn.innerHTML = '<i class="ti ti-plus"></i>';
+  addBtn.onclick = (e) => { e.stopPropagation(); openNewNodeModal(node.id); };
+  const editBtn = document.createElement('button');
+  editBtn.className = 'node-btn';
+  editBtn.title = 'Edit node';
+  editBtn.innerHTML = '<i class="ti ti-edit"></i>';
+  editBtn.onclick = (e) => { e.stopPropagation(); openEditNodeModal(node.id); };
+  const delBtn = document.createElement('button');
+  delBtn.className = 'node-btn';
+  delBtn.title = 'Delete node';
+  delBtn.innerHTML = '<i class="ti ti-trash" style="color:var(--red)"></i>';
+  delBtn.onclick = (e) => { e.stopPropagation(); deleteNodeById(node.id); };
+  btns.appendChild(addBtn); btns.appendChild(editBtn); btns.appendChild(delBtn);
+  header.appendChild(btns);
+  card.appendChild(header);
+
+  // Description
+  if (node.desc) {
+    const desc = document.createElement('div');
+    desc.className = 'node-desc';
+    desc.textContent = node.desc;
+    card.appendChild(desc);
+  }
+
+  // Tags (Pro)
+  if (node.tags && node.tags.length) {
+    const tags = document.createElement('div');
+    tags.className = 'node-tags';
+    node.tags.forEach(t => {
+      const tag = document.createElement('span');
+      tag.className = 'node-tag';
+      tag.textContent = '#' + t;
+      tags.appendChild(tag);
+    });
+    card.appendChild(tags);
+  }
+
+  // Media thumbnail (Plus+)
+  if (node.media && node.media.length && canUseMedia()) {
+    const first = node.media[0];
+    if (first.type === 'image') {
+      const thumb = document.createElement('div');
+      thumb.className = 'node-media-thumb';
+      thumb.innerHTML = `<img src="${esc(first.url)}" alt="${esc(first.label||'')}" loading="lazy" onerror="this.style.display='none'">`;
+      card.appendChild(thumb);
+    }
+  }
+
+  // Links
+  if (node.links && node.links.length) {
+    const links = document.createElement('div');
+    links.className = 'node-links';
+    node.links.slice(0,2).forEach(l => {
+      const lnk = document.createElement('a');
+      lnk.className = 'node-link';
+      lnk.href = l.url; lnk.target = '_blank';
+      lnk.innerHTML = `<i class="ti ti-external-link"></i>${esc(l.label || l.url)}`;
+      lnk.onclick = e => e.stopPropagation();
+      links.appendChild(lnk);
+    });
+    card.appendChild(links);
+  }
+
+  // Add child button at bottom
+  const addChildBtn = document.createElement('button');
+  addChildBtn.className = 'add-child-btn';
+  addChildBtn.innerHTML = '<i class="ti ti-plus"></i> Add child';
+  addChildBtn.onclick = (e) => { e.stopPropagation(); openNewNodeModal(node.id); };
+  card.appendChild(addChildBtn);
+
+  // Collapse toggle (if has children)
+  if (node.children && node.children.length) {
+    const colBtn = document.createElement('button');
+    colBtn.className = 'collapse-btn';
+    colBtn.title = node.collapsed ? 'Expand' : 'Collapse';
+    colBtn.innerHTML = node.collapsed ? '<i class="ti ti-chevron-right"></i>' : '<i class="ti ti-chevron-left"></i>';
+    colBtn.onclick = (e) => { e.stopPropagation(); toggleCollapse(node.id); };
+    card.appendChild(colBtn);
+  }
+
   return card;
 }
 
-function toggleCollapse(id,e){ e.stopPropagation();collapsed[id]=!collapsed[id];renderCanvas(); }
-function expandAll(){ collapsed={};renderCanvas();toast('Expanded'); }
-function collapseAll(){ const t=getTree();if(!t)return;function c(ns){ns.forEach(n=>{collapsed[n.id]=true;c(n.children||[]);});}c(t.roots||[]);renderCanvas();toast('Collapsed'); }
-
-// ── STATS ─────────────────────────────────────────────────────
-function renderStats(){
-  const tree=getTree();if(!tree)return;
-  const ns=allNodes(tree.roots||[]);
-  const wm=ns.filter(n=>(n.media||[]).length).length;
-  const d=maxDepth(tree.roots||[]);
-  document.getElementById('stats-bar').innerHTML=`
-    <span class="si"><i class="ti ti-git-branch"></i><span class="sv">${ns.length}</span> nodes</span>
-    <span class="si"><i class="ti ti-photo"></i><span class="sv">${wm}</span> with media</span>
-    <span class="si"><i class="ti ti-layers-intersect"></i>depth <span class="sv">${d}</span></span>
-    <span class="si"><i class="ti ti-trees"></i><span class="sv">${(tree.roots||[]).length}</span> roots</span>`;
+function toggleCollapse(nodeId) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node.collapsed = !node.collapsed;
+  debouncedSave(activeTreeId);
+  renderCanvas();
 }
 
-// ── DETAIL PANEL ──────────────────────────────────────────────
-function toggleDP(){
-  dpOpen=!dpOpen;
-  const panel=document.getElementById('detail-panel');
-  const mobile=window.innerWidth<768;
-  if(mobile){panel.classList.toggle('m-open',dpOpen);panel.classList.toggle('hidden',!dpOpen);}
-  else panel.classList.toggle('hidden',!dpOpen);
-  document.getElementById('btn-dp').classList.toggle('active',dpOpen);
+function selectNode(nodeId) {
+  const prev = selectedNodeId;
+  selectedNodeId = nodeId;
+  // Update card styles
+  if (prev) {
+    const prevCard = document.getElementById('node_' + prev);
+    if (prevCard) prevCard.classList.remove('selected');
+  }
+  const card = document.getElementById('node_' + nodeId);
+  if (card) card.classList.add('selected');
+  renderDetailPanel(nodeId);
+  if (isMobile) {
+    document.getElementById('detail-panel').classList.add('mobile-open');
+    document.getElementById('detail-panel').classList.remove('hidden');
+    setMobileTab('info');
+  }
 }
-function selectNode(nid,tid,e){
-  if(e)e.stopPropagation();
-  selNode=nid;
-  if(!dpOpen){dpOpen=true;const p=document.getElementById('detail-panel');p.classList.remove('hidden');if(window.innerWidth<768)p.classList.add('m-open');document.getElementById('btn-dp').classList.add('active');}
-  renderCanvas();updateDetailPanel();
-}
-function updateDetailPanel(){
-  const inner=document.getElementById('dp-inner');
-  const tree=getTree();
-  if(!tree||!selNode){inner.innerHTML=`<div class="empty-state" style="min-height:260px"><div style="font-size:36px;color:var(--text3)"><i class="ti ti-info-circle"></i></div><p style="font-size:13px">Select a node to view details.</p></div>`;return;}
-  const node=findNode(tree.roots||[],selNode);if(!node)return;
-  const path=getPath(tree.roots||[],selNode);
-  const ps=path?path.map(n=>n.title).join(' › '):'';
-  const imgs=(node.media||[]).filter(m=>m.type==='image');
-  const vids=(node.media||[]).filter(m=>m.type==='video');
-  const lnks=(node.media||[]).filter(m=>m.type==='link');
-  let h=`<div class="dp-close-row">
-    <span class="dp-path">${esc(ps.length>50?ps.slice(0,50)+'…':ps)}</span>
-    <button class="icon-btn" onclick="closeDetail()"><i class="ti ti-x"></i></button>
+
+// ─── Detail Panel ───
+function renderDetailPanel(nodeId) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  const panel = document.getElementById('detail-panel');
+  const body = document.getElementById('detail-body');
+  panel.classList.remove('hidden');
+
+  let html = '';
+
+  // Title & Desc
+  html += `<div class="detail-section">
+    <div class="detail-label">Title</div>
+    <input class="detail-input" id="dp-title" value="${esc(node.title || '')}" onchange="updateNodeField('${nodeId}','title',this.value)">
   </div>
-  <h2 class="dp-title">${esc(node.title)}</h2>
-  ${node.desc?`<p class="dp-desc">${esc(node.desc)}</p>`:''}
-  ${node.note&&can('nodeNotes')?`<div class="dp-sec"><div class="dp-sec-title"><i class="ti ti-notebook"></i> Notes</div><div class="node-note-box">${esc(node.note)}</div></div>`:''}
-  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px">
-    <button class="nb nb-edit" onclick="openNodeModal({editId:'${node.id}',treeId:'${tree.id}'},null)"><i class="ti ti-pencil"></i> Edit</button>
-    <button class="nb nb-add" onclick="handleAddNode({parentId:'${node.id}',treeId:'${tree.id}'},null)"><i class="ti ti-plus"></i> Add child</button>
+  <div class="detail-section">
+    <div class="detail-label">Description</div>
+    <textarea class="detail-input" id="dp-desc" rows="4" onchange="updateNodeField('${nodeId}','desc',this.value)">${esc(node.desc || '')}</textarea>
   </div>`;
-  if(imgs.length&&can('media')){
-    h+=`<div class="dp-sec"><div class="dp-sec-title"><i class="ti ti-photo"></i> Images</div>`;
-    imgs.forEach(m=>{h+=`<div class="dp-media-item"><img class="dp-img" src="${esc(m.url)}" alt="" onerror="this.style.display='none'">${m.name?`<div class="dp-caption">${esc(m.name)}</div>`:''}</div>`;});
-    h+='</div>';
-  }
-  if(vids.length&&can('media')){
-    h+=`<div class="dp-sec"><div class="dp-sec-title"><i class="ti ti-video"></i> Videos</div>`;
-    vids.forEach(m=>{
-      let eu=m.url;
-      const yt=m.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s?]+)/);
-      const vi=m.url.match(/vimeo\.com\/(\d+)/);
-      if(yt)eu=`https://www.youtube.com/embed/${yt[1]}`;
-      else if(vi)eu=`https://player.vimeo.com/video/${vi[1]}`;
-      h+=`<div class="dp-media-item"><div class="dp-vid"><iframe src="${esc(eu)}" allowfullscreen loading="lazy"></iframe></div>${m.name?`<div class="dp-caption">${esc(m.name)}</div>`:''}</div>`;
+
+  // Links
+  html += `<div class="detail-section">
+    <div class="detail-label">Links</div>
+    <div class="link-list" id="dp-links">`;
+  (node.links || []).forEach((l,i) => {
+    html += `<div class="link-item">
+      <a href="${esc(l.url)}" target="_blank" class="node-link"><i class="ti ti-external-link"></i>${esc(l.label || l.url)}</a>
+      <button class="node-btn" onclick="removeLink('${nodeId}',${i})" title="Remove"><i class="ti ti-x" style="font-size:12px;"></i></button>
+    </div>`;
+  });
+  html += `</div>
+    <div class="add-link-form">
+      <input id="dp-link-url" placeholder="https://..." style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);outline:none;width:100%;">
+      <div class="add-row">
+        <input id="dp-link-label" placeholder="Label (optional)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);outline:none;">
+        <button class="btn-add-sm primary" onclick="addLink('${nodeId}')">Add</button>
+      </div>
+    </div>
+  </div>`;
+
+  // Media (Plus+)
+  html += `<div class="detail-section">
+    <div class="detail-label">Media ${!canUseMedia() ? '<span style="color:var(--yellow);font-size:10px;">PLUS</span>' : ''}</div>`;
+  if (!canUseMedia()) {
+    html += `<div style="font-size:12px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:var(--radius-sm);">
+      <a href="#" onclick="openPaywall('plus');return false;" style="color:var(--accent);">Upgrade to Plus</a> to attach images and videos.
+    </div>`;
+  } else {
+    html += `<div class="media-list" id="dp-media">`;
+    (node.media || []).forEach((m,i) => {
+      if (m.type === 'image') {
+        html += `<div class="media-item">
+          <img src="${esc(m.url)}" alt="${esc(m.label||'')}" loading="lazy" style="width:100%;max-height:140px;object-fit:cover;">
+          <div class="media-item-info"><span class="media-item-label">${esc(m.label||m.url)}</span>
+            <button class="node-btn" onclick="removeMedia('${nodeId}',${i})"><i class="ti ti-x" style="font-size:12px;"></i></button>
+          </div>
+        </div>`;
+      } else if (m.type === 'video') {
+        const videoId = extractVideoId(m.url);
+        html += `<div class="media-item">
+          ${videoId ? `<iframe width="100%" height="140" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="autoplay;encrypted-media" allowfullscreen style="display:block;"></iframe>` : `<div style="padding:10px;font-size:12px;color:var(--text2);">${esc(m.url)}</div>`}
+          <div class="media-item-info"><span class="media-item-label">${esc(m.label||m.url)}</span>
+            <button class="node-btn" onclick="removeMedia('${nodeId}',${i})"><i class="ti ti-x" style="font-size:12px;"></i></button>
+          </div>
+        </div>`;
+      }
     });
-    h+='</div>';
+    html += `</div>
+      <div class="add-media-form">
+        <input id="dp-media-url" placeholder="Image URL or YouTube/Vimeo URL" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);outline:none;width:100%;">
+        <div class="add-row">
+          <input id="dp-media-label" placeholder="Label (optional)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);outline:none;">
+          <button class="btn-add-sm primary" onclick="addMedia('${nodeId}')">Add</button>
+        </div>
+      </div>`;
   }
-  if(lnks.length){
-    h+=`<div class="dp-sec"><div class="dp-sec-title"><i class="ti ti-link"></i> Links</div>`;
-    lnks.forEach(m=>{h+=`<a class="dp-link" href="${esc(m.url)}" target="_blank" rel="noopener"><i class="ti ti-external-link" style="flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${esc(m.name||m.url)}</div><div style="font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.url)}</div></div></a>`;});
-    h+='</div>';
-  }
-  if(!can('media')&&(node.media||[]).length){
-    h+=`<div class="lim-banner" style="margin:0"><div class="lb-ic"><i class="ti ti-photo" style="color:var(--plus)"></i></div><div class="lb-txt"><div class="lb-t">Media requires Plus</div><div class="lb-d">Upgrade to view images &amp; videos.</div></div><button class="lb-btn btn-teal" style="font-size:11px" onclick="openPW('plus')">Upgrade</button></div>`;
-  }
-  inner.innerHTML=h;
-}
-function closeDetail(){ selNode=null;dpOpen=false;const p=document.getElementById('detail-panel');p.classList.add('hidden');p.classList.remove('m-open');document.getElementById('btn-dp').classList.remove('active');renderCanvas();updateDetailPanel(); }
+  html += `</div>`;
 
-// ── ADD/NEW GUARDS ────────────────────────────────────────────
-function handleNewTree(){
-  if(userPlan==='free'&&trees.length>=PLANS.free.trees){openPW('plus',`Free plan limited to ${PLANS.free.trees} trees`);return;}
-  openNewTreeModal();
-}
-function handleAddNode(opts,e){
-  if(e)e.stopPropagation();
-  if(userPlan==='free'&&totalNodes()>=PLANS.free.nodes){openPW('plus',`Free plan limited to ${PLANS.free.nodes} nodes`);return;}
-  openNodeModal(opts,e);
+  // Color Labels (Pro)
+  html += `<div class="detail-section">
+    <div class="detail-label">Color Label ${!canUseProFeatures() ? '<span style="color:var(--accent2);font-size:10px;">PRO</span>' : ''}</div>`;
+  if (!canUseProFeatures()) {
+    html += `<div style="font-size:12px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:var(--radius-sm);">
+      <a href="#" onclick="openPaywall('pro');return false;" style="color:var(--accent);">Upgrade to Pro</a> for color labels.
+    </div>`;
+  } else {
+    html += `<div class="color-picker">`;
+    const colorHexes = {'blue':COLORS[0],'green':COLORS[1],'yellow':COLORS[2],'red':COLORS[3],'purple':COLORS[4],'orange':COLORS[5],'none':'transparent'};
+    ['none',...NODE_COLORS].forEach(c => {
+      html += `<div class="color-swatch ${node.color === c || (!node.color && c==='none') ? 'selected' : ''}" 
+        style="background:${c==='none'?'var(--bg4)':colorHexes[c]};${c==='none'?'border:1px dashed var(--border2);':''}" 
+        onclick="setNodeColor('${nodeId}','${c==='none'?'':c}')" title="${c}"></div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  // Tags (Pro)
+  html += `<div class="detail-section">
+    <div class="detail-label">Tags ${!canUseProFeatures() ? '<span style="color:var(--accent2);font-size:10px;">PRO</span>' : ''}</div>`;
+  if (!canUseProFeatures()) {
+    html += `<div style="font-size:12px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:var(--radius-sm);">
+      <a href="#" onclick="openPaywall('pro');return false;" style="color:var(--accent);">Upgrade to Pro</a> for node tags.
+    </div>`;
+  } else {
+    html += `<div class="add-row">
+      <input id="dp-tag-input" placeholder="Add tag, press Enter" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);outline:none;" 
+        onkeydown="if(event.key==='Enter'){addTag('${nodeId}');event.preventDefault();}">
+      <button class="btn-add-sm primary" onclick="addTag('${nodeId}')">Add</button>
+    </div>
+    <div class="tags-display">`;
+    (node.tags || []).forEach((t,i) => {
+      html += `<div class="tag-chip">#${esc(t)}<button onclick="removeTag('${nodeId}',${i})"><i class="ti ti-x"></i></button></div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  // Extended Notes (Pro)
+  html += `<div class="detail-section">
+    <div class="detail-label">Extended Notes ${!canUseProFeatures() ? '<span style="color:var(--accent2);font-size:10px;">PRO</span>' : ''}</div>`;
+  if (!canUseProFeatures()) {
+    html += `<div style="font-size:12px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:var(--radius-sm);">
+      <a href="#" onclick="openPaywall('pro');return false;" style="color:var(--accent);">Upgrade to Pro</a> for extended notes.
+    </div>`;
+  } else {
+    html += `<textarea class="detail-input" id="dp-extnotes" rows="5" placeholder="Detailed notes, references, analysis..." onchange="updateNodeField('${nodeId}','extNotes',this.value)">${esc(node.extNotes||'')}</textarea>`;
+  }
+  html += `</div>`;
+
+  body.innerHTML = html;
 }
 
-// ── NODE SEARCH ───────────────────────────────────────────────
-function handleNodeSearch(){
-  if(!can('nodeSearch')){openPW('plus','Node search is a Plus feature');return;}
-  const bar=document.getElementById('ns-bar');bar.style.display=bar.style.display==='none'?'block':'none';
-  if(bar.style.display==='block')document.getElementById('ns-input').focus();else renderCanvas();
+function updateNodeField(nodeId, field, value) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node[field] = value;
+  debouncedSave(activeTreeId);
+  if (field === 'title') {
+    const card = document.getElementById('node_' + nodeId);
+    if (card) card.querySelector('.node-title').textContent = value;
+  }
 }
-function searchNodes(q){
-  if(!q.trim()){renderCanvas();return;}
-  const tree=getTree();if(!tree)return;
-  const canvas=document.getElementById('canvas');canvas.innerHTML='';
-  const nodes=allNodes(tree.roots||[]).filter(n=>n.title.toLowerCase().includes(q.toLowerCase())||(n.desc||'').toLowerCase().includes(q.toLowerCase()));
-  if(!nodes.length){canvas.innerHTML=`<div style="padding:36px;text-align:center;color:var(--text3);font-size:13px">No matching nodes.</div>`;return;}
-  nodes.forEach(node=>{
-    const c=document.createElement('div');c.className='node-card';c.style.marginBottom='7px';
-    c.innerHTML=`<div class="node-title">${esc(node.title)}</div>${node.desc?`<div class="node-desc">${esc(node.desc.slice(0,180))}</div>`:''}`;
-    c.onclick=()=>{document.getElementById('ns-input').value='';searchNodes('');selectNode(node.id,getTree().id,null);};
-    canvas.appendChild(c);
+
+function addLink(nodeId) {
+  const url = document.getElementById('dp-link-url').value.trim();
+  if (!url) { showToast('Enter a URL.', 'error'); return; }
+  const label = document.getElementById('dp-link-label').value.trim();
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  if (!node.links) node.links = [];
+  node.links.push({ url, label: label || url });
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+  showToast('Link added.', 'success');
+}
+
+function removeLink(nodeId, idx) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node.links.splice(idx, 1);
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+}
+
+function addMedia(nodeId) {
+  if (!canUseMedia()) { openPaywall('plus'); return; }
+  const url = document.getElementById('dp-media-url').value.trim();
+  if (!url) { showToast('Enter a URL.', 'error'); return; }
+  const label = document.getElementById('dp-media-label').value.trim();
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  if (!node.media) node.media = [];
+  const type = isVideoUrl(url) ? 'video' : 'image';
+  node.media.push({ url, label: label || url, type });
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+  showToast('Media added.', 'success');
+}
+
+function removeMedia(nodeId, idx) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node.media.splice(idx, 1);
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+}
+
+function setNodeColor(nodeId, color) {
+  if (!canUseProFeatures()) { openPaywall('pro'); return; }
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node.color = color || null;
+  debouncedSave(activeTreeId);
+  renderCanvas();
+  renderDetailPanel(nodeId);
+}
+
+function addTag(nodeId) {
+  if (!canUseProFeatures()) { openPaywall('pro'); return; }
+  const input = document.getElementById('dp-tag-input');
+  const tag = input.value.trim().replace(/^#/, '');
+  if (!tag) return;
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  if (!node.tags) node.tags = [];
+  if (!node.tags.includes(tag)) { node.tags.push(tag); }
+  input.value = '';
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+}
+
+function removeTag(nodeId, idx) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node.tags.splice(idx, 1);
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+}
+
+function closeDetailPanel() {
+  document.getElementById('detail-panel').classList.add('hidden');
+  document.getElementById('detail-panel').classList.remove('mobile-open');
+  selectedNodeId = null;
+  document.querySelectorAll('.node-card.selected').forEach(c => c.classList.remove('selected'));
+}
+
+// ─── Context Menu ───
+function showContextMenu(e, nodeId) {
+  contextNodeId = nodeId;
+  const menu = document.getElementById('context-menu');
+  menu.style.display = 'block';
+  const x = Math.min(e.clientX, window.innerWidth - 180);
+  const y = Math.min(e.clientY, window.innerHeight - 120);
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+}
+
+function hideContextMenu() { document.getElementById('context-menu').style.display = 'none'; }
+function ctxAddChild() { hideContextMenu(); openNewNodeModal(contextNodeId); }
+function ctxEdit() { hideContextMenu(); openEditNodeModal(contextNodeId); }
+function ctxDelete() { hideContextMenu(); deleteNodeById(contextNodeId); }
+
+// ─── Search ───
+function handleSearch(val) {
+  if (!canSearch()) {
+    if (val) { showToast('Node search requires Plus plan.', 'error'); openPaywall('plus'); }
+    return;
+  }
+  if (!val.trim()) { hideSearchResults(); return; }
+  const results = [];
+  for (const tree of trees) {
+    searchNodes(tree.nodes || [], val.toLowerCase(), tree, results);
+  }
+  displaySearchResults(results, val);
+}
+
+function searchNodes(nodes, query, tree, results) {
+  for (const n of nodes) {
+    if ((n.title||'').toLowerCase().includes(query) || (n.desc||'').toLowerCase().includes(query)) {
+      results.push({ node: n, tree });
+    }
+    searchNodes(n.children || [], query, tree, results);
+  }
+}
+
+function displaySearchResults(results, query) {
+  const el = document.getElementById('search-results');
+  if (!results.length) {
+    el.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">No results</div>';
+    el.style.display = 'block'; return;
+  }
+  el.innerHTML = results.slice(0,8).map(r =>
+    `<div class="search-result-item" onclick="jumpToNode('${r.tree.id}','${r.node.id}')">
+      <div>${esc(r.node.title)}</div>
+      <div class="sr-tree">${r.tree.icon||'🌳'} ${esc(r.tree.name)}</div>
+    </div>`
+  ).join('');
+  el.style.display = 'block';
+}
+
+function jumpToNode(treeId, nodeId) {
+  hideSearchResults();
+  document.getElementById('search-input').value = '';
+  if (activeTreeId !== treeId) selectTree(treeId);
+  setTimeout(() => {
+    selectedNodeId = nodeId;
+    renderCanvas();
+    selectNode(nodeId);
+    const card = document.getElementById('node_' + nodeId);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
+}
+
+function showSearchResults() {
+  const val = document.getElementById('search-input').value;
+  if (val) handleSearch(val);
+}
+
+function hideSearchResults() {
+  document.getElementById('search-results').style.display = 'none';
+}
+
+// ─── Export ───
+function openExportModal() {
+  if (!canExport()) { openPaywall('plus'); return; }
+  openModal('export-modal');
+}
+
+function exportTree(format) {
+  const tree = getActiveTree(); if (!tree) return;
+  closeModal('export-modal');
+  if (format === 'json') {
+    download(JSON.stringify(tree, null, 2), tree.name + '.json', 'application/json');
+  } else if (format === 'markdown') {
+    const md = ['# ' + tree.name, ''];
+    function addMd(nodes, depth) {
+      for (const n of nodes) {
+        md.push('#'.repeat(Math.min(depth+2,6)) + ' ' + n.title);
+        if (n.desc) md.push(n.desc, '');
+        addMd(n.children||[], depth+1);
+      }
+    }
+    addMd(tree.nodes||[], 0);
+    download(md.join('\n'), tree.name + '.md', 'text/markdown');
+  } else if (format === 'csv') {
+    const rows = [['Title','Description','Depth','Tags']];
+    function addCsv(nodes, depth) {
+      for (const n of nodes) {
+        rows.push([`"${(n.title||'').replace(/"/g,'""')}"`,`"${(n.desc||'').replace(/"/g,'""')}"`,depth,`"${(n.tags||[]).join(',')}"`]);
+        addCsv(n.children||[], depth+1);
+      }
+    }
+    addCsv(tree.nodes||[], 0);
+    download(rows.map(r=>r.join(',')).join('\n'), tree.name + '.csv', 'text/csv');
+  } else if (format === 'print') {
+    window.print();
+  }
+  showToast('Export complete!', 'success');
+}
+
+function download(content, filename, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = filename; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ─── Tree Settings ───
+function openTreeSettings() {
+  const tree = getActiveTree(); if (!tree) return;
+  document.getElementById('ts-name').value = tree.name;
+  tsSelectedEmoji = tree.icon || '🌳';
+  buildEmojiPicker('ts-emoji-picker', 'ts');
+  openModal('tree-settings-modal');
+}
+
+function saveTreeSettings() {
+  const tree = getActiveTree(); if (!tree) return;
+  const name = document.getElementById('ts-name').value.trim();
+  if (!name) { showToast('Enter a tree name.', 'error'); return; }
+  tree.name = name;
+  tree.icon = tsSelectedEmoji;
+  closeModal('tree-settings-modal');
+  const title = document.getElementById('tree-title-display');
+  title.textContent = tsSelectedEmoji + '  ' + name;
+  debouncedSave(activeTreeId);
+  renderTreeList();
+  showToast('Tree settings saved.', 'success');
+}
+
+// ─── Emoji Pickers ───
+function setupEmojiPickers() {
+  buildEmojiPicker('emoji-picker', 'new');
+}
+
+function buildEmojiPicker(containerId, type) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = EMOJIS.map(e =>
+    `<div class="emoji-opt ${(type==='new'?selectedEmoji:tsSelectedEmoji)===e?'selected':''}" onclick="selectEmoji('${e}','${type}')">${e}</div>`
+  ).join('');
+}
+
+function selectEmoji(emoji, type) {
+  if (type === 'new') {
+    selectedEmoji = emoji;
+    buildEmojiPicker('emoji-picker', 'new');
+  } else {
+    tsSelectedEmoji = emoji;
+    buildEmojiPicker('ts-emoji-picker', 'ts');
+  }
+}
+
+// ─── Account Modal ───
+function openAccountModal() {
+  updateUserUI();
+  openModal('account-modal');
+}
+
+// ─── Modal Utilities ───
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function openNewTreeModal() {
+  document.getElementById('new-tree-name').value = '';
+  selectedEmoji = '🌳';
+  buildEmojiPicker('emoji-picker', 'new');
+  openModal('new-tree-modal');
+  setTimeout(() => document.getElementById('new-tree-name').focus(), 100);
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+}
+
+// ─── Mobile Nav ───
+function mobileNavTrees() { document.getElementById('sidebar').classList.toggle('mobile-open'); setMobileTab('trees'); }
+function mobileNavCanvas() { document.getElementById('sidebar').classList.remove('mobile-open'); document.getElementById('detail-panel').classList.remove('mobile-open'); setMobileTab('canvas'); }
+function mobileNavInfo() {
+  if (selectedNodeId) {
+    document.getElementById('detail-panel').classList.toggle('mobile-open');
+    document.getElementById('detail-panel').classList.remove('hidden');
+  } else { showToast('Select a node first.', 'info'); }
+  setMobileTab('info');
+}
+function setMobileTab(tab) {
+  ['trees','canvas','info','account'].forEach(t => {
+    const el = document.getElementById('nav-'+t);
+    if (el) el.classList.toggle('active', t === tab);
   });
 }
 
-// ── EXPORT ────────────────────────────────────────────────────
-function handleExport(){
-  if(!can('export')){openPW('plus','Export is a Plus feature');return;}
-  expOpen=!expOpen;document.getElementById('exp-menu').classList.toggle('open',expOpen);
-}
-document.addEventListener('click',e=>{if(!document.getElementById('btn-exp').contains(e.target)){document.getElementById('exp-menu').classList.remove('open');expOpen=false;}});
-function dl(blob,fn){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;a.click();URL.revokeObjectURL(a.href);toast('✓ Exported: '+fn);}
-function doExportJSON(){ const t=getTree();if(!t)return;dl(new Blob([JSON.stringify(t,null,2)],{type:'application/json'}),t.name.replace(/\s+/g,'_')+'.json');document.getElementById('exp-menu').classList.remove('open'); }
-function doExportMD(){
-  const t=getTree();if(!t)return;
-  function nm(n,d){let m=`${'#'.repeat(Math.min(d+1,6))} ${n.title}\n${n.desc?n.desc+'\n':''}\n`;(n.children||[]).forEach(c=>m+=nm(c,d+1));return m;}
-  dl(new Blob([`# ${t.name}\n\n${(t.roots||[]).map(n=>nm(n,1)).join('')}`],{type:'text/markdown'}),t.name.replace(/\s+/g,'_')+'.md');
-  document.getElementById('exp-menu').classList.remove('open');
-}
-function doExportCSV(){
-  const t=getTree();if(!t)return;
-  const rows=[['Title','Description','Depth','Parent']];
-  function w(ns,d,p){ns.forEach(n=>{rows.push([`"${(n.title||'').replace(/"/g,'""')}"`,`"${(n.desc||'').replace(/"/g,'""')}"`,d,`"${p}"`]);w(n.children||[],d+1,n.title);});}
-  w(t.roots||[],0,'');
-  dl(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}),t.name.replace(/\s+/g,'_')+'.csv');
-  document.getElementById('exp-menu').classList.remove('open');
+// ─── Helpers ───
+function esc(str) {
+  return (str||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-// ── NEW TREE MODAL ─────────────────────────────────────────────
-function openNewTreeModal(){
-  const eOpts=EMOJIS.map((e,i)=>`<div class="ep${i===0?' sel':''}" onclick="sp(this,'nt-er')" data-v="${e}">${e}</div>`).join('');
-  const cOpts=TCOLORS.map((c,i)=>`<div class="cp${i===trees.length%TCOLORS.length?' sel':''}" onclick="sp(this,'nt-cr')" data-v="${c}" style="background:${c}"></div>`).join('');
-  openModal('New Research Tree',`
-    <div class="field"><label>Name</label><input id="nt-name" placeholder="e.g. History of Video Games" autofocus></div>
-    <div class="field"><label>Icon</label><div class="emoji-row" id="nt-er">${eOpts}</div></div>
-    <div class="field"><label>Color</label><div class="color-row" id="nt-cr">${cOpts}</div></div>
-    <div class="field"><label>Description (optional)</label><textarea id="nt-desc"></textarea></div>`,
-    `<button class="btn-secondary" onclick="closeModal()">Cancel</button>
-     <button class="btn-primary" onclick="createTree()"><i class="ti ti-plus"></i> Create</button>`);
-}
-function sp(el,rowId){ document.querySelectorAll(`#${rowId} .ep,#${rowId} .cp`).forEach(x=>x.classList.remove('sel'));el.classList.add('sel'); }
-async function createTree(){
-  const name=document.getElementById('nt-name').value.trim();if(!name){toast('Enter a name');return;}
-  const emoji=document.querySelector('#nt-er .sel')?.dataset.v||'📚';
-  const color=document.querySelector('#nt-cr .sel')?.dataset.v||TCOLORS[0];
-  const tree={id:uid(),name,emoji,color,desc:document.getElementById('nt-desc').value.trim(),roots:[],created:Date.now()};
-  trees.push(tree);activeId=tree.id;
-  closeModal();renderSidebar();renderCanvas();updatePlanUI();
-  await saveTree(tree);toast('✓ Tree created!');
+function isVideoUrl(url) {
+  return /youtube\.com|youtu\.be|vimeo\.com/.test(url);
 }
 
-// ── TREE SETTINGS ──────────────────────────────────────────────
-function openTreeSettings(){
-  const tree=getTree();if(!tree)return;
-  const eOpts=EMOJIS.map(e=>`<div class="ep${tree.emoji===e?' sel':''}" onclick="sp(this,'ts-er')" data-v="${e}">${e}</div>`).join('');
-  const cOpts=TCOLORS.map(c=>`<div class="cp${tree.color===c?' sel':''}" onclick="sp(this,'ts-cr')" data-v="${c}" style="background:${c}"></div>`).join('');
-  openModal('Tree Settings',`
-    <div class="field"><label>Name</label><input id="ts-name" value="${esc(tree.name)}"></div>
-    <div class="field"><label>Icon</label><div class="emoji-row" id="ts-er">${eOpts}</div></div>
-    <div class="field"><label>Color</label><div class="color-row" id="ts-cr">${cOpts}</div></div>
-    <div class="field"><label>Description</label><textarea id="ts-desc">${esc(tree.desc||'')}</textarea></div>`,
-    `<button class="btn-danger" onclick="confirmDelTree('${tree.id}',{stopPropagation:()=>{}});closeModal()">Delete</button>
-     <div style="flex:1"></div>
-     <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-     <button class="btn-primary" onclick="saveTreeSettings('${tree.id}')">Save</button>`);
-}
-async function saveTreeSettings(id){
-  const tree=trees.find(t=>t.id===id);if(!tree)return;
-  const name=document.getElementById('ts-name').value.trim();if(!name){toast('Name required');return;}
-  tree.name=name;tree.emoji=document.querySelector('#ts-er .sel')?.dataset.v||tree.emoji;
-  tree.color=document.querySelector('#ts-cr .sel')?.dataset.v||tree.color;tree.desc=document.getElementById('ts-desc').value.trim();
-  closeModal();renderSidebar();renderCanvas();await saveTree(tree);toast('✓ Saved');
+function extractVideoId(url) {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
 }
 
-// ── NODE MODAL ─────────────────────────────────────────────────
-function openNodeModal(opts,e){
-  if(e)e.stopPropagation();
-  const tree=trees.find(t=>t.id===opts.treeId);
-  const node=opts.editId?findNode(tree.roots||[],opts.editId):null;
-  _media=node?.media?JSON.parse(JSON.stringify(node.media)):[];
-  _nodeColor=node?.color||'none';
-
-  const mediaSec=can('media')?`
-    <div class="field"><label>Media &amp; Links</label>
-      <div class="media-list" id="media-list"></div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px;margin-top:6px">
-        <div style="display:grid;grid-template-columns:110px 1fr;gap:5px;margin-bottom:5px">
-          <select id="m-type" style="background:var(--surface3);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;padding:7px;outline:none">
-            <option value="link">🔗 Link</option><option value="image">🖼️ Image</option><option value="video">🎬 Video</option>
-          </select>
-          <input id="m-url" placeholder="https://...">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr auto;gap:5px">
-          <input id="m-name" placeholder="Label (optional)">
-          <button class="btn-primary" style="padding:7px 11px;font-size:12px" onclick="addMedia()"><i class="ti ti-plus"></i></button>
-        </div>
-      </div>
-    </div>`:`<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:9px;padding:11px;margin-bottom:13px;display:flex;align-items:center;gap:9px;cursor:pointer" onclick="openPW('plus','Media requires Plus')">
-      <i class="ti ti-photo-plus" style="font-size:18px;color:var(--text3)"></i>
-      <div><div style="font-size:13px;font-weight:500">Images, videos &amp; links</div><div style="font-size:11px;color:var(--text3)">Plus &amp; Pro plans</div></div>
-      <span class="feat-locked fl-plus" style="margin-left:auto"><i class="ti ti-lock"></i> Plus</span>
-    </div>`;
-
-  const colorSec=can('nodeColors')?`
-    <div class="field"><label>Color Label</label>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:3px">
-        ${NCOLORS.map(c=>`<div onclick="setNC(this,'${c}')" data-nc="${c}" style="width:24px;height:24px;border-radius:50%;border:2px solid ${_nodeColor===c?'var(--text)':'transparent'};background:${c==='none'?'var(--surface3)':c==='teal'?'var(--teal)':c==='coral'?'var(--coral)':c==='gold'?'var(--gold)':c==='purple'?'var(--accent)':'#5bc8f5'};cursor:pointer;display:flex;align-items:center;justify-content:center">${c==='none'?`<i class="ti ti-ban" style="font-size:10px;color:var(--text3)"></i>`:''}</div>`).join('')}
-      </div>
-    </div>`:`<div style="display:flex;align-items:center;gap:7px;margin-bottom:13px;cursor:pointer" onclick="openPW('pro','Node colors require Pro')"><span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Color Label</span><span class="feat-locked fl-pro"><i class="ti ti-lock"></i> Pro</span></div>`;
-
-  const noteSec=can('nodeNotes')?`<div class="field"><label>Extended Note</label><textarea id="n-note" placeholder="Detailed notes...">${esc(node?.note||'')}</textarea></div>`
-    :`<div style="display:flex;align-items:center;gap:7px;margin-bottom:13px;cursor:pointer" onclick="openPW('pro','Extended notes require Pro')"><span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Extended Note</span><span class="feat-locked fl-pro"><i class="ti ti-lock"></i> Pro</span></div>`;
-
-  const tagSec=can('nodeTags')?`<div class="field"><label>Tags (comma separated)</label><input id="n-tags" value="${esc((node?.tags||[]).join(', '))}" placeholder="e.g. important, todo"></div>`:'' ;
-
-  openModal(opts.editId?'Edit Node':'Add Node',`
-    <div class="field"><label>Title *</label><input id="n-title" value="${esc(node?.title||'')}" placeholder="Node title" autofocus></div>
-    <div class="field"><label>Description</label><textarea id="n-desc" placeholder="Research notes...">${esc(node?.desc||'')}</textarea></div>
-    ${colorSec}${tagSec}${noteSec}${mediaSec}`,
-    `<button class="btn-secondary" onclick="closeModal()">Cancel</button>
-     <button class="btn-primary" onclick="saveNode(${JSON.stringify(JSON.stringify(opts))})">
-       ${opts.editId?'<i class="ti ti-check"></i> Save':'<i class="ti ti-plus"></i> Add'}
-     </button>`);
-  renderMediaList();
-}
-function setNC(el,c){ _nodeColor=c;document.querySelectorAll('[data-nc]').forEach(x=>x.style.borderColor='transparent');el.style.borderColor='var(--text)'; }
-function renderMediaList(){
-  const list=document.getElementById('media-list');if(!list)return;
-  if(!_media.length){list.innerHTML='<div style="font-size:11px;color:var(--text3)">No media yet.</div>';return;}
-  list.innerHTML=_media.map((m,i)=>`<div class="mi-row">
-    <div class="mi-ic">${m.type==='image'?'🖼️':m.type==='video'?'🎬':'🔗'}</div>
-    <div class="mi-info"><div class="mi-name">${esc(m.name||m.url)}</div><div class="mi-url">${esc(m.url)}</div></div>
-    <button class="mi-del" onclick="delMedia(${i})"><i class="ti ti-trash"></i></button>
-  </div>`).join('');
-}
-function addMedia(){ const url=document.getElementById('m-url').value.trim();if(!url){toast('Enter a URL');return;}const type=document.getElementById('m-type').value;const name=document.getElementById('m-name').value.trim();_media.push({url,type,name:name||url.split('/').pop().split('?')[0]||url});document.getElementById('m-url').value='';document.getElementById('m-name').value='';renderMediaList(); }
-function delMedia(i){ _media.splice(i,1);renderMediaList(); }
-
-async function saveNode(optsStr){
-  const opts=JSON.parse(optsStr);
-  const title=document.getElementById('n-title').value.trim();if(!title){toast('Title required');return;}
-  const desc=document.getElementById('n-desc').value.trim();
-  const note=can('nodeNotes')&&document.getElementById('n-note')?document.getElementById('n-note').value.trim():'';
-  const tags=can('nodeTags')&&document.getElementById('n-tags')?document.getElementById('n-tags').value.split(',').map(t=>t.trim()).filter(Boolean):[];
-  const media=[..._media];
-  const tree=trees.find(t=>t.id===opts.treeId);
-  if(opts.editId){
-    const node=findNode(tree.roots||[],opts.editId);
-    if(node) Object.assign(node,{title,desc,media,note,tags,color:_nodeColor});
-    toast('✓ Updated');
-  } else {
-    const newNode={id:uid(),title,desc,media,note,tags,color:_nodeColor,children:[],created:Date.now()};
-    if(opts.parentId){ const p=findNode(tree.roots||[],opts.parentId);if(p){p.children=p.children||[];p.children.push(newNode);collapsed[opts.parentId]=false;} }
-    else if(opts.siblingOf){
-      function addSib(ns){for(let i=0;i<ns.length;i++){if(ns[i].id===opts.siblingOf){ns.push(newNode);return true;}if(addSib(ns[i].children||[]))return true;}return false;}
-      addSib(tree.roots);
-    } else { tree.roots=tree.roots||[];tree.roots.push(newNode); }
-    toast('✓ Node added');
-  }
-  closeModal();renderSidebar();renderCanvas();
-  if(selNode===opts.editId) updateDetailPanel();
-  await saveTree(tree);
+function showToast(msg, type='info') {
+  const tc = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = `<i class="ti ti-${type==='success'?'check':'error'===type?'alert-circle':'info-circle'}"></i><span>${msg}</span>`;
+  tc.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(100%)'; t.style.transition='0.3s'; setTimeout(()=>t.remove(),300); }, 3500);
 }
 
-function confirmDelNode(nid,tid,e){
-  e.stopPropagation();
-  const tree=trees.find(t=>t.id===tid);const node=findNode(tree.roots||[],nid);
-  const cc=countNodes(node.children||[]);
-  if(!confirm(cc>0?`Delete "${node.title}" and its ${cc} child${cc>1?'ren':''}?`:`Delete "${node.title}"?`))return;
-  delNodeFrom(tree.roots||[],nid);
-  if(selNode===nid){selNode=null;updateDetailPanel();}
-  renderSidebar();renderCanvas();
-  saveTree(tree).then(()=>toast('Deleted'));
+function setupClickOutside() {
+  document.addEventListener('click', (e) => {
+    // Context menu
+    if (!e.target.closest('#context-menu')) hideContextMenu();
+    // Search results
+    if (!e.target.closest('#search-wrap')) hideSearchResults();
+    // Modal overlays
+    document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(mo => {
+      if (e.target === mo) closeModal(mo.id);
+    });
+  });
+  // Enter key in node modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(mo => closeModal(mo.id));
+      hideContextMenu();
+    }
+  });
+  // Enter in new tree name
+  document.getElementById('new-tree-name')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') createTree();
+  });
+  // Enter in node title
+  document.getElementById('node-title-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveNodeFromModal();
+  });
 }
 
-// ── PAYWALL ────────────────────────────────────────────────────
-function openPW(plan='plus',reason=''){
-  document.getElementById('pw-title').textContent=reason||'Unlock more with ResearchTree';
-  document.getElementById('pw-sub').textContent=reason?'Upgrade to unlock this feature.':'Choose the plan that fits your workflow.';
-  document.getElementById('pw-overlay').classList.add('open');
-}
-function closePW(){ document.getElementById('pw-overlay').classList.remove('open'); }
-async function activatePlan(p){ userPlan=p;await savePlan(p);closePW();updatePlanUI();renderSidebar();renderCanvas();toast(p==='plus'?'✓ Welcome to Plus!':'✓ Welcome to Pro!'); }
-
-// ── LIMIT BANNER ───────────────────────────────────────────────
-function makeLimBanner(title,desc,plan,btnLabel){
-  const div=document.createElement('div');div.className='lim-banner';
-  div.innerHTML=`<div class="lb-ic"><i class="ti ti-lock" style="color:var(--accent)"></i></div>
-    <div class="lb-txt"><div class="lb-t">${esc(title)}</div><div class="lb-d">${esc(desc)}</div></div>
-    <button class="lb-btn ${plan==='pro'?'btn-gold':'btn-teal'}" style="font-size:12px" onclick="openPW('${plan}')">${esc(btnLabel)}</button>`;
-  return div;
-}
-
-// ── MODAL ──────────────────────────────────────────────────────
-function openModal(title,body,footer){
-  document.getElementById('modal-title').textContent=title;
-  document.getElementById('modal-body').innerHTML=body;
-  document.getElementById('modal-footer').innerHTML=footer;
-  document.getElementById('modal-overlay').classList.add('open');
-  _media=[];
-  setTimeout(()=>{const f=document.querySelector('#modal-body input[autofocus]');if(f)f.focus();},50);
-}
-function closeModal(){ document.getElementById('modal-overlay').classList.remove('open');_media=[]; }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closePW();}});
-
-// ── MOBILE NAV ─────────────────────────────────────────────────
-function mobileNav(tab){
-  ['trees','canvas','info','acct'].forEach(t=>document.getElementById('bnav-'+t)?.classList.remove('active'));
-  document.getElementById('bnav-'+tab)?.classList.add('active');
-  if(tab==='trees') openMobileSB();
-  else if(tab==='info') toggleDP();
-  else if(tab==='acct') openAcctModal();
-  else closeMobileSB();
-}
-function openAcctModal(){
-  if(!currentUser)return;
-  const meta=currentUser.user_metadata||{};
-  openModal('Account',`
-    <div style="text-align:center;margin-bottom:18px">
-      <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;color:#fff;margin:0 auto 10px">${(meta.full_name||meta.name||currentUser.email||'?').charAt(0).toUpperCase()}</div>
-      <div style="font-size:15px;font-weight:600">${esc(meta.full_name||meta.name||'User')}</div>
-      <div style="font-size:12px;color:var(--text2)">${esc(currentUser.email||'')}</div>
-    </div>
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:13px;margin-bottom:14px">
-      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Current Plan</div>
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <span class="plan-badge plan-${userPlan}">${userPlan.charAt(0).toUpperCase()+userPlan.slice(1)}</span>
-        ${userPlan!=='pro'?`<button class="btn-teal" style="font-size:12px;padding:6px 13px" onclick="closeModal();openPW('plus')">Upgrade</button>`:'<span style="font-size:12px;color:var(--gold)">✓ Pro active</span>'}
-      </div>
-    </div>`,
-    `<button class="btn-secondary" onclick="closeModal()">Close</button>
-     <button class="btn-danger" onclick="closeModal();doSignOut()"><i class="ti ti-logout"></i> Sign Out</button>`);
-}
-
-// Initial breadcrumb
-buildBC([{label:'Research Trees'}]);
+// Start
+init();
 </script>
 </body>
 </html>
