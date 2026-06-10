@@ -928,7 +928,8 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 <!-- Loading -->
 <div id="loading-screen">
   <div class="logo">Research<span>Tree</span></div>
-  <div class="spinner"></div>
+  <div class="spinner" id="loading-spinner"></div>
+  <div id="loading-msg" style="font-size:13px;color:var(--text3);display:none;text-align:center;max-width:320px;line-height:1.6;"></div>
 </div>
 
 <!-- Auth Screen -->
@@ -1575,7 +1576,63 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 <div id="toast-container"></div>
 
 <!-- Supabase SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ─── Supabase SDK loader with fallback ───
+(function() {
+  var TIMEOUT_MS = 8000;
+  var loaded = false;
+
+  function showLoadError(msg) {
+    var spinner = document.getElementById('loading-spinner');
+    var msgEl   = document.getElementById('loading-msg');
+    if (spinner) spinner.style.display = 'none';
+    if (msgEl)   { msgEl.style.display = 'block'; msgEl.innerHTML = msg; }
+  }
+
+  // Timeout fallback — if SDK doesn't load in 8s, show error
+  var timer = setTimeout(function() {
+    if (!loaded) {
+      showLoadError(
+        '<strong style="color:var(--red);">⚠️ Could not connect</strong><br><br>' +
+        'The app requires an internet connection to load.<br>' +
+        'If you're previewing this file locally, please deploy it to ' +
+        '<a href="https://pages.github.com" target="_blank" style="color:var(--accent);">GitHub Pages</a> first.<br><br>' +
+        '<button onclick="window.location.reload()" style="margin-top:8px;padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Retry</button>'
+      );
+    }
+  }, TIMEOUT_MS);
+
+  var script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+  script.onload = function() {
+    loaded = true;
+    clearTimeout(timer);
+    // Kick off app init once SDK is confirmed loaded
+    if (typeof initApp === 'function') initApp();
+  };
+  script.onerror = function() {
+    clearTimeout(timer);
+    // Try fallback CDN
+    var fallback = document.createElement('script');
+    fallback.src = 'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+    fallback.onload = function() {
+      loaded = true;
+      if (typeof initApp === 'function') initApp();
+    };
+    fallback.onerror = function() {
+      showLoadError(
+        '<strong style="color:var(--red);">⚠️ Could not load Supabase SDK</strong><br><br>' +
+        'This file needs to be served from <strong>GitHub Pages</strong> or another web host — ' +
+        'it cannot run as a local <code>file://</code> URL.<br><br>' +
+        '<a href="https://pages.github.com" target="_blank" style="color:var(--accent);">Deploy to GitHub Pages →</a><br><br>' +
+        '<button onclick="window.location.reload()" style="margin-top:8px;padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Retry</button>'
+      );
+    };
+    document.head.appendChild(fallback);
+  };
+  document.head.appendChild(script);
+})();
+</script>
 <script>
 
 // ─── Inline SVG Icon System ───
@@ -3544,9 +3601,18 @@ function updateStatsBar() {
   document.getElementById('stat-links').textContent = linkCount;
 }
 
-// Start
-loadPrefs();
-init();
+// ─── Start ───
+// initApp() is called by the SDK loader above once Supabase is ready.
+// Falls back to DOMContentLoaded if the script tag already ran.
+function initApp() {
+  loadPrefs();
+  init();
+}
+// If SDK loaded synchronously (cached), kick off now
+if (window.supabase) {
+  loadPrefs();
+  init();
+}
 </script>
 </body>
 </html>
