@@ -252,15 +252,19 @@ h1,h2,h3,h4 { font-family: 'Playfair Display', serif; }
   display: flex; flex-direction: column; gap: var(--node-gap-y);
   padding-left: var(--node-gap-x); position: relative; margin-top: 0;
 }
-.node-children::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-  width: 1px; background: var(--border); margin-left: 0;
-}
+/* Vertical line is drawn by JS so it stops at first/last child midpoints */
 .node-children.collapsed { display: none; }
 .node-wrap { position: relative; }
+/* Horizontal connector from vertical rail to card */
 .node-connector {
   position: absolute; left: calc(-1 * var(--node-gap-x)); top: 50%;
   width: var(--node-gap-x); height: 1px; background: var(--border);
+  pointer-events: none;
+}
+/* Vertical rail — injected as a real element so it clips perfectly */
+.node-vline {
+  position: absolute; left: 0; width: 1px; background: var(--border);
+  pointer-events: none; top: 0; /* height set by JS */
 }
 
 /* ─── Node Card ─── */
@@ -279,7 +283,7 @@ h1,h2,h3,h4 { font-family: 'Playfair Display', serif; }
 .node-card.has-color-orange { border-left: 3px solid var(--orange); }
 .node-card.has-color-blue { border-left: 3px solid var(--accent); }
 .node-header { display: flex; align-items: flex-start; gap: 8px; }
-.node-title { font-size: 13px; font-weight: 600; flex: 1; word-break: break-word; }
+.node-title { font-size: var(--node-title-size, 13px); font-weight: 600; flex: 1; word-break: break-word; }
 .node-btns { display: flex; gap: 2px; opacity: 0; transition: var(--transition); flex-shrink: 0; }
 .node-card:hover .node-btns { opacity: 1; }
 .node-btn {
@@ -631,31 +635,176 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 }
 .node-has-notes i { font-size: 11px; }
 
-/* ─── Extended Notes Dialog ─── */
-.ext-notes-modal { max-width: 660px; }
-.ext-notes-modal .modal-body { padding: 0; }
-.ext-notes-toolbar {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 16px; border-bottom: 1px solid var(--border);
-  background: var(--bg3);
+/* ─── Full-Screen Note Editor ─── */
+#note-editor-overlay {
+  position: fixed; inset: 0; z-index: 800;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  animation: editorSlideIn 0.22s cubic-bezier(0.22,1,0.36,1);
 }
-.ext-notes-toolbar span { font-size: 13px; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ext-notes-body {
-  padding: 20px; display: flex; flex-direction: column; gap: 12px;
+#note-editor-overlay.hidden { display: none; }
+@keyframes editorSlideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-#ext-notes-textarea {
-  width: 100%; min-height: 340px; max-height: 60vh;
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 14px;
-  color: var(--text); outline: none; font-size: 14px;
-  line-height: 1.7; resize: vertical; font-family: 'DM Sans', sans-serif;
+
+/* Top bar */
+.ne-topbar {
+  height: 56px; flex-shrink: 0;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; padding: 0 20px;
 }
-#ext-notes-textarea:focus { border-color: var(--accent); }
-.ext-notes-footer {
-  padding: 12px 16px; border-top: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
+.ne-back-btn {
+  display: flex; align-items: center; gap: 7px;
+  color: var(--text2); font-size: 13px; font-weight: 500;
+  padding: 6px 12px; border-radius: var(--radius-sm);
+  transition: var(--transition); cursor: pointer;
+}
+.ne-back-btn:hover { background: var(--bg3); color: var(--text); }
+.ne-back-btn svg { width: 16px; height: 16px; }
+.ne-node-title {
+  flex: 1; font-size: 15px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ne-node-breadcrumb {
   font-size: 12px; color: var(--text3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 200px;
 }
+.ne-status {
+  font-size: 12px; color: var(--text3);
+  display: flex; align-items: center; gap: 5px;
+  transition: color 0.3s;
+}
+.ne-status.saved { color: var(--green); }
+
+/* Toolbar */
+.ne-toolbar {
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 6px 20px; display: flex; align-items: center;
+  gap: 2px; flex-wrap: wrap; flex-shrink: 0;
+}
+.ne-toolbar-group {
+  display: flex; align-items: center; gap: 1px;
+  padding-right: 8px; margin-right: 6px;
+  border-right: 1px solid var(--border);
+}
+.ne-toolbar-group:last-child { border-right: none; }
+.tb-btn {
+  width: 30px; height: 30px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text2); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: var(--transition);
+  border: 1px solid transparent; font-family: 'DM Sans', sans-serif;
+  position: relative;
+}
+.tb-btn:hover { background: var(--bg3); color: var(--text); border-color: var(--border); }
+.tb-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(108,142,255,0.3); }
+.tb-btn svg { width: 15px; height: 15px; }
+.tb-sep { width: 1px; background: var(--border); margin: 0 4px; height: 20px; }
+.tb-select {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text); font-size: 12px;
+  padding: 4px 8px; outline: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.tb-select:focus { border-color: var(--accent); }
+.tb-color-btn {
+  width: 30px; height: 30px; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--border); display: flex; align-items: center;
+  justify-content: center; flex-direction: column; gap: 1px;
+  transition: var(--transition);
+}
+.tb-color-btn:hover { border-color: var(--border2); }
+.tb-color-bar { width: 16px; height: 3px; border-radius: 2px; }
+
+/* Document area */
+.ne-doc-wrap {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  background: var(--bg);
+  display: flex; justify-content: center;
+  padding: 48px 24px;
+}
+.ne-doc-page {
+  width: 100%; max-width: 720px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; min-height: 600px;
+  padding: 48px 56px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+}
+@media (max-width: 768px) {
+  .ne-doc-page { padding: 24px 20px; }
+  .ne-doc-wrap { padding: 16px 8px; }
+  .ne-toolbar { padding: 6px 10px; }
+}
+
+/* The editable content */
+#ne-editor {
+  outline: none; min-height: 500px;
+  font-size: 15px; line-height: 1.8; color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  caret-color: var(--accent);
+}
+#ne-editor:empty::before {
+  content: 'Start writing your notes here...\A\AUse the toolbar above for formatting — headings, bold, italic, bullet lists, numbered lists, and more.';
+  white-space: pre-wrap;
+  color: var(--text3); pointer-events: none;
+}
+#ne-editor h1 { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; margin: 24px 0 12px; color: var(--text); line-height: 1.3; }
+#ne-editor h2 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; margin: 20px 0 10px; color: var(--text); }
+#ne-editor h3 { font-size: 16px; font-weight: 600; margin: 16px 0 8px; color: var(--text); }
+#ne-editor p { margin: 0 0 10px; }
+#ne-editor ul { padding-left: 24px; margin: 8px 0 10px; list-style: disc; }
+#ne-editor ol { padding-left: 24px; margin: 8px 0 10px; list-style: decimal; }
+#ne-editor li { margin: 4px 0; }
+#ne-editor blockquote {
+  border-left: 3px solid var(--accent); margin: 16px 0;
+  padding: 8px 16px; color: var(--text2);
+  background: var(--bg3); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+#ne-editor code {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 6px; font-size: 13px;
+  font-family: 'Courier New', monospace; color: var(--accent2);
+}
+#ne-editor pre {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px; margin: 12px 0;
+  overflow-x: auto; font-size: 13px; line-height: 1.6;
+}
+#ne-editor pre code { background: none; border: none; padding: 0; }
+#ne-editor hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+#ne-editor a { color: var(--accent); text-decoration: underline; }
+#ne-editor strong { font-weight: 700; color: var(--text); }
+#ne-editor em { font-style: italic; color: var(--text2); }
+#ne-editor mark { background: rgba(251,191,36,0.3); color: var(--text); border-radius: 2px; padding: 0 2px; }
+#ne-editor s { text-decoration: line-through; color: var(--text3); }
+#ne-editor .task-item { display: flex; align-items: flex-start; gap: 8px; list-style: none; margin: 4px 0; }
+#ne-editor .task-item input[type=checkbox] { margin-top: 3px; accent-color: var(--accent); }
+.ne-doc-page ::selection { background: rgba(108,142,255,0.25); }
+
+/* Bottom status bar */
+.ne-statusbar {
+  height: 32px; flex-shrink: 0; background: var(--bg2);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 20px;
+  padding: 0 20px; font-size: 11px; color: var(--text3);
+}
+.ne-statusbar span { display: flex; align-items: center; gap: 4px; }
+
+/* Node card notes preview */
+.node-notes-preview {
+  margin-top: 6px; padding: 6px 8px;
+  background: var(--bg3); border-radius: var(--radius-sm);
+  border-left: 2px solid var(--accent);
+  font-size: 11px; color: var(--text2); line-height: 1.4;
+  cursor: pointer; transition: var(--transition);
+  overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.node-notes-preview:hover { border-left-color: var(--accent2); color: var(--text); }
+
+/* word count */
 .word-count { font-size: 12px; color: var(--text3); }
 
 /* ─── Account Modal Tabs ─── */
@@ -732,6 +881,23 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .tree-stat-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
 
 
+/* ─── Settings rows ─── */
+.settings-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; background: var(--bg3); border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.settings-row-label { font-size: 12px; font-weight: 500; color: var(--text2); flex-shrink: 0; min-width: 130px; }
+.settings-row input[type=range] { accent-color: var(--accent); }
+.theme-swatch {
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: var(--transition); flex-shrink: 0;
+}
+.theme-swatch:hover { transform: scale(1.15); }
+.theme-swatch.selected { border-color: var(--text) !important; box-shadow: 0 0 0 2px var(--accent); }
+.canvas-dots { background-image: radial-gradient(circle, var(--border) 1px, transparent 1px); background-size: 24px 24px; }
+.canvas-lines { background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 24px 24px; }
+
 /* ─── Toggle Switch ─── */
 .toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
@@ -797,6 +963,10 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     <!-- Sign Up -->
     <div id="signup-form" class="auth-form hidden">
       <div class="form-field">
+        <label>Your Name</label>
+        <input type="text" id="signup-name" placeholder="e.g. Alex Johnson" maxlength="60">
+      </div>
+      <div class="form-field">
         <label>Email</label>
         <input type="email" id="signup-email" placeholder="you@example.com">
       </div>
@@ -837,6 +1007,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       <div class="user-row" onclick="openAccountModal()">
         <div class="user-avatar" id="user-avatar">?</div>
         <div class="user-info">
+          <div id="user-name-display" style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Loading...</div>
           <div id="user-email-display" class="user-email">Loading...</div>
           <div id="plan-badge" class="plan-badge free">Free</div>
         </div>
@@ -1009,6 +1180,16 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       <div class="profile-row">
         <div class="profile-row-icon"><i class="ti ti-user"></i></div>
         <div class="profile-row-info">
+          <div class="profile-row-label">Display Name</div>
+          <div id="acct-name-display" style="font-size:14px;font-weight:600;margin-top:1px;">—</div>
+        </div>
+        <div class="profile-row-action">
+          <button class="btn-add-sm" onclick="editDisplayName()" style="font-size:11px;padding:4px 10px;">Edit</button>
+        </div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon"><i class="ti ti-mail"></i></div>
+        <div class="profile-row-info">
           <div class="profile-row-label">Email</div>
           <div class="profile-row-value" id="acct-email">Loading...</div>
         </div>
@@ -1085,34 +1266,120 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
     <!-- Settings Tab -->
     <div class="acct-pane" id="acct-pane-settings">
-      <div style="font-size:13px;font-weight:600;margin-bottom:2px;">Preferences</div>
-      <div class="profile-row">
-        <div class="profile-row-icon"><i class="ti ti-layout-sidebar"></i></div>
-        <div class="profile-row-info">
-          <div class="profile-row-label">Auto-open detail panel</div>
-          <div class="profile-row-value" style="font-size:13px;">Open details when selecting a node</div>
+      <!-- Appearance sub-tabs -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+        <button class="btn-sm btn-accent" id="stab-appearance" onclick="switchSettingsTab('appearance')" style="font-size:12px;padding:5px 12px;">Appearance</button>
+        <button class="btn-sm btn-outline" id="stab-layout" onclick="switchSettingsTab('layout')" style="font-size:12px;padding:5px 12px;">Layout</button>
+        <button class="btn-sm btn-outline" id="stab-behavior" onclick="switchSettingsTab('behavior')" style="font-size:12px;padding:5px 12px;">Behavior</button>
+      </div>
+
+      <!-- Appearance -->
+      <div id="settings-pane-appearance" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:2px;">Theme &amp; Colors</div>
+        <div class="settings-row">
+          <div class="settings-row-label">Accent Color</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <div class="theme-swatch" style="background:#6c8eff;" onclick="savePref('accentColor','#6c8eff')" title="Blue" data-color="#6c8eff"></div>
+            <div class="theme-swatch" style="background:#a78bfa;" onclick="savePref('accentColor','#a78bfa')" title="Purple" data-color="#a78bfa"></div>
+            <div class="theme-swatch" style="background:#4ade80;" onclick="savePref('accentColor','#4ade80')" title="Green" data-color="#4ade80"></div>
+            <div class="theme-swatch" style="background:#fb923c;" onclick="savePref('accentColor','#fb923c')" title="Orange" data-color="#fb923c"></div>
+            <div class="theme-swatch" style="background:#f472b6;" onclick="savePref('accentColor','#f472b6')" title="Pink" data-color="#f472b6"></div>
+            <div class="theme-swatch" style="background:#fbbf24;" onclick="savePref('accentColor','#fbbf24')" title="Gold" data-color="#fbbf24"></div>
+            <div class="theme-swatch" style="background:#f87171;" onclick="savePref('accentColor','#f87171')" title="Red" data-color="#f87171"></div>
+          </div>
         </div>
-        <div class="profile-row-action">
-          <label class="toggle-switch">
-            <input type="checkbox" id="pref-auto-detail" onchange="savePref('autoDetail',this.checked)" checked>
-            <span class="toggle-track"></span>
-          </label>
+        <div class="settings-row">
+          <div class="settings-row-label">Background Tone</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <div class="theme-swatch" style="background:#0f1117;border:2px solid var(--border);" onclick="savePref('bgTone','dark')" title="Dark (default)" data-bg="dark"></div>
+            <div class="theme-swatch" style="background:#0a0f1e;" onclick="savePref('bgTone','midnight')" title="Midnight" data-bg="midnight"></div>
+            <div class="theme-swatch" style="background:#0d1b0d;" onclick="savePref('bgTone','forest')" title="Forest" data-bg="forest"></div>
+            <div class="theme-swatch" style="background:#1a0f0a;" onclick="savePref('bgTone','ember')" title="Ember" data-bg="ember"></div>
+            <div class="theme-swatch" style="background:#1a1a1a;" onclick="savePref('bgTone','carbon')" title="Carbon" data-bg="carbon"></div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">UI Font</div>
+          <select class="tb-select" style="width:100%;" onchange="savePref('uiFont',this.value)" id="pref-ui-font">
+            <option value="DM Sans">DM Sans (Default)</option>
+            <option value="Inter">Inter</option>
+            <option value="system-ui">System UI</option>
+            <option value="Georgia">Georgia (Serif)</option>
+            <option value="Courier New">Courier New (Mono)</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Base Font Size</div>
+          <input type="range" min="12" max="18" step="1" id="pref-font-size" oninput="savePref('fontSize',+this.value);document.getElementById('font-size-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="font-size-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">14px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Node Border Radius</div>
+          <input type="range" min="0" max="20" step="2" id="pref-radius" oninput="savePref('nodeRadius',+this.value);document.getElementById('radius-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="radius-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">10px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Canvas Background</div>
+          <select class="tb-select" style="width:100%;" onchange="savePref('canvasBg',this.value)" id="pref-canvas-bg">
+            <option value="solid">Solid Dark</option>
+            <option value="dots">Dot Grid</option>
+            <option value="lines">Line Grid</option>
+          </select>
         </div>
       </div>
-      <div class="profile-row">
-        <div class="profile-row-icon"><i class="ti ti-arrows-maximize"></i></div>
-        <div class="profile-row-info">
-          <div class="profile-row-label">Wide node cards</div>
-          <div class="profile-row-value" style="font-size:13px;">Increase node card width to 280px</div>
+
+      <!-- Layout -->
+      <div id="settings-pane-layout" style="display:none;flex-direction:column;gap:12px;">
+        <div class="settings-row">
+          <div class="settings-row-label">Node Card Width</div>
+          <input type="range" min="160" max="340" step="20" id="pref-node-width" oninput="savePref('nodeWidth',+this.value);document.getElementById('node-width-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="node-width-val" style="font-size:12px;color:var(--text3);min-width:36px;text-align:right;">220px</span>
         </div>
-        <div class="profile-row-action">
-          <label class="toggle-switch">
-            <input type="checkbox" id="pref-wide-nodes" onchange="savePref('wideNodes',this.checked)">
-            <span class="toggle-track"></span>
-          </label>
+        <div class="settings-row">
+          <div class="settings-row-label">Node Title Size</div>
+          <input type="range" min="11" max="18" step="1" id="pref-node-title-size" oninput="savePref('nodeTitleSize',+this.value);document.getElementById('node-title-size-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="node-title-size-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">13px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Horizontal Gap</div>
+          <input type="range" min="30" max="120" step="10" id="pref-gap-x" oninput="savePref('gapX',+this.value);document.getElementById('gap-x-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="gap-x-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">60px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Vertical Gap</div>
+          <input type="range" min="8" max="40" step="4" id="pref-gap-y" oninput="savePref('gapY',+this.value);document.getElementById('gap-y-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="gap-y-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">16px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Sidebar Width</div>
+          <input type="range" min="200" max="380" step="20" id="pref-sidebar-w" oninput="savePref('sidebarW',+this.value);document.getElementById('sidebar-w-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="sidebar-w-val" style="font-size:12px;color:var(--text3);min-width:36px;text-align:right;">280px</span>
+        </div>
+        <button class="btn-cancel" style="font-size:12px;margin-top:4px;" onclick="resetLayout()">↺ Reset Layout Defaults</button>
+      </div>
+
+      <!-- Behavior -->
+      <div id="settings-pane-behavior" style="display:none;flex-direction:column;gap:12px;">
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Auto-open detail panel</div><div class="profile-row-value" style="font-size:12px;">Open on node select</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-auto-detail" onchange="savePref('autoDetail',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Show descriptions on cards</div><div class="profile-row-value" style="font-size:12px;">Display node description text</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-show-desc" onchange="savePref('showDesc',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Show notes preview on cards</div><div class="profile-row-value" style="font-size:12px;">Show note snippet on node card</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-show-notes" onchange="savePref('showNotes',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Animate transitions</div><div class="profile-row-value" style="font-size:12px;">Smooth hover &amp; open effects</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-animate" onchange="savePref('animate',this.checked)" checked><span class="toggle-track"></span></label>
         </div>
       </div>
-      <div style="border-top:1px solid var(--border);padding-top:14px;">
+
+      <!-- Danger Zone always visible -->
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
         <div class="danger-zone">
           <div class="danger-zone-title"><i class="ti ti-alert-triangle"></i> Danger Zone</div>
           <p>Permanently delete your account and all data. This cannot be undone.</p>
@@ -1185,25 +1452,107 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 </div>
 
 
-<!-- Extended Notes Dialog -->
-<div class="modal-overlay hidden" id="ext-notes-modal">
-  <div class="modal ext-notes-modal">
-    <div class="modal-header">
-      <h3><i class="ti ti-notes" style="color:var(--accent);margin-right:6px;"></i>Extended Notes</h3>
-      <button class="icon-btn" onclick="closeExtNotes()"><i class="ti ti-x"></i></button>
+<!-- Full-Screen Note Editor -->
+<div id="note-editor-overlay" class="hidden">
+
+  <!-- Top bar -->
+  <div class="ne-topbar">
+    <button class="ne-back-btn" onclick="closeNoteEditor()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>
+      Back to Tree
+    </button>
+    <div class="ne-node-title" id="ne-node-title">Notes</div>
+    <div class="ne-node-breadcrumb" id="ne-breadcrumb"></div>
+    <div class="ne-status" id="ne-save-status">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg>
+      <span id="ne-save-text">All saved</span>
     </div>
-    <div class="ext-notes-body">
-      <div id="ext-notes-node-title" style="font-size:13px;color:var(--text3);margin-bottom:4px;"></div>
-      <textarea id="ext-notes-textarea" placeholder="Write detailed notes, references, analysis, quotes...&#10;&#10;Supports plain text. Auto-saves as you type."></textarea>
-      <div style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;">
-        <i class="ti ti-device-floppy" style="font-size:14px;color:var(--green);"></i>
-        Auto-saves · <span id="ext-notes-wordcount">0 words</span>
+  </div>
+
+  <!-- Formatting Toolbar -->
+  <div class="ne-toolbar" id="ne-toolbar">
+    <!-- Text style -->
+    <div class="ne-toolbar-group">
+      <select class="tb-select" id="ne-block-select" onchange="neBlockFormat(this.value)">
+        <option value="p">Paragraph</option>
+        <option value="h1">Heading 1</option>
+        <option value="h2">Heading 2</option>
+        <option value="h3">Heading 3</option>
+        <option value="blockquote">Quote</option>
+        <option value="pre">Code Block</option>
+      </select>
+    </div>
+    <!-- Inline formatting -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" id="tb-bold" onclick="neExec('bold')" title="Bold (Ctrl+B)"><strong>B</strong></div>
+      <div class="tb-btn" id="tb-italic" onclick="neExec('italic')" title="Italic (Ctrl+I)"><em>I</em></div>
+      <div class="tb-btn" id="tb-underline" onclick="neExec('underline')" title="Underline (Ctrl+U)"><u>U</u></div>
+      <div class="tb-btn" id="tb-strikeThrough" onclick="neExec('strikeThrough')" title="Strikethrough"><s>S</s></div>
+      <div class="tb-btn" id="tb-highlight" onclick="neHighlight()" title="Highlight">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 19h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M12.5 6.5l4 4"/><path d="M3 19h-1" opacity="0.5"/></svg>
       </div>
     </div>
-    <div class="modal-footer">
-      <span class="word-count" id="ext-notes-saved-status"></span>
-      <button class="btn-accent btn-sm" onclick="closeExtNotes()"><i class="ti ti-check"></i> Done</button>
+    <!-- Lists -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" id="tb-insertUnorderedList" onclick="neExec('insertUnorderedList')" title="Bullet list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l11 0"/><path d="M9 12l11 0"/><path d="M9 18l11 0"/><path d="M5 6l0 .01"/><path d="M5 12l0 .01"/><path d="M5 18l0 .01"/></svg>
+      </div>
+      <div class="tb-btn" id="tb-insertOrderedList" onclick="neExec('insertOrderedList')" title="Numbered list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 6h9"/><path d="M11 12h9"/><path d="M11 18h9"/><path d="M4 10h2v-6l-2 2"/><path d="M4 16a2 2 0 1 1 4 0c0 .667 -.333 1.333 -1 2l-3 2h4"/></svg>
+      </div>
+      <div class="tb-btn" onclick="neInsertTaskList()" title="Task / checklist">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3l8 -8"/><path d="M20 12v6a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h9"/></svg>
+      </div>
     </div>
+    <!-- Indent -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" onclick="neExec('indent')" title="Indent">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4l-4 4"/><path d="M11 6h9"/><path d="M11 12h9"/><path d="M11 18h9"/></svg>
+      </div>
+      <div class="tb-btn" onclick="neExec('outdent')" title="Outdent">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 8l-4 4l4 4"/><path d="M11 6h9"/><path d="M11 12h9"/><path d="M11 18h9"/></svg>
+      </div>
+    </div>
+    <!-- Alignment -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" onclick="neExec('justifyLeft')" title="Align left">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l16 0"/><path d="M4 12l10 0"/><path d="M4 18l14 0"/></svg>
+      </div>
+      <div class="tb-btn" onclick="neExec('justifyCenter')" title="Align center">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l16 0"/><path d="M7 12l10 0"/><path d="M5 18l14 0"/></svg>
+      </div>
+    </div>
+    <!-- Insert -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" onclick="neInsertHR()" title="Divider">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/><path d="M4 6h2"/><path d="M4 18h2"/></svg>
+      </div>
+      <div class="tb-btn" onclick="neInsertLink()" title="Insert link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54 .54l3 -3a5 5 0 0 0 -7.07 -7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0 -7.54 -.54l-3 3a5 5 0 0 0 7.07 7.07l1.71 -1.71"/></svg>
+      </div>
+    </div>
+    <!-- Clear -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" onclick="neExec('removeFormat')" title="Clear formatting">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 15l4 4m0 -4l-4 4"/><path d="M7 6v-1h11v1"/><path d="M7 10h4"/><path d="M13 20l-4 -10"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Page -->
+  <div class="ne-doc-wrap">
+    <div class="ne-doc-page">
+      <div id="ne-editor" contenteditable="true" spellcheck="true"></div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="ne-statusbar">
+    <span id="ne-wordcount">0 words</span>
+    <span id="ne-charcount">0 characters</span>
+    <span id="ne-linecount">0 lines</span>
+    <span style="flex:1;"></span>
+    <span style="color:var(--text3);">Ctrl+S to save · Esc to close</span>
   </div>
 </div>
 
@@ -1384,14 +1733,22 @@ async function signInEmail() {
 }
 
 async function signUpEmail() {
+  const name = (document.getElementById('signup-name') ? document.getElementById('signup-name').value.trim() : '');
   const email = document.getElementById('signup-email').value.trim();
   const password = document.getElementById('signup-password').value;
+  if (!name) return showAuthError('Please enter your name.');
   if (!email || !password) return showAuthError('Please fill in all fields.');
   if (password.length < 6) return showAuthError('Password must be at least 6 characters.');
   clearAuthError();
-  const { error } = await sbClient.auth.signUp({ email, password });
+  const { data, error } = await sbClient.auth.signUp({ email, password, options: { data: { full_name: name, display_name: name } } });
   if (error) showAuthError(error.message);
-  else showToast('Account created! Check your email to verify.', 'success');
+  else {
+    // Save name to profile
+    if (data?.user) {
+      await sbClient.from('profiles').upsert({ id: data.user.id, plan: 'free', display_name: name, updated_at: new Date().toISOString() });
+    }
+    showToast('Account created! Check your email to verify.', 'success');
+  }
 }
 
 async function signInGoogle() {
@@ -1411,14 +1768,19 @@ async function signOut() {
 }
 
 // ─── Profile / Plan ───
+let currentDisplayName = '';
+
 async function loadUserProfile() {
-  const { data, error } = await sbClient.from('profiles').select('plan').eq('id', currentUser.id).single();
+  const { data, error } = await sbClient.from('profiles').select('plan, display_name').eq('id', currentUser.id).single();
   if (data) {
     currentPlan = data.plan || 'free';
+    currentDisplayName = data.display_name || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
   } else if (error && error.code === 'PGRST116') {
     // Profile doesn't exist yet, create it
-    await sbClient.from('profiles').insert({ id: currentUser.id, plan: 'free' });
+    const nameFromMeta = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+    await sbClient.from('profiles').insert({ id: currentUser.id, plan: 'free', display_name: nameFromMeta });
     currentPlan = 'free';
+    currentDisplayName = nameFromMeta;
   }
 }
 
@@ -1437,8 +1799,11 @@ async function updatePlanFromStripe(plan) {
 function updateUserUI() {
   if (!currentUser) return;
   const email = currentUser.email || 'User';
-  const initial = email[0].toUpperCase();
+  const displayName = currentDisplayName || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || email.split('@')[0];
+  const initial = displayName[0].toUpperCase();
   document.getElementById('user-avatar').textContent = initial;
+  const nameEl = document.getElementById('user-name-display');
+  if (nameEl) nameEl.textContent = displayName;
   document.getElementById('user-email-display').textContent = email;
   const badge = document.getElementById('plan-badge');
   badge.textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
@@ -1447,6 +1812,8 @@ function updateUserUI() {
   // Profile tab
   const emailEl = document.getElementById('acct-email');
   if (emailEl) emailEl.textContent = email;
+  const nameDisp = document.getElementById('acct-name-display');
+  if (nameDisp) nameDisp.textContent = displayName;
   const planLabel = document.getElementById('acct-plan-label');
   if (planLabel) {
     const planNames = { free: 'Free Plan', plus: 'Plus Plan — $9/mo', pro: 'Pro Plan — $19/mo' };
@@ -1478,16 +1845,16 @@ function updateUserUI() {
   if (actionRow) {
     if (currentPlan === 'free') {
       actionRow.innerHTML = `
-        <button class="btn-sm btn-outline" onclick="openPaywall('plus')"><i class="ti ti-star"></i> Upgrade to Plus — $9/mo</button>
-        <button class="btn-sm btn-accent" onclick="openPaywall('pro')"><i class="ti ti-crown"></i> Go Pro — $19/mo</button>`;
+        <button class="btn-sm btn-outline" onclick="openPaywall('plus')" style="flex:1;justify-content:center;"><i class="ti ti-star"></i> Plus — $9/mo</button>
+        <button class="btn-sm btn-accent" onclick="openPaywall('pro')" style="flex:1;justify-content:center;"><i class="ti ti-crown"></i> Pro — $19/mo</button>`;
     } else if (currentPlan === 'plus') {
       actionRow.innerHTML = `
-        <button class="btn-sm btn-accent" onclick="openPaywall('pro')"><i class="ti ti-crown"></i> Upgrade to Pro — $19/mo</button>
-        <button class="btn-sm btn-outline" onclick="showToast('To cancel, visit your Stripe billing portal.','info')"><i class="ti ti-x"></i> Cancel Plan</button>`;
+        <button class="btn-sm btn-accent" onclick="openPaywall('pro')" style="flex:1;justify-content:center;"><i class="ti ti-crown"></i> Upgrade to Pro</button>
+        <button class="btn-danger" onclick="cancelPlan()" style="flex:1;"><i class="ti ti-x"></i> Cancel to Free</button>`;
     } else if (currentPlan === 'pro') {
       actionRow.innerHTML = `
-        <div style="font-size:13px;color:var(--green);display:flex;align-items:center;gap:6px;"><i class="ti ti-circle-check"></i> You're on the highest plan!</div>
-        <button class="btn-sm btn-outline" onclick="showToast('To cancel, visit your Stripe billing portal.','info')"><i class="ti ti-x"></i> Cancel Plan</button>`;
+        <button class="btn-sm btn-outline" onclick="downgradeTo('plus')" style="flex:1;justify-content:center;"><i class="ti ti-star"></i> Downgrade to Plus</button>
+        <button class="btn-danger" onclick="cancelPlan()" style="flex:1;"><i class="ti ti-x"></i> Cancel to Free</button>`;
     }
   }
 }
@@ -1567,12 +1934,48 @@ function openChangePassword() {
   document.body.appendChild(d);
 }
 
+async function editDisplayName() {
+  const current = currentDisplayName || '';
+  const newName = prompt('Enter your display name:', current);
+  if (newName === null) return; // cancelled
+  const trimmed = newName.trim();
+  if (!trimmed) { showToast('Name cannot be empty.', 'error'); return; }
+  const { error } = await sbClient.from('profiles').upsert({ id: currentUser.id, display_name: trimmed, updated_at: new Date().toISOString() });
+  if (error) { showToast('Failed to update name: ' + error.message, 'error'); return; }
+  currentDisplayName = trimmed;
+  updateUserUI();
+  showToast('Display name updated!', 'success');
+}
+
 async function sendPasswordReset(btn, email) {
   btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> Sending...';
   const { error } = await sbClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
   btn.closest('.modal-overlay').remove();
   if (error) showToast('Failed: ' + error.message, 'error');
   else showToast('Password reset email sent! Check your inbox.', 'success');
+}
+
+async function cancelPlan() {
+  if (!confirm('Cancel your plan and move to Free? You will lose access to paid features immediately.')) return;
+  const { error } = await sbClient.from('profiles').upsert({ id: currentUser.id, plan: 'free', updated_at: new Date().toISOString() });
+  if (error) { showToast('Failed to cancel plan: ' + error.message, 'error'); return; }
+  currentPlan = 'free';
+  updateUserUI();
+  renderCanvas(); // re-gate features
+  showToast('Plan cancelled. You are now on Free.', 'info');
+  switchAcctTab('plan');
+}
+
+async function downgradeTo(plan) {
+  const labels = { free: 'Free', plus: 'Plus ($9/mo)' };
+  if (!confirm('Downgrade to ' + (labels[plan]||plan) + '? Some features may be locked.')) return;
+  const { error } = await sbClient.from('profiles').upsert({ id: currentUser.id, plan: plan, updated_at: new Date().toISOString() });
+  if (error) { showToast('Failed to change plan: ' + error.message, 'error'); return; }
+  currentPlan = plan;
+  updateUserUI();
+  renderCanvas();
+  showToast('Plan changed to ' + (labels[plan]||plan) + '.', 'success');
+  switchAcctTab('plan');
 }
 
 function confirmDeleteAccount() {
@@ -1602,12 +2005,94 @@ function savePref(key, val) {
   localStorage.setItem('rt_prefs', JSON.stringify(prefs));
   applyPrefs();
 }
+function switchSettingsTab(tab) {
+  ['appearance','layout','behavior'].forEach(t => {
+    const pane = document.getElementById('settings-pane-' + t);
+    const btn  = document.getElementById('stab-' + t);
+    if (pane) pane.style.display = t === tab ? 'flex' : 'none';
+    if (btn)  { btn.className = t === tab ? 'btn-sm btn-accent' : 'btn-sm btn-outline'; btn.style.fontSize = '12px'; btn.style.padding = '5px 12px'; }
+  });
+}
+
+function resetLayout() {
+  ['nodeWidth','gapX','gapY','sidebarW','nodeTitleSize'].forEach(k => delete prefs[k]);
+  localStorage.setItem('rt_prefs', JSON.stringify(prefs));
+  applyPrefs();
+  showToast('Layout reset to defaults.', 'info');
+}
+
+const BG_TONES = {
+  dark:     { bg:'#0f1117', bg2:'#161b27', bg3:'#1e2535', bg4:'#252d3d', border:'#2e3650', border2:'#3a4560' },
+  midnight: { bg:'#0a0f1e', bg2:'#111827', bg3:'#1a2234', bg4:'#222d42', border:'#2a3654', border2:'#364673' },
+  forest:   { bg:'#0d1b0d', bg2:'#121f12', bg3:'#1a2a1a', bg4:'#233023', border:'#2e4030', border2:'#3d5240' },
+  ember:    { bg:'#1a0f0a', bg2:'#211510', bg3:'#2a1c16', bg4:'#33221d', border:'#3d2a24', border2:'#50382f' },
+  carbon:   { bg:'#111111', bg2:'#1a1a1a', bg3:'#222222', bg4:'#2a2a2a', border:'#333', border2:'#444' },
+};
+
 function applyPrefs() {
-  document.documentElement.style.setProperty('--node-w', prefs.wideNodes ? '280px' : '220px');
-  const wn = document.getElementById('pref-wide-nodes');
-  const ad = document.getElementById('pref-auto-detail');
-  if (wn) wn.checked = prefs.wideNodes;
-  if (ad) ad.checked = prefs.autoDetail;
+  const r = document.documentElement.style;
+  // Node width
+  r.setProperty('--node-w', (prefs.nodeWidth || 220) + 'px');
+  // Gaps
+  r.setProperty('--node-gap-x', (prefs.gapX || 60) + 'px');
+  r.setProperty('--node-gap-y', (prefs.gapY || 16) + 'px');
+  // Sidebar
+  r.setProperty('--sidebar-w', (prefs.sidebarW || 280) + 'px');
+  // Font size
+  document.body.style.fontSize = (prefs.fontSize || 14) + 'px';
+  // UI Font
+  if (prefs.uiFont) document.body.style.fontFamily = "'" + prefs.uiFont + "', sans-serif";
+  // Border radius
+  if (prefs.nodeRadius !== undefined) r.setProperty('--radius', prefs.nodeRadius + 'px');
+  // Accent color
+  if (prefs.accentColor) {
+    r.setProperty('--accent', prefs.accentColor);
+    r.setProperty('--accent2', prefs.accentColor + 'cc');
+    r.setProperty('--accent-dim', prefs.accentColor + '26');
+  }
+  // Background tone
+  if (prefs.bgTone && BG_TONES[prefs.bgTone]) {
+    const t = BG_TONES[prefs.bgTone];
+    Object.entries(t).forEach(([k,v]) => r.setProperty('--' + k.replace(/([A-Z])/g,'-$1').toLowerCase(), v));
+  }
+  // Canvas background
+  const canvas = document.getElementById('canvas-wrap');
+  if (canvas) {
+    canvas.classList.remove('canvas-dots','canvas-lines');
+    if (prefs.canvasBg === 'dots') canvas.classList.add('canvas-dots');
+    else if (prefs.canvasBg === 'lines') canvas.classList.add('canvas-lines');
+  }
+  // Transitions
+  if (prefs.animate === false) r.setProperty('--transition', '0s');
+  else r.setProperty('--transition', '0.18s ease');
+
+  // Sync UI controls
+  const syncCtrl = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  const syncChk  = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+  const syncTxt  = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  syncCtrl('pref-node-width',     prefs.nodeWidth     || 220);  syncTxt('node-width-val',      (prefs.nodeWidth||220)+'px');
+  syncCtrl('pref-gap-x',          prefs.gapX          || 60);   syncTxt('gap-x-val',            (prefs.gapX||60)+'px');
+  syncCtrl('pref-gap-y',          prefs.gapY          || 16);   syncTxt('gap-y-val',            (prefs.gapY||16)+'px');
+  syncCtrl('pref-sidebar-w',      prefs.sidebarW      || 280);  syncTxt('sidebar-w-val',        (prefs.sidebarW||280)+'px');
+  syncCtrl('pref-font-size',      prefs.fontSize      || 14);   syncTxt('font-size-val',        (prefs.fontSize||14)+'px');
+  syncCtrl('pref-radius',         prefs.nodeRadius    || 10);   syncTxt('radius-val',           (prefs.nodeRadius||10)+'px');
+  syncCtrl('pref-node-title-size',prefs.nodeTitleSize || 13);   syncTxt('node-title-size-val',  (prefs.nodeTitleSize||13)+'px');
+  if (prefs.nodeTitleSize) r.setProperty('--node-title-size', prefs.nodeTitleSize + 'px');
+  syncChk('pref-auto-detail', prefs.autoDetail !== false);
+  syncChk('pref-show-desc',   prefs.showDesc !== false);
+  syncChk('pref-show-notes',  prefs.showNotes !== false);
+  syncChk('pref-animate',     prefs.animate !== false);
+  const fontSel = document.getElementById('pref-ui-font');
+  if (fontSel && prefs.uiFont) fontSel.value = prefs.uiFont;
+  const bgSel = document.getElementById('pref-canvas-bg');
+  if (bgSel && prefs.canvasBg) bgSel.value = prefs.canvasBg;
+  // Highlight selected accent swatch
+  document.querySelectorAll('.theme-swatch[data-color]').forEach(s => {
+    s.classList.toggle('selected', s.dataset.color === prefs.accentColor);
+  });
+  document.querySelectorAll('.theme-swatch[data-bg]').forEach(s => {
+    s.classList.toggle('selected', s.dataset.bg === (prefs.bgTone||'dark'));
+  });
 }
 
 // ─── Paywall ───
@@ -1623,22 +2108,25 @@ function openPaywall(targetPlan) {
 }
 
 function updatePaywallUI() {
-  // Free btn
   const freebtn = document.getElementById('plan-free-btn');
   const plusbtn = document.getElementById('plan-plus-btn');
-  const probtn = document.getElementById('plan-pro-btn');
+  const probtn  = document.getElementById('plan-pro-btn');
+  if (!freebtn || !plusbtn || !probtn) return;
+  // Reset all
+  freebtn.className = 'plan-btn'; plusbtn.className = 'plan-btn accent'; probtn.className = 'plan-btn gold';
+  freebtn.onclick = null; plusbtn.onclick = null; probtn.onclick = null;
   if (currentPlan === 'free') {
-    freebtn.textContent = '✓ Current Plan'; freebtn.className = 'plan-btn current';
-    plusbtn.innerHTML = '<i class="ti ti-credit-card"></i> Upgrade — $9/mo'; plusbtn.className = 'plan-btn accent'; plusbtn.onclick = () => goToStripe('plus');
-    probtn.innerHTML = '<i class="ti ti-crown"></i> Go Pro — $19/mo'; probtn.className = 'plan-btn gold'; probtn.onclick = () => goToStripe('pro');
+    freebtn.innerHTML = '✓ Current Plan'; freebtn.className = 'plan-btn current';
+    plusbtn.innerHTML = '<i class="ti ti-credit-card"></i> Upgrade — $9/mo'; plusbtn.onclick = () => goToStripe('plus');
+    probtn.innerHTML  = '<i class="ti ti-crown"></i> Go Pro — $19/mo';       probtn.onclick  = () => goToStripe('pro');
   } else if (currentPlan === 'plus') {
-    freebtn.textContent = 'Downgrade'; freebtn.className = 'plan-btn';
-    plusbtn.textContent = '✓ Current Plan'; plusbtn.className = 'plan-btn current'; plusbtn.onclick = null;
-    probtn.innerHTML = '<i class="ti ti-crown"></i> Upgrade to Pro — $19/mo'; probtn.className = 'plan-btn gold'; probtn.onclick = () => goToStripe('pro');
+    freebtn.innerHTML = '↓ Downgrade to Free'; freebtn.onclick = () => { closeModal('paywall-modal'); cancelPlan(); };
+    plusbtn.innerHTML = '✓ Current Plan'; plusbtn.className = 'plan-btn current';
+    probtn.innerHTML  = '<i class="ti ti-crown"></i> Upgrade to Pro — $19/mo'; probtn.onclick = () => goToStripe('pro');
   } else if (currentPlan === 'pro') {
-    freebtn.textContent = 'Downgrade'; freebtn.className = 'plan-btn';
-    plusbtn.textContent = 'Downgrade'; plusbtn.className = 'plan-btn'; plusbtn.onclick = null;
-    probtn.textContent = '✓ Current Plan'; probtn.className = 'plan-btn current'; probtn.onclick = null;
+    freebtn.innerHTML = '↓ Cancel to Free';  freebtn.onclick = () => { closeModal('paywall-modal'); cancelPlan(); };
+    plusbtn.innerHTML = '↓ Downgrade to Plus'; plusbtn.className = 'plan-btn'; plusbtn.onclick = () => { closeModal('paywall-modal'); downgradeTo('plus'); };
+    probtn.innerHTML  = '✓ Current Plan'; probtn.className = 'plan-btn current';
   }
 }
 
@@ -1933,6 +2421,25 @@ function deleteNodeById(nodeId) {
   showToast('Node deleted.', 'info');
 }
 
+// ─── Vertical connector line (clips to first/last child midpoints) ───
+function drawVLine(childCol) {
+  // Remove any existing vline
+  const existing = childCol.querySelector('.node-vline');
+  if (existing) existing.remove();
+  const wraps = childCol.querySelectorAll(':scope > .node-and-children > .node-wrap');
+  if (wraps.length < 1) return;
+  const colRect = childCol.getBoundingClientRect();
+  const first = wraps[0].getBoundingClientRect();
+  const last  = wraps[wraps.length - 1].getBoundingClientRect();
+  const topY    = (first.top  + first.height  / 2) - colRect.top;
+  const bottomY = (last.top   + last.height   / 2) - colRect.top;
+  const vline = document.createElement('div');
+  vline.className = 'node-vline';
+  vline.style.top    = topY + 'px';
+  vline.style.height = Math.max(0, bottomY - topY) + 'px';
+  childCol.insertBefore(vline, childCol.firstChild);
+}
+
 // ─── Canvas Rendering ───
 function renderCanvas() {
   const canvas = document.getElementById('canvas');
@@ -1965,6 +2472,10 @@ function renderCanvas() {
   canvas.appendChild(empty);
   canvas.appendChild(container);
   updateStatsBar();
+  // Draw all vertical connector lines after layout
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
+  });
 }
 
 function renderNodeAndChildren(node, hasConnector) {
@@ -1992,7 +2503,11 @@ function renderNodeAndChildren(node, hasConnector) {
     for (const child of children) {
       childCol.appendChild(renderNodeAndChildren(child, true));
     }
+    // Vertical rail drawn after DOM is attached — placed in rAF
     wrap.appendChild(childCol);
+    if (!node.collapsed) {
+      requestAnimationFrame(() => drawVLine(childCol));
+    }
   }
 
   return wrap;
@@ -2042,14 +2557,20 @@ function buildNodeCard(node) {
     card.appendChild(desc);
   }
 
-  // Extended notes indicator (Pro)
+  // Extended notes preview (Pro)
   if (node.extNotes && node.extNotes.trim()) {
-    const notesHint = document.createElement('div');
-    notesHint.className = 'node-has-notes';
-    notesHint.innerHTML = '<i class="ti ti-notes"></i> Notes';
-    notesHint.title = 'Has extended notes — click to open';
-    notesHint.onclick = (e) => { e.stopPropagation(); openExtNotes(node.id); };
-    card.appendChild(notesHint);
+    // Strip HTML to get plain text preview
+    const tmp = document.createElement('div');
+    tmp.innerHTML = node.extNotes;
+    const plainText = (tmp.innerText || tmp.textContent || '').trim();
+    if (plainText) {
+      const preview = document.createElement('div');
+      preview.className = 'node-notes-preview';
+      preview.textContent = plainText;
+      preview.title = 'Open notes editor';
+      preview.onclick = (e) => { e.stopPropagation(); openNoteEditor(node.id); };
+      card.appendChild(preview);
+    }
   }
 
   // Tags (Pro)
@@ -2117,6 +2638,10 @@ function toggleCollapse(nodeId) {
   node.collapsed = !node.collapsed;
   debouncedSave(activeTreeId);
   renderCanvas();
+  // Re-draw all vlines after layout settles
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
+  });
 }
 
 function selectNode(nodeId) {
@@ -2255,24 +2780,30 @@ function renderDetailPanel(nodeId) {
   }
   html += `</div>`;
 
-  // Extended Notes (Pro)
+  // Extended Notes (Pro) — opens full-screen editor
   html += `<div class="detail-section">
     <div class="detail-label" style="display:flex;align-items:center;justify-content:space-between;">
-      <span>Extended Notes ${!canUseProFeatures() ? '<span style="color:var(--accent2);font-size:10px;">PRO</span>' : ''}</span>
-      ${canUseProFeatures() ? `<button class="btn-add-sm" onclick="openExtNotes('${nodeId}')" style="padding:3px 8px;font-size:11px;"><i class="ti ti-arrows-maximize" style="font-size:11px;"></i> Full Editor</button>` : ''}
+      <span>Notes ${!canUseProFeatures() ? '<span style="color:var(--accent2);font-size:10px;">PRO</span>' : ''}</span>
     </div>`;
   if (!canUseProFeatures()) {
-    html += `<div style="font-size:12px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:var(--radius-sm);">
-      <a href="#" onclick="openPaywall('pro');return false;" style="color:var(--accent);">Upgrade to Pro</a> for extended notes.
+    html += `<div style="font-size:12px;color:var(--text3);padding:10px 12px;background:var(--bg3);border-radius:var(--radius-sm);border:1px dashed var(--border);">
+      <a href="#" onclick="openPaywall('pro');return false;" style="color:var(--accent);">Upgrade to Pro</a> to unlock the full note editor — rich text, bullet lists, headings &amp; more.
     </div>`;
   } else {
-    const wordCount = (node.extNotes||'').trim().split(/\s+/).filter(Boolean).length;
-    html += `<div style="position:relative;">
-      <textarea class="detail-input" id="dp-extnotes" rows="4" placeholder="Detailed notes, references, analysis..." onchange="updateNodeField('${nodeId}','extNotes',this.value)">${esc(node.extNotes||'')}</textarea>
-      ${wordCount ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;">${wordCount} word${wordCount!==1?'s':''}</div>` : ''}
-    </div>
-    <button class="btn-add-sm primary" onclick="openExtNotes('${nodeId}')" style="width:100%;justify-content:center;display:flex;align-items:center;gap:6px;margin-top:2px;">
-      <i class="ti ti-arrows-maximize"></i> Open Full Editor
+    // Show plain text preview of notes
+    const tmp2 = document.createElement('div');
+    tmp2.innerHTML = node.extNotes || '';
+    const previewText = (tmp2.innerText || tmp2.textContent || '').trim();
+    const wordCount = previewText ? previewText.split(/\s+/).filter(Boolean).length : 0;
+    if (previewText) {
+      html += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.6;max-height:100px;overflow:hidden;position:relative;cursor:pointer;" onclick="openNoteEditor('${nodeId}')">
+        ${esc(previewText.slice(0,200))}${previewText.length > 200 ? '...' : ''}
+        <div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,var(--bg3));"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">${wordCount} word${wordCount!==1?'s':''}</div>`;
+    }
+    html += `<button class="btn-add-sm primary" onclick="openNoteEditor('${nodeId}')" style="width:100%;justify-content:center;display:flex;align-items:center;gap:7px;padding:10px;">
+      <i class="ti ti-notes"></i> ${previewText ? 'Edit Notes' : 'Open Note Editor'}
     </button>`;
   }
   html += `</div>`;
@@ -2465,31 +2996,115 @@ function openExportModal() {
 function exportTree(format) {
   const tree = getActiveTree(); if (!tree) return;
   closeModal('export-modal');
+
   if (format === 'json') {
     download(JSON.stringify(tree, null, 2), tree.name + '.json', 'application/json');
+
   } else if (format === 'markdown') {
-    const md = ['# ' + tree.name, ''];
+    const md = [];
+    md.push('# ' + tree.name);
+    md.push('');
+    md.push('> *Exported from ResearchTree · ' + new Date().toLocaleDateString() + '*');
+    md.push('');
+    md.push('---');
+    md.push('');
     function addMd(nodes, depth) {
       for (const n of nodes) {
-        md.push('#'.repeat(Math.min(depth+2,6)) + ' ' + n.title);
-        if (n.desc) md.push(n.desc, '');
-        addMd(n.children||[], depth+1);
+        const hashes = '#'.repeat(Math.min(depth + 2, 6));
+        const indent = '  '.repeat(Math.max(0, depth - 1));
+        md.push(hashes + ' ' + n.title);
+        if (n.desc) { md.push(''); md.push(indent + n.desc); }
+        if (n.tags && n.tags.length) md.push(''); md.push((n.tags||[]).map(t => '`#' + t + '`').join(' '));
+        if (n.links && n.links.length) {
+          md.push('');
+          n.links.forEach(l => md.push('- 🔗 [' + (l.label||l.url) + '](' + l.url + ')'));
+        }
+        if (n.extNotes) {
+          const tmp = document.createElement('div');
+          tmp.innerHTML = n.extNotes;
+          const plain = (tmp.innerText||'').trim();
+          if (plain) { md.push(''); md.push('**Notes:**'); md.push(''); md.push(plain); }
+        }
+        md.push('');
+        if ((n.children||[]).length) {
+          addMd(n.children, depth + 1);
+        }
       }
     }
     addMd(tree.nodes||[], 0);
     download(md.join('\n'), tree.name + '.md', 'text/markdown');
+
   } else if (format === 'csv') {
-    const rows = [['Title','Description','Depth','Tags']];
+    const rows = [['Title','Description','Depth','Tags','Links','Has Notes']];
     function addCsv(nodes, depth) {
       for (const n of nodes) {
-        rows.push([`"${(n.title||'').replace(/"/g,'""')}"`,`"${(n.desc||'').replace(/"/g,'""')}"`,depth,`"${(n.tags||[]).join(',')}"`]);
+        const linkStr = (n.links||[]).map(l => l.url).join('; ');
+        const hasNotes = (n.extNotes && n.extNotes.trim()) ? 'Yes' : 'No';
+        rows.push([
+          '"' + (n.title||'').replace(/"/g,'""') + '"',
+          '"' + (n.desc||'').replace(/"/g,'""') + '"',
+          depth,
+          '"' + (n.tags||[]).join(', ') + '"',
+          '"' + linkStr.replace(/"/g,'""') + '"',
+          hasNotes
+        ]);
         addCsv(n.children||[], depth+1);
       }
     }
     addCsv(tree.nodes||[], 0);
     download(rows.map(r=>r.join(',')).join('\n'), tree.name + '.csv', 'text/csv');
+
   } else if (format === 'print') {
-    window.print();
+    // Build a nice print page
+    const printWin = window.open('', '_blank');
+    let printBody = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>${tree.name}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #1a1a2e; line-height: 1.7; }
+  h1 { font-size: 28px; border-bottom: 3px solid #6c8eff; padding-bottom: 12px; margin-bottom: 6px; }
+  .meta { color: #888; font-size: 13px; margin-bottom: 32px; }
+  .node { margin-bottom: 20px; page-break-inside: avoid; }
+  .node-depth-0 { border-left: 4px solid #6c8eff; padding-left: 16px; }
+  .node-depth-1 { border-left: 3px solid #8fa8ff; padding-left: 16px; margin-left: 20px; }
+  .node-depth-2 { border-left: 2px solid #a78bfa; padding-left: 16px; margin-left: 40px; }
+  .node-depth-3 { border-left: 1px solid #ccc; padding-left: 16px; margin-left: 60px; }
+  .node-title { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+  .node-desc { color: #444; margin: 4px 0 8px; font-size: 14px; }
+  .node-notes { background: #f8f9ff; border-radius: 6px; padding: 12px 16px; margin: 8px 0; font-size: 14px; }
+  .node-notes h4 { margin: 0 0 6px; font-size: 13px; color: #6c8eff; text-transform: uppercase; letter-spacing: 0.5px; }
+  .node-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .node-tag { background: #eef; border-radius: 20px; padding: 2px 10px; font-size: 12px; color: #6c8eff; }
+  .node-links { margin: 6px 0; }
+  .node-links a { color: #6c8eff; font-size: 13px; display: block; }
+  @media print { body { margin: 20px; } }
+</style></head><body>`;
+    printBody += `<h1>${tree.icon || '🌳'} ${tree.name}</h1>`;
+    printBody += `<div class="meta">Exported from ResearchTree · ${new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'})}</div>`;
+    function addPrint(nodes, depth) {
+      for (const n of nodes) {
+        const tmp = document.createElement('div'); tmp.innerHTML = n.extNotes||'';
+        const notesHtml = (tmp.innerText||'').trim();
+        printBody += `<div class="node node-depth-${Math.min(depth,3)}">`;
+        printBody += `<div class="node-title">${n.title||''}</div>`;
+        if (n.desc) printBody += `<div class="node-desc">${n.desc}</div>`;
+        if (n.tags && n.tags.length) {
+          printBody += `<div class="node-tags">` + n.tags.map(t=>`<span class="node-tag">#${t}</span>`).join('') + `</div>`;
+        }
+        if (n.links && n.links.length) {
+          printBody += `<div class="node-links">` + n.links.map(l=>`<a href="${l.url}">${l.label||l.url}</a>`).join('') + `</div>`;
+        }
+        if (notesHtml) {
+          printBody += `<div class="node-notes"><h4>Notes</h4>${n.extNotes}</div>`;
+        }
+        printBody += `</div>`;
+        addPrint(n.children||[], depth+1);
+      }
+    }
+    addPrint(tree.nodes||[], 0);
+    printBody += `</body></html>`;
+    printWin.document.write(printBody);
+    printWin.document.close();
+    printWin.onload = () => { printWin.print(); };
   }
   showToast('Export complete!', 'success');
 }
@@ -2639,64 +3254,180 @@ function setupClickOutside() {
 }
 
 
-// ─── Extended Notes Dialog ───
-let extNotesNodeId = null;
-let extNotesSaveTimer = null;
+// ─── Full-Screen Note Editor ───
+let neNodeId = null;
+let neSaveTimer = null;
+let neIsOpen = false;
 
-function openExtNotes(nodeId) {
-  if (!canUseProFeatures()) { openPaywall('pro'); return; }
+function openNoteEditor(nodeId) {
   const tree = getActiveTree(); if (!tree) return;
   const node = findNode(tree.nodes, nodeId); if (!node) return;
-  extNotesNodeId = nodeId;
-  const ta = document.getElementById('ext-notes-textarea');
-  const titleEl = document.getElementById('ext-notes-node-title');
-  if (ta) ta.value = node.extNotes || '';
-  if (titleEl) titleEl.textContent = '📝  ' + node.title;
-  updateExtNotesWordCount();
-  openModal('ext-notes-modal');
-  setTimeout(() => { if (ta) ta.focus(); }, 100);
-  // Auto-save on input
-  if (ta) {
-    ta.oninput = () => {
-      updateExtNotesWordCount();
-      clearTimeout(extNotesSaveTimer);
-      extNotesSaveTimer = setTimeout(() => saveExtNotes(), 600);
-    };
-  }
+  neNodeId = nodeId;
+  neIsOpen = true;
+
+  // Set title / breadcrumb
+  document.getElementById('ne-node-title').textContent = node.title;
+  document.getElementById('ne-breadcrumb').textContent = tree.icon + ' ' + tree.name;
+
+  // Load content — stored as HTML
+  const editor = document.getElementById('ne-editor');
+  editor.innerHTML = node.extNotes || '';
+
+  // Show overlay
+  const overlay = document.getElementById('note-editor-overlay');
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // Focus
+  setTimeout(() => { editor.focus(); neUpdateCounts(); }, 80);
+
+  // Wire up events
+  editor.oninput = () => {
+    neUpdateCounts();
+    neSetStatus('saving');
+    clearTimeout(neSaveTimer);
+    neSaveTimer = setTimeout(() => neSave(), 800);
+  };
+
+  editor.onkeydown = (e) => {
+    // Ctrl+S
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); neSave(); return; }
+    // Escape
+    if (e.key === 'Escape') { closeNoteEditor(); return; }
+    // Tab → indent
+    if (e.key === 'Tab') { e.preventDefault(); document.execCommand(e.shiftKey ? 'outdent' : 'indent'); }
+  };
+
+  editor.onselectionchange = () => neUpdateToolbarState();
+  document.addEventListener('selectionchange', neUpdateToolbarState);
+
+  renderIcons(overlay);
 }
 
-function updateExtNotesWordCount() {
-  const ta = document.getElementById('ext-notes-textarea');
-  const wc = document.getElementById('ext-notes-wordcount');
-  if (!ta || !wc) return;
-  const words = ta.value.trim().split(/\s+/).filter(Boolean).length;
-  wc.textContent = words + ' word' + (words !== 1 ? 's' : '');
-}
+// Alias for backward compat with detail panel buttons
+function openExtNotes(nodeId) { openNoteEditor(nodeId); }
+function closeExtNotes() { closeNoteEditor(); }
 
-function saveExtNotes() {
-  if (!extNotesNodeId) return;
-  const ta = document.getElementById('ext-notes-textarea');
-  if (!ta) return;
-  const tree = getActiveTree(); if (!tree) return;
-  const node = findNode(tree.nodes, extNotesNodeId); if (!node) return;
-  node.extNotes = ta.value;
-  debouncedSave(activeTreeId);
-  const status = document.getElementById('ext-notes-saved-status');
-  if (status) { status.textContent = 'Saved ✓'; setTimeout(() => { if(status) status.textContent = ''; }, 2000); }
-  // Update word count in detail panel if open
-  if (selectedNodeId === extNotesNodeId) {
-    const dpNotes = document.getElementById('dp-extnotes');
-    if (dpNotes) dpNotes.value = ta.value;
-  }
-}
-
-function closeExtNotes() {
-  saveExtNotes();
-  extNotesNodeId = null;
-  closeModal('ext-notes-modal');
+function closeNoteEditor() {
+  neSave();
+  neIsOpen = false;
+  neNodeId = null;
+  document.getElementById('note-editor-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  document.removeEventListener('selectionchange', neUpdateToolbarState);
+  // Refresh detail panel + canvas to show updated preview
   if (selectedNodeId) renderDetailPanel(selectedNodeId);
   renderCanvas();
 }
+
+function neSave() {
+  if (!neNodeId) return;
+  const editor = document.getElementById('ne-editor');
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, neNodeId); if (!node) return;
+  // Store innerHTML (rich HTML)
+  node.extNotes = editor.innerHTML === '<br>' ? '' : editor.innerHTML;
+  debouncedSave(activeTreeId);
+  neSetStatus('saved');
+}
+
+function neSetStatus(state) {
+  const el = document.getElementById('ne-save-status');
+  const txt = document.getElementById('ne-save-text');
+  if (!el || !txt) return;
+  if (state === 'saved') {
+    el.className = 'ne-status saved';
+    txt.textContent = 'All saved';
+  } else {
+    el.className = 'ne-status';
+    txt.textContent = 'Saving...';
+  }
+}
+
+function neUpdateCounts() {
+  const editor = document.getElementById('ne-editor');
+  if (!editor) return;
+  const text = editor.innerText || '';
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const chars = text.length;
+  const lines = text.split('\n').length;
+  const wc = document.getElementById('ne-wordcount');
+  const cc = document.getElementById('ne-charcount');
+  const lc = document.getElementById('ne-linecount');
+  if (wc) wc.textContent = words + ' word' + (words !== 1 ? 's' : '');
+  if (cc) cc.textContent = chars + ' char' + (chars !== 1 ? 's' : '');
+  if (lc) lc.textContent = lines + ' line' + (lines !== 1 ? 's' : '');
+}
+
+function neExec(cmd, value) {
+  document.getElementById('ne-editor').focus();
+  document.execCommand(cmd, false, value || null);
+  neUpdateToolbarState();
+}
+
+function neBlockFormat(tag) {
+  const editor = document.getElementById('ne-editor');
+  editor.focus();
+  if (tag === 'p') { document.execCommand('formatBlock', false, 'p'); }
+  else if (tag === 'pre') {
+    document.execCommand('formatBlock', false, 'pre');
+  } else {
+    document.execCommand('formatBlock', false, tag);
+  }
+  neUpdateToolbarState();
+}
+
+function neHighlight() {
+  document.getElementById('ne-editor').focus();
+  document.execCommand('hiliteColor', false, 'rgba(251,191,36,0.35)');
+  neUpdateToolbarState();
+}
+
+function neInsertHR() {
+  const editor = document.getElementById('ne-editor');
+  editor.focus();
+  document.execCommand('insertHTML', false, '<hr><p>​</p>');
+}
+
+function neInsertLink() {
+  const url = prompt('Enter URL:');
+  if (!url) return;
+  const text = window.getSelection().toString() || url;
+  document.getElementById('ne-editor').focus();
+  document.execCommand('insertHTML', false, '<a href="' + url + '" target="_blank">' + text + '</a>');
+}
+
+function neInsertTaskList() {
+  const editor = document.getElementById('ne-editor');
+  editor.focus();
+  document.execCommand('insertHTML', false,
+    '<ul style="list-style:none;padding-left:0;">' +
+    '<li class="task-item"><input type="checkbox"> Task item</li>' +
+    '<li class="task-item"><input type="checkbox"> Another task</li>' +
+    '</ul><p>​</p>'
+  );
+}
+
+function neUpdateToolbarState() {
+  const cmds = ['bold','italic','underline','strikeThrough','insertUnorderedList','insertOrderedList'];
+  cmds.forEach(cmd => {
+    const btn = document.getElementById('tb-' + cmd);
+    if (btn) btn.classList.toggle('active', document.queryCommandState(cmd));
+  });
+  // Update block select
+  const sel = document.getElementById('ne-block-select');
+  if (sel) {
+    try {
+      const block = document.queryCommandValue('formatBlock').toLowerCase().replace(/^<|>$/g,'') || 'p';
+      const map = { 'h1':'h1','h2':'h2','h3':'h3','blockquote':'blockquote','pre':'pre' };
+      sel.value = map[block] || 'p';
+    } catch(e) {}
+  }
+}
+
+// Keep updateExtNotesWordCount as alias (used elsewhere)
+function updateExtNotesWordCount() { neUpdateCounts(); }
+function saveExtNotes() { neSave(); }
 
 // ─── Stats Bar ───
 function updateStatsBar() {
