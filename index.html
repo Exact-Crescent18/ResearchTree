@@ -1583,53 +1583,48 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   var loaded = false;
 
   function showLoadError(msg) {
-    var spinner = document.getElementById('loading-spinner');
-    var msgEl   = document.getElementById('loading-msg');
-    if (spinner) spinner.style.display = 'none';
-    if (msgEl)   { msgEl.style.display = 'block'; msgEl.innerHTML = msg; }
+    var spinner = document.getElementById("loading-spinner");
+    var msgEl   = document.getElementById("loading-msg");
+    if (spinner) spinner.style.display = "none";
+    if (msgEl)   { msgEl.style.display = "block"; msgEl.innerHTML = msg; }
   }
 
-  // Timeout fallback — if SDK doesn't load in 8s, show error
   var timer = setTimeout(function() {
     if (!loaded) {
       showLoadError(
-        '<strong style="color:var(--red);">⚠️ Could not connect</strong><br><br>' +
-        'The app requires an internet connection to load.<br>' +
-        'If you're previewing this file locally, please deploy it to ' +
-        '<a href="https://pages.github.com" target="_blank" style="color:var(--accent);">GitHub Pages</a> first.<br><br>' +
-        '<button onclick="window.location.reload()" style="margin-top:8px;padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Retry</button>'
+        "<strong style='color:var(--red)'>Could not connect</strong><br><br>" +
+        "The app requires an internet connection to load.<br>" +
+        "If previewing locally, please deploy to GitHub Pages first.<br><br>" +
+        "<button onclick='window.location.reload()' style='margin-top:8px;padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px'>Retry</button>"
       );
     }
   }, TIMEOUT_MS);
 
-  var script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-  script.onload = function() {
+  function onLoaded() {
     loaded = true;
     clearTimeout(timer);
-    // Kick off app init once SDK is confirmed loaded
-    if (typeof initApp === 'function') initApp();
-  };
-  script.onerror = function() {
-    clearTimeout(timer);
-    // Try fallback CDN
-    var fallback = document.createElement('script');
-    fallback.src = 'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-    fallback.onload = function() {
-      loaded = true;
-      if (typeof initApp === 'function') initApp();
-    };
+    if (typeof initApp === "function") initApp();
+  }
+
+  function tryFallback() {
+    var fallback = document.createElement("script");
+    fallback.src = "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+    fallback.onload = onLoaded;
     fallback.onerror = function() {
       showLoadError(
-        '<strong style="color:var(--red);">⚠️ Could not load Supabase SDK</strong><br><br>' +
-        'This file needs to be served from <strong>GitHub Pages</strong> or another web host — ' +
-        'it cannot run as a local <code>file://</code> URL.<br><br>' +
-        '<a href="https://pages.github.com" target="_blank" style="color:var(--accent);">Deploy to GitHub Pages →</a><br><br>' +
-        '<button onclick="window.location.reload()" style="margin-top:8px;padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Retry</button>'
+        "<strong style='color:var(--red)'>Could not load Supabase SDK</strong><br><br>" +
+        "This file must be served from GitHub Pages or a web host, not a local file.<br><br>" +
+        "<a href='https://pages.github.com' target='_blank' style='color:var(--accent)'>Deploy to GitHub Pages</a><br><br>" +
+        "<button onclick='window.location.reload()' style='margin-top:8px;padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px'>Retry</button>"
       );
     };
     document.head.appendChild(fallback);
-  };
+  }
+
+  var script = document.createElement("script");
+  script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+  script.onload = onLoaded;
+  script.onerror = function() { clearTimeout(timer); tryFallback(); };
   document.head.appendChild(script);
 })();
 </script>
@@ -1689,7 +1684,7 @@ const STRIPE_PLUS_LINK = 'https://buy.stripe.com/YOUR_PLUS_LINK_HERE';
 const STRIPE_PRO_LINK = 'https://buy.stripe.com/YOUR_PRO_LINK_HERE';
 
 // ─── Supabase Client ───
-const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let sbClient = null; // initialized in initApp() after SDK loads
 
 // ─── State ───
 let currentUser = null;
@@ -1818,7 +1813,7 @@ function openForgotPassword() {
   const d = document.createElement('div');
   d.className = 'modal-overlay';
   d.style.zIndex = '600';
-  d.innerHTML = \`<div class="modal" style="max-width:400px;">
+  d.innerHTML = `<div class="modal" style="max-width:400px;">
     <div class="modal-header"><h3>Reset Password</h3><button class="icon-btn" onclick="this.closest('.modal-overlay').remove()"><i class="ti ti-x"></i></button></div>
     <div class="modal-body">
       <p style="font-size:13px;color:var(--text2);">Enter your email and we'll send a reset link.</p>
@@ -1831,7 +1826,7 @@ function openForgotPassword() {
       <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
       <button class="btn-accent btn-sm" onclick="sendForgotPassword(this)"><i class="ti ti-mail"></i> Send Reset Link</button>
     </div>
-  </div>\`;
+  </div>`;
   document.body.appendChild(d);
   renderIcons(d);
   setTimeout(() => d.querySelector('#forgot-email').focus(), 100);
@@ -3602,14 +3597,11 @@ function updateStatsBar() {
 }
 
 // ─── Start ───
-// initApp() is called by the SDK loader above once Supabase is ready.
-// Falls back to DOMContentLoaded if the script tag already ran.
+// initApp() is called by the SDK loader once window.supabase is available.
 function initApp() {
-  loadPrefs();
-  init();
-}
-// If SDK loaded synchronously (cached), kick off now
-if (window.supabase) {
+  if (!window.supabase) { console.error("Supabase SDK not loaded"); return; }
+  // Create client NOW — SDK is guaranteed present
+  sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   loadPrefs();
   init();
 }
