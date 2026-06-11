@@ -925,6 +925,15 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 </head>
 <body>
 
+<!-- Debug Panel (remove before final deploy) -->
+<div id="debug-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#0a0a0a;border-top:2px solid #f87171;padding:12px 16px;font-family:monospace;font-size:12px;color:#4ade80;max-height:220px;overflow-y:auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <strong style="color:#fbbf24;">🔍 ResearchTree Debug</strong>
+    <button onclick="document.getElementById('debug-panel').style.display='none'" style="background:#333;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;">Hide</button>
+  </div>
+  <div id="debug-log"></div>
+</div>
+
 <!-- Loading -->
 <div id="loading-screen">
   <div class="logo">Research<span>Tree</span></div>
@@ -1882,8 +1891,27 @@ async function signOut() {
 // ─── Profile / Plan ───
 let currentDisplayName = '';
 
+function dbg(msg, color) {
+  color = color || '#4ade80';
+  const panel = document.getElementById('debug-panel');
+  const log = document.getElementById('debug-log');
+  if (panel) panel.style.display = 'block';
+  if (log) {
+    const line = document.createElement('div');
+    line.style.color = color;
+    line.style.borderBottom = '1px solid #222';
+    line.style.paddingBottom = '3px';
+    line.style.marginBottom = '3px';
+    line.textContent = new Date().toLocaleTimeString() + '  ' + msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+  console.log('[RT]', msg);
+}
+
 async function loadUserProfile() {
-  console.log('[ResearchTree] Loading profile for user:', currentUser.id, currentUser.email);
+  dbg('Loading profile — user id: ' + currentUser.id);
+  dbg('User email: ' + currentUser.email);
 
   const { data, error } = await sbClient
     .from('profiles')
@@ -1891,35 +1919,31 @@ async function loadUserProfile() {
     .eq('id', currentUser.id)
     .single();
 
-  console.log('[ResearchTree] Profile query result:', { data, error });
-
   if (data) {
-    // Successfully read profile — use whatever plan is stored
+    dbg('SUCCESS — raw data: ' + JSON.stringify(data), '#4ade80');
     currentPlan = data.plan || 'free';
     currentDisplayName = data.display_name
       || currentUser.user_metadata?.full_name
       || currentUser.user_metadata?.name
       || '';
-    console.log('[ResearchTree] Plan loaded:', currentPlan, '| Name:', currentDisplayName);
+    dbg('Plan set to: ' + currentPlan, '#fbbf24');
 
   } else if (error && error.code === 'PGRST116') {
-    // Row does not exist yet — create it fresh with free plan
-    console.log('[ResearchTree] No profile row found, creating...');
+    dbg('No profile row found (PGRST116) — creating new row with free plan', '#fb923c');
     const nameFromMeta = currentUser.user_metadata?.full_name
       || currentUser.user_metadata?.name || '';
-    await sbClient.from('profiles').insert({
-      id: currentUser.id,
-      plan: 'free',
-      display_name: nameFromMeta
+    const { error: insertErr } = await sbClient.from('profiles').insert({
+      id: currentUser.id, plan: 'free', display_name: nameFromMeta
     });
+    if (insertErr) dbg('Insert error: ' + insertErr.message, '#f87171');
+    else dbg('New profile row created', '#4ade80');
     currentPlan = 'free';
     currentDisplayName = nameFromMeta;
 
   } else if (error) {
-    // Any other error (RLS, network, etc.) — DO NOT overwrite the plan.
-    // Just keep currentPlan as 'free' for this session without touching the DB.
-    console.warn('[ResearchTree] Could not read profile:', error.code, error.message);
-    console.warn('[ResearchTree] Plan defaulting to free for this session only — DB not touched.');
+    dbg('ERROR reading profile: code=' + error.code + ' msg=' + error.message, '#f87171');
+    dbg('hint: ' + (error.hint || 'none') + ' | details: ' + (error.details || 'none'), '#f87171');
+    dbg('Plan defaulting to free — DB NOT touched', '#fb923c');
     currentPlan = 'free';
   }
 }
