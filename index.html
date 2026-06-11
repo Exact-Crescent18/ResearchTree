@@ -2299,6 +2299,20 @@ function savePref(key, val) {
   prefs[key] = val;
   localStorage.setItem('rt_prefs', JSON.stringify(prefs));
   applyPrefs();
+  // Any pref that changes layout needs vlines redrawn after reflow
+  const layoutKeys = ['gapY', 'gapX', 'nodeWidth', 'nodeTitleSize', 'showDesc', 'showNotes'];
+  if (layoutKeys.includes(key)) {
+    redrawAllVLines();
+  }
+}
+
+function redrawAllVLines() {
+  // Wait two frames — one for CSS vars to apply, one for reflow
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
+    });
+  });
 }
 function switchSettingsTab(tab) {
   ['appearance','layout','behavior'].forEach(t => {
@@ -2313,6 +2327,7 @@ function resetLayout() {
   ['nodeWidth','gapX','gapY','sidebarW','nodeTitleSize'].forEach(k => delete prefs[k]);
   localStorage.setItem('rt_prefs', JSON.stringify(prefs));
   applyPrefs();
+  redrawAllVLines();
   showToast('Layout reset to defaults.', 'info');
 }
 
