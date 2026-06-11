@@ -1894,28 +1894,33 @@ async function loadUserProfile() {
   console.log('[ResearchTree] Profile query result:', { data, error });
 
   if (data) {
+    // Successfully read profile — use whatever plan is stored
     currentPlan = data.plan || 'free';
-    currentDisplayName = data.display_name || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+    currentDisplayName = data.display_name
+      || currentUser.user_metadata?.full_name
+      || currentUser.user_metadata?.name
+      || '';
     console.log('[ResearchTree] Plan loaded:', currentPlan, '| Name:', currentDisplayName);
+
+  } else if (error && error.code === 'PGRST116') {
+    // Row does not exist yet — create it fresh with free plan
+    console.log('[ResearchTree] No profile row found, creating...');
+    const nameFromMeta = currentUser.user_metadata?.full_name
+      || currentUser.user_metadata?.name || '';
+    await sbClient.from('profiles').insert({
+      id: currentUser.id,
+      plan: 'free',
+      display_name: nameFromMeta
+    });
+    currentPlan = 'free';
+    currentDisplayName = nameFromMeta;
+
   } else if (error) {
-    console.warn('[ResearchTree] Profile error:', error.code, error.message);
-    if (error.code === 'PGRST116') {
-      // Row doesn't exist — create it
-      const nameFromMeta = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
-      const { error: insertErr } = await sbClient.from('profiles').insert({
-        id: currentUser.id, plan: 'free', display_name: nameFromMeta
-      });
-      console.log('[ResearchTree] Created profile, insertErr:', insertErr);
-      currentPlan = 'free';
-      currentDisplayName = nameFromMeta;
-    } else {
-      // RLS or other error — try upsert to ensure row exists
-      console.warn('[ResearchTree] Unexpected profile error, attempting upsert...');
-      await sbClient.from('profiles').upsert({
-        id: currentUser.id, plan: 'free', updated_at: new Date().toISOString()
-      }, { onConflict: 'id', ignoreDuplicates: true });
-      currentPlan = 'free';
-    }
+    // Any other error (RLS, network, etc.) — DO NOT overwrite the plan.
+    // Just keep currentPlan as 'free' for this session without touching the DB.
+    console.warn('[ResearchTree] Could not read profile:', error.code, error.message);
+    console.warn('[ResearchTree] Plan defaulting to free for this session only — DB not touched.');
+    currentPlan = 'free';
   }
 }
 
