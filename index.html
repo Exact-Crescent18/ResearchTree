@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ResearchTree</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2044%2044%22%3E%3Crect%20x%3D%2219.5%22%20y%3D%2228%22%20width%3D%225%22%20height%3D%2212%22%20rx%3D%222.5%22%20fill%3D%22%238B6343%22/%3E%3Cpath%20d%3D%22M22%2028%20Q14%2024%2010%2018%22%20stroke%3D%22%237B5533%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M22%2028%20Q30%2024%2034%2018%22%20stroke%3D%22%237B5533%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M22%2028%20Q22%2020%2022%2014%22%20stroke%3D%22%237B5533%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20fill%3D%22none%22/%3E%3Ccircle%20cx%3D%2222%22%20cy%3D%2210%22%20r%3D%226.5%22%20fill%3D%22%2322c55e%22/%3E%3Ccircle%20cx%3D%227%22%20cy%3D%2210%22%20r%3D%225.5%22%20fill%3D%22%2316a34a%22/%3E%3Ccircle%20cx%3D%2237%22%20cy%3D%2210%22%20r%3D%225.5%22%20fill%3D%22%2316a34a%22/%3E%3Ccircle%20cx%3D%2216%22%20cy%3D%228%22%20r%3D%225%22%20fill%3D%22%2322c55e%22/%3E%3Ccircle%20cx%3D%2228%22%20cy%3D%228%22%20r%3D%225%22%20fill%3D%22%2322c55e%22/%3E%3Ccircle%20cx%3D%2222%22%20cy%3D%225%22%20r%3D%223.5%22%20fill%3D%22%234ade80%22/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -60,7 +61,7 @@ h1,h2,h3,h4 { font-family: 'Playfair Display', serif; }
   display: flex; align-items: center; justify-content: center;
   flex-direction: column; gap: 16px; z-index: 9999;
 }
-#loading-screen .logo { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--text); }
+#loading-screen .logo { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--text); display:flex; align-items:center; }
 #loading-screen .logo span { color: var(--accent); }
 .spinner {
   width: 32px; height: 32px; border: 3px solid var(--border);
@@ -925,18 +926,61 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 </head>
 <body>
 
-<!-- Debug Panel (remove before final deploy) -->
-<div id="debug-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#0a0a0a;border-top:2px solid #f87171;padding:12px 16px;font-family:monospace;font-size:12px;color:#4ade80;max-height:220px;overflow-y:auto;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <strong style="color:#fbbf24;">🔍 ResearchTree Debug</strong>
-    <button onclick="document.getElementById('debug-panel').style.display='none'" style="background:#333;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;">Hide</button>
-  </div>
-  <div id="debug-log"></div>
-</div>
-
 <!-- Loading -->
 <div id="loading-screen">
-  <div class="logo">Research<span>Tree</span></div>
+  <div class="logo"><svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Trunk -->
+  <rect x="19.5" y="28" width="5" height="12" rx="2.5" fill="url(#trunkGrad)"/>
+  <!-- Main branch left -->
+  <path d="M22 28 Q14 24 10 18" stroke="url(#branchGrad)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <!-- Main branch right -->
+  <path d="M22 28 Q30 24 34 18" stroke="url(#branchGrad)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <!-- Center branch up -->
+  <path d="M22 28 Q22 20 22 14" stroke="url(#branchGrad)" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch left-left -->
+  <path d="M13 21 Q9 17 7 13" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch left-right -->
+  <path d="M13 21 Q14 16 16 12" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch right-left -->
+  <path d="M31 21 Q30 16 28 12" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch right-right -->
+  <path d="M31 21 Q35 17 37 13" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Leaf clusters — large -->
+  <circle cx="22" cy="10" r="6.5" fill="url(#leafGrad1)" opacity="0.95"/>
+  <circle cx="7" cy="10" r="5.5" fill="url(#leafGrad2)" opacity="0.9"/>
+  <circle cx="37" cy="10" r="5.5" fill="url(#leafGrad2)" opacity="0.9"/>
+  <!-- Leaf clusters — medium -->
+  <circle cx="16" cy="8" r="5" fill="url(#leafGrad1)" opacity="0.85"/>
+  <circle cx="28" cy="8" r="5" fill="url(#leafGrad1)" opacity="0.85"/>
+  <!-- Leaf clusters — small accent -->
+  <circle cx="22" cy="5" r="3.5" fill="url(#leafGrad3)" opacity="0.8"/>
+  <circle cx="12" cy="6" r="3" fill="url(#leafGrad3)" opacity="0.75"/>
+  <circle cx="32" cy="6" r="3" fill="url(#leafGrad3)" opacity="0.75"/>
+  <!-- Ground line -->
+  <path d="M14 40 Q22 38 30 40" stroke="url(#trunkGrad)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.4"/>
+  <defs>
+    <linearGradient id="trunkGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8B6343"/>
+      <stop offset="100%" stop-color="#5C3D1E"/>
+    </linearGradient>
+    <linearGradient id="branchGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7B5533"/>
+      <stop offset="100%" stop-color="#4A2E0E"/>
+    </linearGradient>
+    <radialGradient id="leafGrad1" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#6FEBA0"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </radialGradient>
+    <radialGradient id="leafGrad2" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </radialGradient>
+    <radialGradient id="leafGrad3" cx="40%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#4ade80"/>
+    </radialGradient>
+  </defs>
+</svg><span style="margin-left:10px;">Research<span style="color:var(--accent)">Tree</span></span></div>
   <div class="spinner" id="loading-spinner"></div>
   <div id="loading-msg" style="font-size:13px;color:var(--text3);display:none;text-align:center;max-width:320px;line-height:1.6;"></div>
 </div>
@@ -945,7 +989,62 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">
-      <h1>Research<span>Tree</span></h1>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px;">
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Trunk -->
+  <rect x="19.5" y="28" width="5" height="12" rx="2.5" fill="url(#trunkGrad)"/>
+  <!-- Main branch left -->
+  <path d="M22 28 Q14 24 10 18" stroke="url(#branchGrad)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <!-- Main branch right -->
+  <path d="M22 28 Q30 24 34 18" stroke="url(#branchGrad)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <!-- Center branch up -->
+  <path d="M22 28 Q22 20 22 14" stroke="url(#branchGrad)" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch left-left -->
+  <path d="M13 21 Q9 17 7 13" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch left-right -->
+  <path d="M13 21 Q14 16 16 12" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch right-left -->
+  <path d="M31 21 Q30 16 28 12" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch right-right -->
+  <path d="M31 21 Q35 17 37 13" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Leaf clusters — large -->
+  <circle cx="22" cy="10" r="6.5" fill="url(#leafGrad1)" opacity="0.95"/>
+  <circle cx="7" cy="10" r="5.5" fill="url(#leafGrad2)" opacity="0.9"/>
+  <circle cx="37" cy="10" r="5.5" fill="url(#leafGrad2)" opacity="0.9"/>
+  <!-- Leaf clusters — medium -->
+  <circle cx="16" cy="8" r="5" fill="url(#leafGrad1)" opacity="0.85"/>
+  <circle cx="28" cy="8" r="5" fill="url(#leafGrad1)" opacity="0.85"/>
+  <!-- Leaf clusters — small accent -->
+  <circle cx="22" cy="5" r="3.5" fill="url(#leafGrad3)" opacity="0.8"/>
+  <circle cx="12" cy="6" r="3" fill="url(#leafGrad3)" opacity="0.75"/>
+  <circle cx="32" cy="6" r="3" fill="url(#leafGrad3)" opacity="0.75"/>
+  <!-- Ground line -->
+  <path d="M14 40 Q22 38 30 40" stroke="url(#trunkGrad)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.4"/>
+  <defs>
+    <linearGradient id="trunkGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8B6343"/>
+      <stop offset="100%" stop-color="#5C3D1E"/>
+    </linearGradient>
+    <linearGradient id="branchGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7B5533"/>
+      <stop offset="100%" stop-color="#4A2E0E"/>
+    </linearGradient>
+    <radialGradient id="leafGrad1" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#6FEBA0"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </radialGradient>
+    <radialGradient id="leafGrad2" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </radialGradient>
+    <radialGradient id="leafGrad3" cx="40%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#4ade80"/>
+    </radialGradient>
+  </defs>
+</svg>
+        <h1 style="margin:0;">Research<span>Tree</span></h1>
+      </div>
       <p>Organize knowledge. Build connections. Think deeper.</p>
     </div>
     <div class="auth-tabs">
@@ -1006,7 +1105,59 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   <!-- Sidebar -->
   <div id="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-logo">Research<span>Tree</span></div>
+      <div class="sidebar-logo" style="display:flex;align-items:center;gap:8px;"><svg width="32" height="32" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Trunk -->
+  <rect x="19.5" y="28" width="5" height="12" rx="2.5" fill="url(#trunkGrad)"/>
+  <!-- Main branch left -->
+  <path d="M22 28 Q14 24 10 18" stroke="url(#branchGrad)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <!-- Main branch right -->
+  <path d="M22 28 Q30 24 34 18" stroke="url(#branchGrad)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <!-- Center branch up -->
+  <path d="M22 28 Q22 20 22 14" stroke="url(#branchGrad)" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch left-left -->
+  <path d="M13 21 Q9 17 7 13" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch left-right -->
+  <path d="M13 21 Q14 16 16 12" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch right-left -->
+  <path d="M31 21 Q30 16 28 12" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Sub branch right-right -->
+  <path d="M31 21 Q35 17 37 13" stroke="url(#branchGrad)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <!-- Leaf clusters — large -->
+  <circle cx="22" cy="10" r="6.5" fill="url(#leafGrad1)" opacity="0.95"/>
+  <circle cx="7" cy="10" r="5.5" fill="url(#leafGrad2)" opacity="0.9"/>
+  <circle cx="37" cy="10" r="5.5" fill="url(#leafGrad2)" opacity="0.9"/>
+  <!-- Leaf clusters — medium -->
+  <circle cx="16" cy="8" r="5" fill="url(#leafGrad1)" opacity="0.85"/>
+  <circle cx="28" cy="8" r="5" fill="url(#leafGrad1)" opacity="0.85"/>
+  <!-- Leaf clusters — small accent -->
+  <circle cx="22" cy="5" r="3.5" fill="url(#leafGrad3)" opacity="0.8"/>
+  <circle cx="12" cy="6" r="3" fill="url(#leafGrad3)" opacity="0.75"/>
+  <circle cx="32" cy="6" r="3" fill="url(#leafGrad3)" opacity="0.75"/>
+  <!-- Ground line -->
+  <path d="M14 40 Q22 38 30 40" stroke="url(#trunkGrad)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.4"/>
+  <defs>
+    <linearGradient id="trunkGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8B6343"/>
+      <stop offset="100%" stop-color="#5C3D1E"/>
+    </linearGradient>
+    <linearGradient id="branchGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7B5533"/>
+      <stop offset="100%" stop-color="#4A2E0E"/>
+    </linearGradient>
+    <radialGradient id="leafGrad1" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#6FEBA0"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </radialGradient>
+    <radialGradient id="leafGrad2" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </radialGradient>
+    <radialGradient id="leafGrad3" cx="40%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#4ade80"/>
+    </radialGradient>
+  </defs>
+</svg><span>Research<span>Tree</span></span></div>
       <div class="sidebar-actions">
         <button class="icon-btn" onclick="openNewTreeModal()" title="New tree"><i class="ti ti-plus"></i></button>
         <button class="icon-btn" onclick="openAccountModal()" title="Account"><i class="ti ti-settings"></i></button>
@@ -1891,28 +2042,7 @@ async function signOut() {
 // ─── Profile / Plan ───
 let currentDisplayName = '';
 
-function dbg(msg, color) {
-  color = color || '#4ade80';
-  const panel = document.getElementById('debug-panel');
-  const log = document.getElementById('debug-log');
-  if (panel) panel.style.display = 'block';
-  if (log) {
-    const line = document.createElement('div');
-    line.style.color = color;
-    line.style.borderBottom = '1px solid #222';
-    line.style.paddingBottom = '3px';
-    line.style.marginBottom = '3px';
-    line.textContent = new Date().toLocaleTimeString() + '  ' + msg;
-    log.appendChild(line);
-    log.scrollTop = log.scrollHeight;
-  }
-  console.log('[RT]', msg);
-}
-
 async function loadUserProfile() {
-  dbg('Loading profile — user id: ' + currentUser.id);
-  dbg('User email: ' + currentUser.email);
-
   const { data, error } = await sbClient
     .from('profiles')
     .select('plan, display_name')
@@ -1920,41 +2050,32 @@ async function loadUserProfile() {
     .single();
 
   if (data) {
-    dbg('SUCCESS — raw data: ' + JSON.stringify(data), '#4ade80');
     currentPlan = data.plan || 'free';
     currentDisplayName = data.display_name
       || currentUser.user_metadata?.full_name
       || currentUser.user_metadata?.name
       || '';
-    dbg('Plan set to: ' + currentPlan, '#fbbf24');
-
   } else if (error && error.code === 'PGRST116') {
-    dbg('No profile row found (PGRST116) — creating new row with free plan', '#fb923c');
+    // No row yet — create it
     const nameFromMeta = currentUser.user_metadata?.full_name
       || currentUser.user_metadata?.name || '';
-    const { error: insertErr } = await sbClient.from('profiles').insert({
+    await sbClient.from('profiles').insert({
       id: currentUser.id, plan: 'free', display_name: nameFromMeta
     });
-    if (insertErr) dbg('Insert error: ' + insertErr.message, '#f87171');
-    else dbg('New profile row created', '#4ade80');
     currentPlan = 'free';
     currentDisplayName = nameFromMeta;
-
   } else if (error) {
-    dbg('ERROR reading profile: code=' + error.code + ' msg=' + error.message, '#f87171');
-    dbg('hint: ' + (error.hint || 'none') + ' | details: ' + (error.details || 'none'), '#f87171');
-    dbg('Plan defaulting to free — DB NOT touched', '#fb923c');
-    currentPlan = 'free';
+    // Read failed — do NOT touch DB, just default to free this session
+      currentPlan = 'free';
   }
 }
 
 // Dev helper — call refreshPlan() in browser console to force re-read without logout
 async function refreshPlan() {
-  if (!currentUser) { console.warn('Not logged in'); return; }
+  if (!currentUser) return;
   await loadUserProfile();
   updateUserUI();
   renderCanvas();
-  console.log('[ResearchTree] Plan refreshed:', currentPlan);
   showToast('Plan refreshed: ' + currentPlan, 'success');
 }
 
@@ -2131,11 +2252,11 @@ async function sendPasswordReset(btn, email) {
 
 async function cancelPlan() {
   if (!confirm('Cancel your plan and move to Free? You will lose access to paid features immediately.')) return;
-  const { error } = await sbClient.from('profiles').upsert({ id: currentUser.id, plan: 'free', updated_at: new Date().toISOString() });
+  const { error } = await sbClient.from('profiles').update({ plan: 'free' }).eq('id', currentUser.id);
   if (error) { showToast('Failed to cancel plan: ' + error.message, 'error'); return; }
   currentPlan = 'free';
   updateUserUI();
-  renderCanvas(); // re-gate features
+  renderCanvas();
   showToast('Plan cancelled. You are now on Free.', 'info');
   switchAcctTab('plan');
 }
@@ -2143,7 +2264,7 @@ async function cancelPlan() {
 async function downgradeTo(plan) {
   const labels = { free: 'Free', plus: 'Plus ($9/mo)' };
   if (!confirm('Downgrade to ' + (labels[plan]||plan) + '? Some features may be locked.')) return;
-  const { error } = await sbClient.from('profiles').upsert({ id: currentUser.id, plan: plan, updated_at: new Date().toISOString() });
+  const { error } = await sbClient.from('profiles').update({ plan: plan }).eq('id', currentUser.id);
   if (error) { showToast('Failed to change plan: ' + error.message, 'error'); return; }
   currentPlan = plan;
   updateUserUI();
