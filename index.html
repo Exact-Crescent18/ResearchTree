@@ -246,37 +246,56 @@ h1,h2,h3,h4 { font-family: 'Raleway', sans-serif; font-weight: 300; letter-spaci
 
 /* ─── Tree Rendering ─── */
 .tree-root-container { display: flex; flex-direction: column; gap: var(--node-gap-y); }
-/* Each node+children row: parent centered against child column */
-.node-and-children { display: flex; align-items: center; gap: 0; }
-/* Left-branching: reverse so children visually sit LEFT of parent */
-.node-and-children.side-left { flex-direction: row-reverse; }
-/* Right-side children column */
-.node-children {
-  display: flex; flex-direction: column; gap: var(--node-gap-y);
-  padding-left: var(--node-gap-x); position: relative;
+/* Each node+children row — parent vertically centered against children */
+.node-and-children {
+  display: flex;
+  align-items: center;
+  gap: 0;
 }
-/* Left-side children column: padding on right instead */
-.node-children.side-left { padding-left: 0; padding-right: var(--node-gap-x); }
+/* ── RIGHT-side children (default) ─────────────────────
+   DOM order: [nodeWrap] [childCol]
+   childCol sits to the RIGHT of nodeWrap naturally        */
+.node-children {
+  display: flex; flex-direction: column;
+  gap: var(--node-gap-y);
+  padding-left: var(--node-gap-x);
+  position: relative;
+}
+/* ── LEFT-side children ─────────────────────────────────
+   DOM order: [childCol] [nodeWrap]   (set in JS)
+   childCol sits to the LEFT of nodeWrap naturally         */
+.node-children.side-left {
+  padding-left: 0;
+  padding-right: var(--node-gap-x);
+}
 .node-children.collapsed { display: none; }
 .node-wrap { position: relative; flex-shrink: 0; }
-/* Connector: right-side — extends LEFT from child card to vertical rail */
+
+/* Horizontal connector — RIGHT children: extends LEFT from child to vline */
 .node-connector {
-  position: absolute; left: calc(-1 * var(--node-gap-x)); top: 50%;
-  width: var(--node-gap-x); height: 1px; background: var(--border);
+  position: absolute;
+  left: calc(-1 * var(--node-gap-x));
+  top: 50%;
+  width: var(--node-gap-x);
+  height: 1px;
+  background: var(--border);
   pointer-events: none;
 }
-/* Connector: left-side — extends RIGHT from child card to vertical rail */
+/* Horizontal connector — LEFT children: extends RIGHT from child to vline */
 .node-connector.connector-left {
-  left: auto; right: calc(-1 * var(--node-gap-x));
+  left: auto;
+  right: calc(-1 * var(--node-gap-x));
 }
-/* Vertical rail — right side */
+/* Vertical rail — RIGHT side: on left edge of childCol */
 .node-vline {
-  position: absolute; left: 0; width: 1px; background: var(--border);
+  position: absolute; left: 0;
+  width: 1px; background: var(--border);
   pointer-events: none; top: 0;
 }
-/* Vertical rail — left side: flush right edge */
+/* Vertical rail — LEFT side: on right edge of childCol */
 .node-vline.vline-left { left: auto; right: 0; }
-/* Collapse button */
+
+/* Collapse button position */
 .collapse-btn { right: -12px; left: auto; }
 .collapse-btn.collapse-left { right: auto; left: -12px; }
 
@@ -986,17 +1005,21 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   background-size: 24px 24px;
 }
 
-/* ─── Zoom anti-blur ─── */
+
+/* ─── Zoom crisp rendering ─── */
 #canvas-transform {
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  text-rendering: optimizeLegibility;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+  will-change: transform;
 }
-#canvas * {
+/* Force crisp text at all zoom levels */
+#canvas .node-card {
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  transform: translateZ(0);
 }
 </style>
 </head>
@@ -2481,44 +2504,55 @@ function redrawAllVLines() {
 }
 
 function renderNodeAndChildren(node, hasConnector) {
-  // node.side controls which side THIS node's children appear on.
-  // Default is 'right'. 'left' puts children to the left of this node.
-  const side = node.side || 'right';
-  const isLeft = side === 'left';
+  // node.side = 'right' (default) or 'left'
+  // 'right': children column appears RIGHT of parent card
+  // 'left':  children column appears LEFT of parent card
+  const isLeft = (node.side || 'right') === 'left';
 
   const wrap = document.createElement('div');
-  // side-left triggers flex-direction:row-reverse so childCol appears LEFT of nodeWrap
-  wrap.className = 'node-and-children' + (isLeft ? ' side-left' : '');
+  wrap.className = 'node-and-children';
+  // NO row-reverse — we control order explicitly via DOM append order below
 
   const nodeWrap = document.createElement('div');
   nodeWrap.className = 'node-wrap';
 
-  // Connector points toward the parent:
-  // - right-side child: connector on left of card (extends left to vline on left of childCol)
-  // - left-side child: connector on right of card (extends right to vline on right of childCol)
   if (hasConnector) {
     const conn = document.createElement('div');
+    // RIGHT child: connector extends LEFT (toward vline on left edge of sibling childCol)
+    // LEFT child:  connector extends RIGHT (toward vline on right edge of sibling childCol)
     conn.className = 'node-connector' + (isLeft ? ' connector-left' : '');
     nodeWrap.appendChild(conn);
   }
-
   nodeWrap.appendChild(buildNodeCard(node, isLeft));
-  wrap.appendChild(nodeWrap);
 
   const children = node.children || [];
   if (children.length > 0) {
     const childCol = document.createElement('div');
-    // side-left on childCol: padding on right instead of left
-    childCol.className = 'node-children' + (node.collapsed ? ' collapsed' : '') + (isLeft ? ' side-left' : '');
+    childCol.className = 'node-children' +
+      (node.collapsed ? ' collapsed' : '') +
+      (isLeft ? ' side-left' : '');
     childCol.id = 'children_' + node.id;
+
     for (const child of children) {
-      // Children do NOT inherit side — each child has its own side setting (default: right)
       childCol.appendChild(renderNodeAndChildren(child, true));
     }
-    wrap.appendChild(childCol);
+
+    if (isLeft) {
+      // LEFT: append childCol FIRST so it appears left, then nodeWrap on right
+      wrap.appendChild(childCol);
+      wrap.appendChild(nodeWrap);
+    } else {
+      // RIGHT (default): nodeWrap first, childCol to its right
+      wrap.appendChild(nodeWrap);
+      wrap.appendChild(childCol);
+    }
+
     if (!node.collapsed) {
       requestAnimationFrame(() => drawVLine(childCol));
     }
+  } else {
+    // No children — just the node card
+    wrap.appendChild(nodeWrap);
   }
 
   return wrap;
@@ -3417,6 +3451,9 @@ function applyCV() {
   el.style.transform = `translate(${cvX}px,${cvY}px) scale(${cvScale})`;
   const lv = document.getElementById('zoom-level');
   if (lv) lv.textContent = Math.round(cvScale*100)+'%';
+  // Counter-scale node card text so it stays the same visual size
+  // Disabled: user sees zoom working naturally on cards.
+  // Title size is controlled by --node-title-size CSS var set via prefs.
 }
 
 function zoomIn()  { setZoom(cvScale * 1.2); }
