@@ -249,47 +249,53 @@ h1,h2,h3,h4 { font-family: 'Playfair Display', serif; }
 .tree-root-container { display: flex; flex-direction: column; gap: var(--node-gap-y); }
 .tree-row { display: flex; align-items: flex-start; gap: var(--node-gap-x); position: relative; }
 
-/* Parent+children row — center parent against its children block */
+/* Parent+children row — parent centered against children block */
 .node-and-children {
   display: flex; align-items: center; gap: 0;
 }
-/* Children branch RIGHT (default) */
+/* row-reverse flips children to the LEFT of parent card */
+.node-and-children.side-left {
+  flex-direction: row-reverse;
+}
+
+/* Children column — right (default) */
 .node-children {
   display: flex; flex-direction: column; gap: var(--node-gap-y);
   padding-left: var(--node-gap-x); position: relative;
 }
-/* Children branch LEFT */
+/* Children column — left (same padding, just visually reversed by row-reverse) */
 .node-children.side-left {
   padding-left: 0;
   padding-right: var(--node-gap-x);
-  order: -1; /* render before the parent card */
 }
 .node-children.collapsed { display: none; }
 .node-wrap { position: relative; }
 
-/* Horizontal connector — right side (default) */
+/* Horizontal connector — default (right children, connector on left of child card) */
 .node-connector {
   position: absolute; left: calc(-1 * var(--node-gap-x)); top: 50%;
   width: var(--node-gap-x); height: 1px; background: var(--border);
   pointer-events: none;
 }
-/* Horizontal connector — left side */
+/* Left-side children: connector extends to the right of child card toward parent */
 .node-connector.connector-left {
   left: auto; right: calc(-1 * var(--node-gap-x));
 }
-/* Vertical rail */
+
+/* Vertical rail — right side: flush left of children column */
 .node-vline {
   position: absolute; left: 0; width: 1px; background: var(--border);
   pointer-events: none; top: 0;
 }
-/* Vertical rail — left side (flush right edge of children column) */
+/* Vertical rail — left side: flush right of children column */
 .node-vline.vline-left {
   left: auto; right: 0;
 }
-/* Collapse toggle — left side flips to left of card */
-.collapse-btn.collapse-left {
-  right: auto; left: -12px;
-}
+
+/* Collapse button — right side points left (toward children) */
+.collapse-btn { right: -12px; left: auto; }
+/* Collapse button — left side points right (toward children) */
+.collapse-btn.collapse-left { right: auto; left: -12px; }
 
 /* ─── Node Card ─── */
 .node-card {
@@ -322,13 +328,27 @@ h1,h2,h3,h4 { font-family: 'Playfair Display', serif; }
 .node-media-thumb img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; }
 .node-links { margin-top: 6px; }
 .node-link { font-size: 11px; color: var(--accent); display: flex; align-items: center; gap: 4px; }
+.add-child-row {
+  margin-top: 6px; display: flex; gap: 4px; align-items: center;
+}
 .add-child-btn {
-  margin-top: 6px; width: 100%; padding: 5px; border: 1px dashed var(--border);
+  flex: 1; padding: 5px; border: 1px dashed var(--border);
   border-radius: var(--radius-sm); color: var(--text3); font-size: 12px;
   display: flex; align-items: center; justify-content: center; gap: 5px;
   transition: var(--transition);
 }
 .add-child-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.side-toggle {
+  display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  overflow: hidden; flex-shrink: 0;
+}
+.side-toggle-btn {
+  padding: 4px 7px; font-size: 10px; font-weight: 600; color: var(--text3);
+  background: var(--bg3); cursor: pointer; transition: var(--transition);
+  line-height: 1; border: none;
+}
+.side-toggle-btn:hover { background: var(--bg4); color: var(--text); }
+.side-toggle-btn.active { background: var(--accent-dim); color: var(--accent); }
 .collapse-btn {
   position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
   width: 20px; height: 20px; border-radius: 50%;
@@ -2086,6 +2106,7 @@ let selectedNodeId = null;
 let contextNodeId = null;
 let nodeModalParentId = null;
 let nodeModalEditId = null;
+let nodeModalSide = 'right';
 let isMobile = window.innerWidth <= 768;
 let saveDebounceTimer = null;
 let selectedEmoji = '🌳';
@@ -2882,7 +2903,7 @@ function deleteNode(nodes, id) {
   return false;
 }
 
-function openNewNodeModal(parentId) {
+function openNewNodeModal(parentId, side) {
   if (!activeTreeId) { showToast('Select a tree first.', 'error'); return; }
   if (!canAddNode()) {
     showToast('Free plan limit: 20 nodes. Upgrade to add more.', 'error');
@@ -2890,17 +2911,19 @@ function openNewNodeModal(parentId) {
   }
   nodeModalParentId = parentId;
   nodeModalEditId = null;
+  // Store the side chosen from the card toggle (or 'right' for root nodes)
+  nodeModalSide = side || 'right';
   document.getElementById('node-modal-title').textContent = parentId ? 'Add Child Node' : 'Add Root Node';
   document.getElementById('node-title-input').value = '';
   document.getElementById('node-desc-input').value = '';
   document.getElementById('node-save-btn').innerHTML = '<i class="ti ti-check"></i> Save Node';
-  // Show side picker for root nodes only (child nodes inherit parent direction)
+  // Show side picker only for root nodes; child side is set via card toggle
   const sideGroup = document.getElementById('node-side-group');
   if (sideGroup) sideGroup.style.display = parentId ? 'none' : '';
-  // Reset to right
   const rightRadio = document.getElementById('node-side-right');
-  if (rightRadio) rightRadio.checked = true;
-  // Highlight selected radio label
+  const leftRadio  = document.getElementById('node-side-left');
+  if (rightRadio) rightRadio.checked = nodeModalSide === 'right';
+  if (leftRadio)  leftRadio.checked  = nodeModalSide === 'left';
   setupSideRadioHighlight();
   openModal('node-modal');
   setTimeout(() => document.getElementById('node-title-input').focus(), 100);
@@ -2932,8 +2955,9 @@ function saveNodeFromModal() {
   const title = document.getElementById('node-title-input').value.trim();
   if (!title) { showToast('Node title is required.', 'error'); document.getElementById('node-title-input').focus(); return; }
   const desc = document.getElementById('node-desc-input').value.trim();
+  // For root nodes read the radio; for child nodes use the toggle stored in nodeModalSide
   const sideEl = document.querySelector('input[name="node-side"]:checked');
-  const side = sideEl ? sideEl.value : 'right';
+  const side = nodeModalParentId ? nodeModalSide : (sideEl ? sideEl.value : 'right');
   const tree = getActiveTree(); if (!tree) return;
 
   if (nodeModalEditId) {
@@ -3043,45 +3067,42 @@ function renderCanvas() {
 }
 
 function renderNodeAndChildren(node, hasConnector) {
-  // Determine side: 'left' means children branch to the LEFT of this node
   const side = node.side || 'right';
   const isLeft = side === 'left';
 
+  // The wrap uses row-reverse when side=left so children appear LEFT of parent
   const wrap = document.createElement('div');
-  wrap.className = 'node-and-children';
-  // CSS handles centering via align-items:center
+  wrap.className = 'node-and-children' + (isLeft ? ' side-left' : '');
 
+  // nodeWrap always appended first — row-reverse handles visual order
   const nodeWrap = document.createElement('div');
   nodeWrap.className = 'node-wrap';
 
   if (hasConnector) {
     const conn = document.createElement('div');
+    // connector-left: extends right from child toward parent (row-reversed layout)
     conn.className = 'node-connector' + (isLeft ? ' connector-left' : '');
     nodeWrap.appendChild(conn);
   }
 
   nodeWrap.appendChild(buildNodeCard(node, isLeft));
+  wrap.appendChild(nodeWrap);
 
   const children = node.children || [];
   if (children.length > 0) {
     const childCol = document.createElement('div');
+    // side-left on childCol = padding on right instead of left
     childCol.className = 'node-children' + (node.collapsed ? ' collapsed' : '') + (isLeft ? ' side-left' : '');
     childCol.id = 'children_' + node.id;
     for (const child of children) {
-      // Children inherit the parent's side direction
       const childWithSide = Object.assign({}, child, { side: child.side || side });
       childCol.appendChild(renderNodeAndChildren(childWithSide, true));
     }
-    // Left-side children go before the node card via order:-1 in CSS,
-    // but we append here and let CSS handle ordering
     wrap.appendChild(childCol);
     if (!node.collapsed) {
       requestAnimationFrame(() => drawVLine(childCol));
     }
   }
-
-  // Append nodeWrap AFTER childCol so CSS order:-1 on side-left works
-  wrap.appendChild(nodeWrap);
 
   return wrap;
 }
@@ -3189,12 +3210,52 @@ function buildNodeCard(node, isLeft) {
     card.appendChild(links);
   }
 
-  // Add child button at bottom
+  // Add child row: [+ Add child] [R] [L]
+  const addRow = document.createElement('div');
+  addRow.className = 'add-child-row';
+
   const addChildBtn = document.createElement('button');
   addChildBtn.className = 'add-child-btn';
   addChildBtn.innerHTML = '<i class="ti ti-plus"></i> Add child';
-  addChildBtn.onclick = (e) => { e.stopPropagation(); openNewNodeModal(node.id); };
-  card.appendChild(addChildBtn);
+
+  // Side toggle: R / L
+  const sideToggle = document.createElement('div');
+  sideToggle.className = 'side-toggle';
+  sideToggle.title = 'Branch direction for new child';
+
+  const btnR = document.createElement('button');
+  btnR.className = 'side-toggle-btn active';
+  btnR.textContent = 'R';
+  btnR.title = 'Branch right';
+
+  const btnL = document.createElement('button');
+  btnL.className = 'side-toggle-btn';
+  btnL.textContent = 'L';
+  btnL.title = 'Branch left';
+
+  // Toggle logic
+  btnR.onclick = (e) => {
+    e.stopPropagation();
+    btnR.classList.add('active'); btnL.classList.remove('active');
+    addRow.dataset.childSide = 'right';
+  };
+  btnL.onclick = (e) => {
+    e.stopPropagation();
+    btnL.classList.add('active'); btnR.classList.remove('active');
+    addRow.dataset.childSide = 'left';
+  };
+  addRow.dataset.childSide = 'right'; // default
+
+  addChildBtn.onclick = (e) => {
+    e.stopPropagation();
+    openNewNodeModal(node.id, addRow.dataset.childSide);
+  };
+
+  sideToggle.appendChild(btnR);
+  sideToggle.appendChild(btnL);
+  addRow.appendChild(addChildBtn);
+  addRow.appendChild(sideToggle);
+  card.appendChild(addRow);
 
   // Collapse toggle (if has children)
   if (node.children && node.children.length) {
