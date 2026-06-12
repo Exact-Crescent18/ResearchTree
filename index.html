@@ -1,227 +1,3618 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laughder CMS - Admin Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <style>
-        :root {
-            --dark-bg: #0f172a; 
-            --card-bg: #1e293b;
-            --border-color: #334155;
-            --accent-mint: #00ff88;
-            --accent-mint-dark: #00cc6a;
-        }
-        body { font-family: 'Inter', sans-serif; background-color: var(--dark-bg); color: #f8fafc; }
-        .form-input-glass { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); color: white; border-radius: 0.5rem; transition: all 0.3s ease; }
-        .form-input-glass:focus { outline: none; border-color: var(--accent-mint); box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.2); }
-        .btn-primary { background: linear-gradient(135deg, var(--accent-mint), var(--accent-mint-dark)); color: #000; font-weight: bold; transition: all 0.3s ease; cursor: pointer; }
-        .btn-primary:hover { box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); transform: translateY(-1px); }
-        .btn-secondary { background: #334155; color: white; transition: all 0.3s ease; cursor: pointer; }
-        .btn-secondary:hover { background: #475569; }
-        .sidebar-item { display: block; width: 100%; text-align: left; padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; transition: all 0.2s; cursor: pointer; }
-        .sidebar-item:hover { background: rgba(255,255,255,0.05); }
-        .sidebar-item.active { background-color: rgba(0, 255, 136, 0.1); color: var(--accent-mint); border-right: 3px solid var(--accent-mint); }
-        .toast { background: #1e293b; border-left: 4px solid var(--accent-mint); color: white; padding: 16px 24px; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); margin-bottom: 12px; opacity: 0; transform: translateX(100%); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .toast.error { border-left-color: #ef4444; }
-        .toast.show { opacity: 1; transform: translateX(0); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResearchTree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─── CSS Variables ─── */
+:root {
+  --bg: #0f1117;
+  --bg2: #161b27;
+  --bg3: #1e2535;
+  --bg4: #252d3d;
+  --border: #2e3650;
+  --border2: #3a4560;
+  --text: #e8eaf0;
+  --text2: #9aa3b8;
+  --text3: #6b7492;
+  --accent: #6c8eff;
+  --accent2: #8fa8ff;
+  --accent-dim: rgba(108,142,255,0.15);
+  --green: #4ade80;
+  --yellow: #fbbf24;
+  --red: #f87171;
+  --purple: #a78bfa;
+  --orange: #fb923c;
+  --pink: #f472b6;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --sidebar-w: 280px;
+  --detail-w: 340px;
+  --topbar-h: 56px;
+  --node-w: 220px;
+  --node-gap-x: 60px;
+  --node-gap-y: 16px;
+  --transition: 0.18s ease;
+}
+
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+button { cursor: pointer; font-family: inherit; border: none; background: none; }
+input, textarea, select { font-family: inherit; font-size: 14px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1,h2,h3,h4 { font-family: 'Playfair Display', serif; }
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+/* ─── Loading Screen ─── */
+#loading-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px; z-index: 9999;
+}
+#loading-screen .logo { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--text); }
+#loading-screen .logo span { color: var(--accent); }
+.spinner {
+  width: 32px; height: 32px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Auth Screen ─── */
+#auth-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: none; align-items: center; justify-content: center;
+  z-index: 999;
+}
+.auth-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 16px; padding: 40px; width: 100%; max-width: 420px;
+  box-shadow: var(--shadow);
+}
+.auth-logo { text-align: center; margin-bottom: 28px; }
+.auth-logo h1 { font-size: 26px; }
+.auth-logo h1 span { color: var(--accent); }
+.auth-logo p { color: var(--text2); font-size: 13px; margin-top: 4px; }
+.auth-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+.auth-tab {
+  flex: 1; padding: 10px; text-align: center; font-size: 14px; font-weight: 500;
+  color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent;
+  transition: var(--transition);
+}
+.auth-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-form.hidden { display: none; }
+.form-field { display: flex; flex-direction: column; gap: 6px; }
+.form-field label { font-size: 13px; font-weight: 500; color: var(--text2); }
+.form-field input {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; color: var(--text); outline: none; transition: var(--transition);
+}
+.form-field input:focus { border-color: var(--accent); }
+.btn-primary {
+  background: var(--accent); color: #fff; padding: 11px;
+  border-radius: var(--radius-sm); font-weight: 600; font-size: 14px;
+  transition: var(--transition); margin-top: 4px;
+}
+.btn-primary:hover { background: var(--accent2); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.auth-divider { text-align: center; color: var(--text3); font-size: 12px; position: relative; }
+.auth-divider::before, .auth-divider::after {
+  content: ''; position: absolute; top: 50%; width: 40%; height: 1px; background: var(--border);
+}
+.auth-divider::before { left: 0; }
+.auth-divider::after { right: 0; }
+.social-btns { display: flex; gap: 10px; }
+.btn-social {
+  flex: 1; padding: 9px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); font-size: 13px; font-weight: 500;
+  background: var(--bg3); display: flex; align-items: center; justify-content: center; gap: 7px;
+  transition: var(--transition);
+}
+.btn-social:hover { border-color: var(--border2); background: var(--bg4); }
+.auth-error {
+  background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3);
+  color: var(--red); border-radius: var(--radius-sm); padding: 10px 12px;
+  font-size: 13px; display: none;
+}
+
+/* ─── App Layout ─── */
+#app { display: flex; height: 100vh; overflow: hidden; }
+#app.hidden { display: none; }
+
+/* ─── Sidebar ─── */
+#sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+  transition: transform var(--transition);
+}
+.sidebar-header {
+  padding: 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sidebar-logo { font-family: 'Playfair Display', serif; font-size: 18px; }
+.sidebar-logo span { color: var(--accent); }
+.sidebar-actions { display: flex; gap: 6px; }
+.icon-btn {
+  width: 30px; height: 30px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text2); transition: var(--transition);
+}
+.icon-btn:hover { background: var(--bg3); color: var(--text); }
+.sidebar-search {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+}
+.search-input-wrap { position: relative; }
+.search-input-wrap i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 16px; }
+.search-input-wrap input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 10px 8px 34px;
+  color: var(--text); outline: none;
+}
+.search-input-wrap input:focus { border-color: var(--accent); }
+.tree-list { flex: 1; overflow-y: auto; padding: 8px; }
+.tree-item {
+  display: flex; align-items: center; gap: 8px; padding: 9px 10px;
+  border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition);
+  margin-bottom: 2px;
+}
+.tree-item:hover { background: var(--bg3); }
+.tree-item.active { background: var(--accent-dim); border: 1px solid rgba(108,142,255,0.2); }
+.tree-item-icon { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
+.tree-item-name { flex: 1; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-item-count { font-size: 11px; color: var(--text3); flex-shrink: 0; }
+.tree-item-menu { opacity: 0; transition: var(--transition); }
+.tree-item:hover .tree-item-menu { opacity: 1; }
+.sidebar-footer {
+  padding: 12px; border-top: 1px solid var(--border);
+}
+.user-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px;
+  border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition);
+}
+.user-row:hover { background: var(--bg3); }
+.user-avatar {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; color: #fff; flex-shrink: 0;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-email { font-size: 12px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-badge {
+  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.plan-badge.free { background: var(--bg4); color: var(--text3); }
+.plan-badge.plus { background: rgba(251,191,36,0.2); color: var(--yellow); }
+.plan-badge.pro { background: rgba(108,142,255,0.2); color: var(--accent2); }
+
+/* ─── Main Area ─── */
+#main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ─── Topbar ─── */
+#topbar {
+  height: var(--topbar-h); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; padding: 0 16px;
+  background: var(--bg2); flex-shrink: 0;
+}
+#tree-title-display {
+  font-family: 'Playfair Display', serif; font-size: 18px;
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#tree-title-display.placeholder { color: var(--text3); font-family: 'DM Sans', sans-serif; font-style: italic; font-size: 14px; }
+.topbar-btns { display: flex; gap: 6px; }
+.btn-sm {
+  padding: 6px 12px; border-radius: var(--radius-sm); font-size: 13px;
+  font-weight: 500; display: flex; align-items: center; gap: 6px; transition: var(--transition);
+}
+.btn-outline { border: 1px solid var(--border); color: var(--text2); }
+.btn-outline:hover { border-color: var(--border2); color: var(--text); background: var(--bg3); }
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover { background: var(--accent2); }
+.sync-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+  transition: background 0.3s;
+}
+.sync-dot.syncing { background: var(--yellow); animation: pulse 0.8s infinite; }
+.sync-dot.error { background: var(--red); }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+/* ─── Canvas ─── */
+#canvas-wrap { flex: 1; overflow: auto; position: relative; }
+#canvas {
+  min-width: 100%; min-height: 100%;
+  padding: 40px; display: flex; flex-direction: column; gap: 0;
+  position: relative;
+}
+#canvas-empty {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px; color: var(--text3);
+  pointer-events: none;
+}
+#canvas-empty i { font-size: 48px; opacity: 0.3; }
+#canvas-empty p { font-size: 15px; }
+#canvas-empty small { font-size: 13px; }
+
+/* ─── Tree Rendering ─── */
+.tree-root-container { display: flex; flex-direction: column; gap: var(--node-gap-y); }
+.tree-row { display: flex; align-items: flex-start; gap: var(--node-gap-x); position: relative; }
+.node-and-children { display: flex; align-items: flex-start; gap: 0; }
+.node-children {
+  display: flex; flex-direction: column; gap: var(--node-gap-y);
+  padding-left: var(--node-gap-x); position: relative; margin-top: 0;
+}
+/* Vertical line is drawn by JS so it stops at first/last child midpoints */
+.node-children.collapsed { display: none; }
+.node-wrap { position: relative; }
+/* Horizontal connector from vertical rail to card */
+.node-connector {
+  position: absolute; left: calc(-1 * var(--node-gap-x)); top: 50%;
+  width: var(--node-gap-x); height: 1px; background: var(--border);
+  pointer-events: none;
+}
+/* Vertical rail — injected as a real element so it clips perfectly */
+.node-vline {
+  position: absolute; left: 0; width: 1px; background: var(--border);
+  pointer-events: none; top: 0; /* height set by JS */
+}
+
+/* ─── Node Card ─── */
+.node-card {
+  width: var(--node-w); background: var(--bg2);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px; cursor: pointer; transition: var(--transition);
+  position: relative; flex-shrink: 0;
+}
+.node-card:hover { border-color: var(--border2); background: var(--bg3); }
+.node-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+.node-card.has-color-red { border-left: 3px solid var(--red); }
+.node-card.has-color-green { border-left: 3px solid var(--green); }
+.node-card.has-color-yellow { border-left: 3px solid var(--yellow); }
+.node-card.has-color-purple { border-left: 3px solid var(--purple); }
+.node-card.has-color-orange { border-left: 3px solid var(--orange); }
+.node-card.has-color-blue { border-left: 3px solid var(--accent); }
+.node-header { display: flex; align-items: flex-start; gap: 8px; }
+.node-title { font-size: var(--node-title-size, 13px); font-weight: 600; flex: 1; word-break: break-word; }
+.node-btns { display: flex; gap: 2px; opacity: 0; transition: var(--transition); flex-shrink: 0; }
+.node-card:hover .node-btns { opacity: 1; }
+.node-btn {
+  width: 22px; height: 22px; border-radius: 4px; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; color: var(--text3);
+}
+.node-btn:hover { background: var(--bg4); color: var(--text); }
+/* .node-desc moved to additions below */
+.node-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.node-tag { font-size: 10px; padding: 2px 6px; background: var(--bg4); border-radius: 20px; color: var(--text3); }
+.node-media-thumb { margin-top: 8px; }
+.node-media-thumb img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; }
+.node-links { margin-top: 6px; }
+.node-link { font-size: 11px; color: var(--accent); display: flex; align-items: center; gap: 4px; }
+.add-child-btn {
+  margin-top: 6px; width: 100%; padding: 5px; border: 1px dashed var(--border);
+  border-radius: var(--radius-sm); color: var(--text3); font-size: 12px;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  transition: var(--transition);
+}
+.add-child-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.collapse-btn {
+  position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text3); z-index: 2;
+  transition: var(--transition);
+}
+.collapse-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
+
+/* ─── Detail Panel ─── */
+#detail-panel {
+  width: var(--detail-w); min-width: var(--detail-w);
+  background: var(--bg2); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+  transition: var(--transition);
+}
+#detail-panel.hidden { display: none; }
+.detail-header {
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.detail-title { font-size: 14px; font-weight: 600; }
+.detail-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.detail-empty { color: var(--text3); font-size: 13px; text-align: center; margin-top: 40px; }
+.detail-section { display: flex; flex-direction: column; gap: 8px; }
+.detail-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); }
+.detail-input {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 12px; color: var(--text); outline: none; transition: var(--transition); width: 100%;
+}
+.detail-input:focus { border-color: var(--accent); }
+textarea.detail-input { resize: vertical; min-height: 80px; }
+.detail-save-btn {
+  padding: 8px 16px; background: var(--accent); color: #fff;
+  border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; align-self: flex-end;
+  transition: var(--transition);
+}
+.detail-save-btn:hover { background: var(--accent2); }
+.media-list { display: flex; flex-direction: column; gap: 8px; }
+.media-item {
+  background: var(--bg3); border-radius: var(--radius-sm); overflow: hidden;
+  border: 1px solid var(--border);
+}
+.media-item img { width: 100%; height: 120px; object-fit: cover; }
+.media-item-info { padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; }
+.media-item-label { font-size: 12px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-list { display: flex; flex-direction: column; gap: 6px; }
+.link-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border);
+}
+.link-item a { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.add-media-form, .add-link-form { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.add-media-form input, .add-link-form input {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 10px; color: var(--text); outline: none; width: 100%;
+}
+.add-media-form input:focus, .add-link-form input:focus { border-color: var(--accent); }
+.add-row { display: flex; gap: 6px; }
+.btn-add-sm {
+  padding: 7px 12px; background: var(--bg4); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-size: 12px; font-weight: 500;
+  white-space: nowrap; transition: var(--transition);
+}
+.btn-add-sm:hover { border-color: var(--border2); background: var(--bg3); }
+.btn-add-sm.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-add-sm.primary:hover { background: var(--accent2); }
+.color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-swatch {
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: var(--transition);
+}
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch.selected { border-color: var(--text); }
+.tags-input-wrap { position: relative; }
+.tags-display { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.tag-chip {
+  font-size: 11px; padding: 3px 8px; background: var(--accent-dim);
+  border-radius: 20px; color: var(--accent2); display: flex; align-items: center; gap: 4px;
+}
+.tag-chip button { font-size: 10px; color: var(--text3); }
+.tag-chip button:hover { color: var(--red); }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-card {
+  background: var(--bg3); border-radius: var(--radius-sm); padding: 12px;
+  border: 1px solid var(--border); text-align: center;
+}
+.stat-card .stat-val { font-size: 22px; font-weight: 700; color: var(--accent); }
+.stat-card .stat-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* ─── Modals ─── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500; padding: 20px;
+}
+.modal-overlay.hidden { display: none; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; width: 100%; max-width: 440px;
+  box-shadow: var(--shadow); display: flex; flex-direction: column;
+  max-height: 90vh; overflow: hidden;
+}
+.modal-header {
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.modal-header h3 { font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; }
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+.modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 13px; font-weight: 500; color: var(--text2); }
+.form-group input, .form-group textarea, .form-group select {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 12px; color: var(--text); outline: none; transition: var(--transition); width: 100%;
+}
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--accent); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.btn-cancel {
+  padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text2); font-size: 13px; font-weight: 500; transition: var(--transition);
+}
+.btn-cancel:hover { border-color: var(--border2); color: var(--text); background: var(--bg3); }
+
+/* ─── Paywall Modal ─── */
+.paywall-modal { max-width: 580px; }
+.paywall-header { text-align: center; padding: 28px 20px 0; }
+.paywall-header h2 { font-size: 22px; margin-bottom: 6px; }
+.paywall-header p { color: var(--text2); font-size: 14px; }
+.plans-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 20px; }
+.plan-card {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; display: flex; flex-direction: column; gap: 12px; position: relative;
+}
+.plan-card.current-plan { border-color: var(--accent); }
+.plan-card.popular { border-color: var(--yellow); }
+.plan-popular-badge {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  background: var(--yellow); color: #000; font-size: 10px; font-weight: 700;
+  padding: 2px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.plan-name { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; }
+.plan-price { font-size: 24px; font-weight: 700; }
+.plan-price span { font-size: 13px; font-weight: 400; color: var(--text3); }
+.plan-features { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.plan-feature { font-size: 12px; color: var(--text2); display: flex; align-items: flex-start; gap: 6px; }
+.plan-feature i { color: var(--green); font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+.plan-feature.locked { color: var(--text3); }
+.plan-feature.locked i { color: var(--text3); }
+.plan-btn {
+  padding: 9px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+  text-align: center; transition: var(--transition); border: 1px solid var(--border);
+  color: var(--text2);
+}
+.plan-btn:hover { background: var(--bg4); }
+.plan-btn.current { background: var(--bg4); color: var(--text3); cursor: default; }
+.plan-btn.accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+.plan-btn.accent:hover { background: var(--accent2); }
+.plan-btn.gold { background: var(--yellow); color: #000; border-color: var(--yellow); }
+.plan-btn.gold:hover { opacity: 0.9; }
+.paywall-note { text-align: center; font-size: 12px; color: var(--text3); padding: 0 20px 20px; }
+.stripe-badge { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
+.stripe-badge i { font-size: 14px; color: var(--green); }
+
+/* ─── Export Modal ─── */
+.export-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.export-opt {
+  padding: 14px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); text-align: center; cursor: pointer;
+  transition: var(--transition); display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.export-opt:hover { border-color: var(--border2); background: var(--bg4); }
+.export-opt i { font-size: 22px; color: var(--accent); }
+.export-opt span { font-size: 13px; font-weight: 500; }
+
+/* ─── Account Modal ─── */
+.account-section { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 4px; }
+.account-section:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.account-email { font-size: 13px; color: var(--text2); margin-top: 4px; }
+.btn-danger {
+  padding: 8px 16px; border: 1px solid rgba(248,113,113,0.4); border-radius: var(--radius-sm);
+  color: var(--red); font-size: 13px; font-weight: 500; transition: var(--transition);
+}
+.btn-danger:hover { background: rgba(248,113,113,0.1); }
+
+/* ─── Tree Settings Modal ─── */
+.emoji-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.emoji-opt {
+  width: 36px; height: 36px; border-radius: var(--radius-sm); font-size: 20px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  border: 2px solid transparent; transition: var(--transition); background: var(--bg3);
+}
+.emoji-opt:hover { background: var(--bg4); }
+.emoji-opt.selected { border-color: var(--accent); }
+.tree-color-opts { display: flex; gap: 8px; flex-wrap: wrap; }
+.tree-color-opt {
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: var(--transition);
+}
+.tree-color-opt:hover { transform: scale(1.15); }
+.tree-color-opt.selected { border-color: var(--text); }
+
+/* ─── Toast ─── */
+#toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  padding: 12px 18px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text); font-size: 13px;
+  box-shadow: var(--shadow); display: flex; align-items: center; gap: 10px;
+  animation: slideIn 0.2s ease; max-width: 320px;
+}
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error { border-left: 3px solid var(--red); }
+.toast.info { border-left: 3px solid var(--accent); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ─── Context Menu ─── */
+#context-menu {
+  position: fixed; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 4px; z-index: 600;
+  box-shadow: var(--shadow); min-width: 160px; display: none;
+}
+.ctx-item {
+  padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; gap: 8px; color: var(--text);
+  transition: var(--transition);
+}
+.ctx-item:hover { background: var(--bg4); }
+.ctx-item.danger { color: var(--red); }
+.ctx-item.danger:hover { background: rgba(248,113,113,0.1); }
+.ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* ─── Search Results ─── */
+.search-results {
+  position: absolute; top: 100%; left: 0; right: 0;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); margin-top: 4px; z-index: 50;
+  max-height: 200px; overflow-y: auto; box-shadow: var(--shadow);
+}
+.search-result-item {
+  padding: 9px 12px; cursor: pointer; font-size: 13px; transition: var(--transition);
+  border-bottom: 1px solid var(--border);
+}
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover { background: var(--bg4); }
+.search-result-item .sr-tree { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* ─── Responsive ─── */
+@media (max-width: 1024px) {
+  :root { --sidebar-w: 240px; --detail-w: 300px; --node-w: 200px; }
+}
+@media (max-width: 768px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 60px; z-index: 200;
+    transform: translateX(-100%); box-shadow: var(--shadow);
+  }
+  #sidebar.mobile-open { transform: translateX(0); }
+  #detail-panel {
+    position: fixed; right: 0; top: 0; bottom: 60px; z-index: 200;
+    transform: translateX(100%); box-shadow: var(--shadow);
+    min-width: unset; width: 85vw;
+  }
+  #detail-panel.mobile-open { transform: translateX(0); }
+  #detail-panel.hidden { transform: translateX(100%); }
+  #bottom-nav { display: flex; }
+  #main-area { padding-bottom: 60px; }
+  .topbar-btns .btn-outline { display: none; }
+}
+@media (min-width: 769px) {
+  #bottom-nav { display: none; }
+}
+@media (max-width: 380px) {
+  :root { --node-w: 180px; }
+  .auth-card { border-radius: 0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+}
+
+/* ─── Bottom Nav ─── */
+#bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
+  background: var(--bg2); border-top: 1px solid var(--border);
+  align-items: center; justify-content: space-around; z-index: 300;
+}
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 10px; color: var(--text3); padding: 8px 16px;
+  transition: var(--transition); cursor: pointer;
+}
+.nav-btn i { font-size: 20px; }
+.nav-btn.active { color: var(--accent); }
+.nav-btn.new-btn {
+  background: var(--accent); color: #fff; border-radius: 50%;
+  width: 48px; height: 48px; padding: 0; margin-bottom: 8px;
+  justify-content: center;
+}
+.nav-btn.new-btn i { font-size: 22px; }
+
+/* ─── Pro/Plus Gate Overlay ─── */
+.gate-wrap { position: relative; }
+.gate-overlay {
+  position: absolute; inset: 0; background: rgba(15,17,23,0.7);
+  backdrop-filter: blur(2px); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-sm);
+  z-index: 5;
+}
+.gate-overlay i { font-size: 20px; color: var(--accent); }
+.gate-overlay span { font-size: 12px; color: var(--text2); text-align: center; padding: 0 10px; }
+.gate-overlay button { font-size: 12px; padding: 5px 12px; background: var(--accent); color: #fff; border-radius: 20px; font-weight: 600; }
+
+/* ─── Limit Banner ─── */
+.limit-banner {
+  background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3);
+  border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; color: var(--yellow);
+  display: flex; align-items: center; gap: 8px;
+}
+.limit-banner i { font-size: 16px; }
+.limit-banner a { color: var(--yellow); font-weight: 600; }
+
+/* ─── Node Description on Card ─── */
+.node-desc {
+  font-size: 11.5px; color: var(--text2); margin-top: 5px;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical; line-height: 1.45;
+}
+.node-has-notes {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; color: var(--text3); margin-top: 5px;
+  padding: 2px 6px; background: var(--bg4); border-radius: 20px;
+}
+.node-has-notes i { font-size: 11px; }
+
+/* ─── Full-Screen Note Editor ─── */
+#note-editor-overlay {
+  position: fixed; inset: 0; z-index: 800;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  animation: editorSlideIn 0.22s cubic-bezier(0.22,1,0.36,1);
+}
+#note-editor-overlay.hidden { display: none; }
+@keyframes editorSlideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Top bar */
+.ne-topbar {
+  height: 56px; flex-shrink: 0;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; padding: 0 20px;
+}
+.ne-back-btn {
+  display: flex; align-items: center; gap: 7px;
+  color: var(--text2); font-size: 13px; font-weight: 500;
+  padding: 6px 12px; border-radius: var(--radius-sm);
+  transition: var(--transition); cursor: pointer;
+}
+.ne-back-btn:hover { background: var(--bg3); color: var(--text); }
+.ne-back-btn svg { width: 16px; height: 16px; }
+.ne-node-title {
+  flex: 1; font-size: 15px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ne-node-breadcrumb {
+  font-size: 12px; color: var(--text3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 200px;
+}
+.ne-status {
+  font-size: 12px; color: var(--text3);
+  display: flex; align-items: center; gap: 5px;
+  transition: color 0.3s;
+}
+.ne-status.saved { color: var(--green); }
+
+/* Toolbar */
+.ne-toolbar {
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 6px 20px; display: flex; align-items: center;
+  gap: 2px; flex-wrap: wrap; flex-shrink: 0;
+}
+.ne-toolbar-group {
+  display: flex; align-items: center; gap: 1px;
+  padding-right: 8px; margin-right: 6px;
+  border-right: 1px solid var(--border);
+}
+.ne-toolbar-group:last-child { border-right: none; }
+.tb-btn {
+  width: 30px; height: 30px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text2); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: var(--transition);
+  border: 1px solid transparent; font-family: 'DM Sans', sans-serif;
+  position: relative;
+}
+.tb-btn:hover { background: var(--bg3); color: var(--text); border-color: var(--border); }
+.tb-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(108,142,255,0.3); }
+.tb-btn svg { width: 15px; height: 15px; }
+.tb-sep { width: 1px; background: var(--border); margin: 0 4px; height: 20px; }
+.tb-select {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text); font-size: 12px;
+  padding: 4px 8px; outline: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.tb-select:focus { border-color: var(--accent); }
+.tb-color-btn {
+  width: 30px; height: 30px; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--border); display: flex; align-items: center;
+  justify-content: center; flex-direction: column; gap: 1px;
+  transition: var(--transition);
+}
+.tb-color-btn:hover { border-color: var(--border2); }
+.tb-color-bar { width: 16px; height: 3px; border-radius: 2px; }
+
+/* Document area */
+.ne-doc-wrap {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  background: var(--bg);
+  display: flex; justify-content: center;
+  padding: 48px 24px;
+}
+.ne-doc-page {
+  width: 100%; max-width: 720px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; min-height: 600px;
+  padding: 48px 56px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+}
+@media (max-width: 768px) {
+  .ne-doc-page { padding: 24px 20px; }
+  .ne-doc-wrap { padding: 16px 8px; }
+  .ne-toolbar { padding: 6px 10px; }
+}
+
+/* The editable content */
+#ne-editor {
+  outline: none; min-height: 500px;
+  font-size: 15px; line-height: 1.8; color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  caret-color: var(--accent);
+}
+#ne-editor:empty::before {
+  content: 'Start writing your notes here...\A\AUse the toolbar above for formatting — headings, bold, italic, bullet lists, numbered lists, and more.';
+  white-space: pre-wrap;
+  color: var(--text3); pointer-events: none;
+}
+#ne-editor h1 { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; margin: 24px 0 12px; color: var(--text); line-height: 1.3; }
+#ne-editor h2 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; margin: 20px 0 10px; color: var(--text); }
+#ne-editor h3 { font-size: 16px; font-weight: 600; margin: 16px 0 8px; color: var(--text); }
+#ne-editor p { margin: 0 0 10px; }
+#ne-editor ul { padding-left: 24px; margin: 8px 0 10px; list-style: disc; }
+#ne-editor ol { padding-left: 24px; margin: 8px 0 10px; list-style: decimal; }
+#ne-editor li { margin: 4px 0; }
+#ne-editor blockquote {
+  border-left: 3px solid var(--accent); margin: 16px 0;
+  padding: 8px 16px; color: var(--text2);
+  background: var(--bg3); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+#ne-editor code {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 6px; font-size: 13px;
+  font-family: 'Courier New', monospace; color: var(--accent2);
+}
+#ne-editor pre {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px; margin: 12px 0;
+  overflow-x: auto; font-size: 13px; line-height: 1.6;
+}
+#ne-editor pre code { background: none; border: none; padding: 0; }
+#ne-editor hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+#ne-editor a { color: var(--accent); text-decoration: underline; }
+#ne-editor strong { font-weight: 700; color: var(--text); }
+#ne-editor em { font-style: italic; color: var(--text2); }
+#ne-editor mark { background: rgba(251,191,36,0.3); color: var(--text); border-radius: 2px; padding: 0 2px; }
+#ne-editor s { text-decoration: line-through; color: var(--text3); }
+#ne-editor .task-item { display: flex; align-items: flex-start; gap: 8px; list-style: none; margin: 4px 0; }
+#ne-editor .task-item input[type=checkbox] { margin-top: 3px; accent-color: var(--accent); }
+.ne-doc-page ::selection { background: rgba(108,142,255,0.25); }
+
+/* Bottom status bar */
+.ne-statusbar {
+  height: 32px; flex-shrink: 0; background: var(--bg2);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 20px;
+  padding: 0 20px; font-size: 11px; color: var(--text3);
+}
+.ne-statusbar span { display: flex; align-items: center; gap: 4px; }
+
+/* Node card notes preview */
+.node-notes-preview {
+  margin-top: 6px; padding: 6px 8px;
+  background: var(--bg3); border-radius: var(--radius-sm);
+  border-left: 2px solid var(--accent);
+  font-size: 11px; color: var(--text2); line-height: 1.4;
+  cursor: pointer; transition: var(--transition);
+  overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.node-notes-preview:hover { border-left-color: var(--accent2); color: var(--text); }
+
+/* word count */
+.word-count { font-size: 12px; color: var(--text3); }
+
+/* ─── Account Modal Tabs ─── */
+.acct-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 0; }
+.acct-tab {
+  flex: 1; padding: 12px; text-align: center; font-size: 13px; font-weight: 500;
+  color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent;
+  transition: var(--transition);
+}
+.acct-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.acct-pane { display: none; padding: 20px; flex-direction: column; gap: 16px; }
+.acct-pane.active { display: flex; }
+
+/* ─── Profile Info Rows ─── */
+.profile-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; background: var(--bg3); border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.profile-row-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.profile-row-icon i { font-size: 16px; color: var(--accent); }
+.profile-row-info { flex: 1; min-width: 0; }
+.profile-row-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
+.profile-row-value { font-size: 14px; font-weight: 500; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-row-action { flex-shrink: 0; }
+
+/* ─── Usage Bar ─── */
+.usage-bar-wrap { display: flex; flex-direction: column; gap: 6px; }
+.usage-bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); }
+.usage-bar-track { height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
+.usage-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; background: var(--accent); }
+.usage-bar-fill.warn { background: var(--yellow); }
+.usage-bar-fill.full { background: var(--red); }
+
+/* ─── Plan Management ─── */
+.current-plan-card {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; display: flex; align-items: center; gap: 14px;
+}
+.current-plan-icon { font-size: 28px; }
+.current-plan-info { flex: 1; }
+.current-plan-name { font-size: 16px; font-weight: 700; }
+.current-plan-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.plan-action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* ─── Danger Zone ─── */
+.danger-zone { background: rgba(248,113,113,0.05); border: 1px solid rgba(248,113,113,0.2); border-radius: var(--radius-sm); padding: 14px; }
+.danger-zone-title { font-size: 12px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+.danger-zone p { font-size: 12px; color: var(--text3); margin-bottom: 10px; }
+
+/* ─── Keyboard Shortcut Hint ─── */
+.kbd {
+  display: inline-block; background: var(--bg4); border: 1px solid var(--border2);
+  border-radius: 4px; padding: 1px 5px; font-size: 11px; color: var(--text3);
+  font-family: monospace;
+}
+
+/* ─── Node card hover — show desc expand button ─── */
+.node-desc-expand {
+  font-size: 10px; color: var(--accent); cursor: pointer; margin-top: 3px;
+  display: inline-block;
+}
+.node-desc-expand:hover { text-decoration: underline; }
+
+/* ─── Stats panel (Pro) ─── */
+.tree-stats-bar {
+  display: flex; gap: 1px; background: var(--border); border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tree-stat {
+  flex: 1; padding: 8px 12px; background: var(--bg2); text-align: center;
+}
+.tree-stat-val { font-size: 18px; font-weight: 700; color: var(--accent); }
+.tree-stat-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+
+
+/* ─── Settings rows ─── */
+.settings-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; background: var(--bg3); border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.settings-row-label { font-size: 12px; font-weight: 500; color: var(--text2); flex-shrink: 0; min-width: 130px; }
+.settings-row input[type=range] { accent-color: var(--accent); }
+.theme-swatch {
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: var(--transition); flex-shrink: 0;
+}
+.theme-swatch:hover { transform: scale(1.15); }
+.theme-swatch.selected { border-color: var(--text) !important; box-shadow: 0 0 0 2px var(--accent); }
+.canvas-dots { background-image: radial-gradient(circle, var(--border) 1px, transparent 1px); background-size: 24px 24px; }
+.canvas-lines { background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 24px 24px; }
+
+/* ─── Toggle Switch ─── */
+.toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0; background: var(--bg4); border-radius: 11px;
+  border: 1px solid var(--border2); transition: var(--transition);
+}
+.toggle-track::after {
+  content: ''; position: absolute; width: 16px; height: 16px; background: var(--text3);
+  border-radius: 50%; top: 2px; left: 2px; transition: var(--transition);
+}
+.toggle-switch input:checked + .toggle-track { background: var(--accent); border-color: var(--accent); }
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); background: #fff; }
+
+
+/* ─── SVG Icon fixes ─── */
+[class^="ti ti-"], [class*=" ti ti-"] {
+  display: inline-flex; align-items: center; justify-content: center;
+  line-height: 1; vertical-align: middle; flex-shrink: 0;
+}
+[class^="ti ti-"] svg, [class*=" ti ti-"] svg {
+  width: 1em; height: 1em;
+}
+</style>
 </head>
-<body class="antialiased h-screen flex">
+<body>
 
-    <!-- LOGIN SCREEN -->
-    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1120]">
-        <div class="bg-[#1e293b] p-10 rounded-2xl border border-gray-800 w-full max-w-md shadow-2xl mx-4">
-            <h1 class="text-3xl font-black text-white mb-2 text-center">Laughder CMS</h1>
-            <p class="text-gray-400 text-center mb-6 text-sm">Authorized Personnel Only</p>
-            <form id="login-form" class="space-y-5">
-                <input type="email" id="login-email" required class="form-input-glass w-full p-3" placeholder="Email">
-                <input type="password" id="login-password" required class="form-input-glass w-full p-3" placeholder="Password">
-                <button type="submit" class="w-full btn-primary px-6 py-3 rounded-lg">Secure Login</button>
-            </form>
+<!-- Loading -->
+<div id="loading-screen">
+  <div class="logo">Research<span>Tree</span></div>
+  <div class="spinner" id="loading-spinner"></div>
+  <div id="loading-msg" style="font-size:13px;color:var(--text3);display:none;text-align:center;max-width:320px;line-height:1.6;"></div>
+</div>
+
+<!-- Auth Screen -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>Research<span>Tree</span></h1>
+      <p>Organize knowledge. Build connections. Think deeper.</p>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</div>
+      <div class="auth-tab" onclick="switchAuthTab('signup')">Create Account</div>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+    <!-- Sign In -->
+    <div id="signin-form" class="auth-form">
+      <div class="form-field">
+        <label>Email</label>
+        <input type="email" id="signin-email" placeholder="you@example.com">
+      </div>
+      <div class="form-field">
+        <label>Password</label>
+        <input type="password" id="signin-password" placeholder="••••••••">
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:-4px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2);">
+          <input type="checkbox" id="remember-me" checked style="accent-color:var(--accent);width:15px;height:15px;">
+          Remember me
+        </label>
+        <button onclick="openForgotPassword()" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;">Forgot password?</button>
+      </div>
+      <button class="btn-primary" onclick="signInEmail()">Sign In</button>
+      <div class="auth-divider">or continue with</div>
+      <div class="social-btns">
+        <button class="btn-social" onclick="signInGoogle()"><i class="ti ti-brand-google"></i> Google</button>
+        <button class="btn-social" onclick="signInGitHub()"><i class="ti ti-brand-github"></i> GitHub</button>
+      </div>
+    </div>
+    <!-- Sign Up -->
+    <div id="signup-form" class="auth-form hidden">
+      <div class="form-field">
+        <label>Your Name</label>
+        <input type="text" id="signup-name" placeholder="e.g. Alex Johnson" maxlength="60">
+      </div>
+      <div class="form-field">
+        <label>Email</label>
+        <input type="email" id="signup-email" placeholder="you@example.com">
+      </div>
+      <div class="form-field">
+        <label>Password</label>
+        <input type="password" id="signup-password" placeholder="At least 6 characters">
+      </div>
+      <button class="btn-primary" onclick="signUpEmail()">Create Account</button>
+      <div class="auth-divider">or continue with</div>
+      <div class="social-btns">
+        <button class="btn-social" onclick="signInGoogle()"><i class="ti ti-brand-google"></i> Google</button>
+        <button class="btn-social" onclick="signInGitHub()"><i class="ti ti-brand-github"></i> GitHub</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="app" class="hidden">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">Research<span>Tree</span></div>
+      <div class="sidebar-actions">
+        <button class="icon-btn" onclick="openNewTreeModal()" title="New tree"><i class="ti ti-plus"></i></button>
+        <button class="icon-btn" onclick="openAccountModal()" title="Account"><i class="ti ti-settings"></i></button>
+      </div>
+    </div>
+    <div class="sidebar-search">
+      <div class="search-input-wrap" id="search-wrap">
+        <i class="ti ti-search"></i>
+        <input type="text" placeholder="Search nodes..." id="search-input" oninput="handleSearch(this.value)" onfocus="showSearchResults()" autocomplete="off">
+        <div id="search-results" class="search-results" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="tree-list" id="tree-list"></div>
+    <div class="sidebar-footer">
+      <div class="user-row" onclick="openAccountModal()">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div id="user-name-display" style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Loading...</div>
+          <div id="user-email-display" class="user-email">Loading...</div>
+          <div id="plan-badge" class="plan-badge free">Free</div>
         </div>
+        <i class="ti ti-chevron-right" style="color:var(--text3);font-size:14px;"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main-area">
+    <div id="topbar">
+      <button class="icon-btn" id="sidebar-toggle" onclick="toggleSidebar()" style="display:none;"><i class="ti ti-menu-2"></i></button>
+      <div id="tree-title-display" class="placeholder">Select or create a tree</div>
+      <div class="topbar-btns">
+        <div class="sync-dot" id="sync-dot" title="Saved"></div>
+        <button class="btn-sm btn-outline" onclick="openTreeSettings()" id="tree-settings-btn" style="display:none"><i class="ti ti-settings"></i> Settings</button>
+        <button class="btn-sm btn-outline" onclick="openExportModal()" id="export-btn" style="display:none"><i class="ti ti-download"></i> Export</button>
+        <button class="btn-sm btn-accent" onclick="openNewNodeModal(null)" id="add-root-btn" style="display:none"><i class="ti ti-plus"></i> Add Node</button>
+      </div>
+    </div>
+    <div id="canvas-wrap">
+      <div id="canvas">
+        <div id="canvas-empty">
+          <i class="ti ti-tree"></i>
+          <p>No tree selected</p>
+          <small>Create a new tree or select one from the sidebar</small>
+        </div>
+      </div>
     </div>
 
-    <!-- APP CONTAINER -->
-    <div id="app-container" class="hidden w-full h-full flex">
-        <aside class="w-64 bg-[#0f172a] border-r border-gray-800 flex flex-col p-6">
-            <h2 class="text-2xl font-black text-white mb-8">Laughder<span class="text-[var(--accent-mint)]">.</span></h2>
-            
-            <nav class="flex-1 space-y-2">
-                <button class="sidebar-item active">Dashboard</button>
-                <button class="sidebar-item">Comedians</button>
-                <button class="sidebar-item">Venues</button>
-            </nav>
+  <!-- Stats Bar (Pro) -->
+  <div id="stats-bar" class="tree-stats-bar" style="display:none;">
+    <div class="tree-stat"><div class="tree-stat-val" id="stat-nodes">0</div><div class="tree-stat-lbl">Nodes</div></div>
+    <div class="tree-stat"><div class="tree-stat-val" id="stat-roots">0</div><div class="tree-stat-lbl">Root Nodes</div></div>
+    <div class="tree-stat"><div class="tree-stat-val" id="stat-depth">0</div><div class="tree-stat-lbl">Max Depth</div></div>
+    <div class="tree-stat"><div class="tree-stat-val" id="stat-media">0</div><div class="tree-stat-lbl">Media</div></div>
+    <div class="tree-stat"><div class="tree-stat-val" id="stat-links">0</div><div class="tree-stat-lbl">Links</div></div>
+  </div>
+  </div>
 
-            <div class="border-t border-gray-800 pt-4 mt-4 space-y-3">
-                <button onclick="importFromTicketmaster()" class="w-full btn-secondary px-4 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    Sync Ticketmaster
-                </button>
-                <button onclick="logout()" class="w-full bg-red-900/30 text-red-400 hover:bg-red-900/50 px-4 py-2 rounded-lg text-sm font-bold transition-colors">Sign Out</button>
-            </div>
-        </aside>
-        
-        <main class="flex-1 p-8 overflow-y-auto">
-            <header class="flex justify-between items-center mb-8">
-                <h2 class="text-3xl font-bold text-white">Admin Overview</h2>
-            </header>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-[#1e293b] p-6 rounded-xl border border-gray-800">
-                    <h3 class="text-gray-400 font-medium mb-1">Total Comedians</h3>
-                    <p class="text-3xl font-bold text-white" id="stat-comedians">--</p>
-                </div>
-            </div>
-        </main>
+  <!-- Detail Panel -->
+  <div id="detail-panel" class="hidden">
+    <div class="detail-header">
+      <div class="detail-title">Node Details</div>
+      <button class="icon-btn" onclick="closeDetailPanel()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="detail-body" id="detail-body">
+      <div class="detail-empty">Select a node to view details</div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div id="bottom-nav">
+  <div class="nav-btn" id="nav-trees" onclick="mobileNavTrees()"><i class="ti ti-tree"></i><span>Trees</span></div>
+  <div class="nav-btn" id="nav-canvas" onclick="mobileNavCanvas()"><i class="ti ti-layout-kanban"></i><span>Canvas</span></div>
+  <div class="nav-btn new-btn" onclick="openNewTreeModal()"><i class="ti ti-plus"></i></div>
+  <div class="nav-btn" id="nav-info" onclick="mobileNavInfo()"><i class="ti ti-info-circle"></i><span>Info</span></div>
+  <div class="nav-btn" id="nav-account" onclick="openAccountModal()"><i class="ti ti-user"></i><span>Account</span></div>
+</div>
+
+<!-- New Tree Modal -->
+<div class="modal-overlay hidden" id="new-tree-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>New Research Tree</h3>
+      <button class="icon-btn" onclick="closeModal('new-tree-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Tree Name</label>
+        <input type="text" id="new-tree-name" placeholder="e.g. Machine Learning Fundamentals" maxlength="80">
+      </div>
+      <div class="form-group">
+        <label>Icon (emoji)</label>
+        <div class="emoji-picker" id="emoji-picker">
+          🌳 🔬 📚 💡 🧠 🔭 🎯 🗺️ ⚡ 🌐 🏗️ 🎨 💎 🚀 📊 🔑
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('new-tree-modal')">Cancel</button>
+      <button class="btn-accent btn-sm" onclick="createTree()"><i class="ti ti-plus"></i> Create Tree</button>
+    </div>
+  </div>
+</div>
+
+<!-- New/Edit Node Modal -->
+<div class="modal-overlay hidden" id="node-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="node-modal-title">Add Node</h3>
+      <button class="icon-btn" onclick="closeModal('node-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="node-modal-body">
+      <div class="form-group">
+        <label>Title <span style="color:var(--red)">*</span></label>
+        <input type="text" id="node-title-input" placeholder="Node title" maxlength="120">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="node-desc-input" placeholder="Add research notes, summary, or description..." rows="4"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('node-modal')">Cancel</button>
+      <button class="btn-accent btn-sm" id="node-save-btn" onclick="saveNodeFromModal()"><i class="ti ti-check"></i> Save Node</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tree Settings Modal -->
+<div class="modal-overlay hidden" id="tree-settings-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Tree Settings</h3>
+      <button class="icon-btn" onclick="closeModal('tree-settings-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Tree Name</label>
+        <input type="text" id="ts-name" placeholder="Tree name" maxlength="80">
+      </div>
+      <div class="form-group">
+        <label>Icon</label>
+        <div class="emoji-picker" id="ts-emoji-picker"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('tree-settings-modal')">Cancel</button>
+      <button class="btn-accent btn-sm" onclick="saveTreeSettings()"><i class="ti ti-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay hidden" id="export-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Export Tree</h3>
+      <button class="icon-btn" onclick="closeModal('export-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="export-options">
+        <div class="export-opt" onclick="exportTree('json')"><i class="ti ti-file-code"></i><span>JSON</span></div>
+        <div class="export-opt" onclick="exportTree('markdown')"><i class="ti ti-markdown"></i><span>Markdown</span></div>
+        <div class="export-opt" onclick="exportTree('csv')"><i class="ti ti-table"></i><span>CSV</span></div>
+        <div class="export-opt" onclick="exportTree('print')"><i class="ti ti-printer"></i><span>Print / PDF</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Account Modal -->
+<div class="modal-overlay hidden" id="account-modal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h3>Account &amp; Settings</h3>
+      <button class="icon-btn" onclick="closeModal('account-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="acct-tabs">
+      <div class="acct-tab active" onclick="switchAcctTab('profile')"><i class="ti ti-user" style="margin-right:5px;"></i>Profile</div>
+      <div class="acct-tab" onclick="switchAcctTab('plan')"><i class="ti ti-credit-card" style="margin-right:5px;"></i>Plan</div>
+      <div class="acct-tab" onclick="switchAcctTab('usage')"><i class="ti ti-chart-bar" style="margin-right:5px;"></i>Usage</div>
+      <div class="acct-tab" onclick="switchAcctTab('settings')"><i class="ti ti-settings" style="margin-right:5px;"></i>Settings</div>
     </div>
 
-    <div id="toast-container" class="fixed top-5 right-5 z-[200]"></div>
+    <!-- Profile Tab -->
+    <div class="acct-pane active" id="acct-pane-profile">
+      <div class="profile-row">
+        <div class="profile-row-icon"><i class="ti ti-user"></i></div>
+        <div class="profile-row-info">
+          <div class="profile-row-label">Display Name</div>
+          <div id="acct-name-display" style="font-size:14px;font-weight:600;margin-top:1px;">—</div>
+        </div>
+        <div class="profile-row-action">
+          <button class="btn-add-sm" onclick="editDisplayName()" style="font-size:11px;padding:4px 10px;">Edit</button>
+        </div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon"><i class="ti ti-mail"></i></div>
+        <div class="profile-row-info">
+          <div class="profile-row-label">Email</div>
+          <div class="profile-row-value" id="acct-email">Loading...</div>
+        </div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon"><i class="ti ti-calendar"></i></div>
+        <div class="profile-row-info">
+          <div class="profile-row-label">Member Since</div>
+          <div class="profile-row-value" id="acct-joined">—</div>
+        </div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon"><i class="ti ti-crown"></i></div>
+        <div class="profile-row-info">
+          <div class="profile-row-label">Current Plan</div>
+          <div class="profile-row-value" id="acct-plan-label">Free</div>
+        </div>
+        <div class="profile-row-action">
+          <button class="btn-sm btn-accent" id="acct-upgrade-shortcut" onclick="switchAcctTab('plan')" style="display:none"><i class="ti ti-arrow-up"></i> Upgrade</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn-danger" style="flex:1;" onclick="signOut()"><i class="ti ti-logout"></i> Sign Out</button>
+        <button class="btn-sm btn-outline" style="flex:1;" onclick="openChangePassword()"><i class="ti ti-lock"></i> Change Password</button>
+      </div>
+    </div>
 
-    <script>
-        const supabaseUrl = 'https://lapwxjyqjecuqpcirxxo.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhcHd4anlxamVjdXFwY2lyeHhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMjg0NTQsImV4cCI6MjA5NjYwNDQ1NH0.V5QysD6p6lztmjpFfA1JZ-1aez14znjZWP42c9lGbPk';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    <!-- Plan Tab -->
+    <div class="acct-pane" id="acct-pane-plan">
+      <div class="current-plan-card" id="current-plan-card">
+        <div class="current-plan-icon" id="current-plan-icon">🌱</div>
+        <div class="current-plan-info">
+          <div class="current-plan-name" id="current-plan-name">Free Plan</div>
+          <div class="current-plan-desc" id="current-plan-desc">Basic access · 3 trees · 20 nodes</div>
+        </div>
+      </div>
+      <div class="plan-action-row" id="plan-action-row"></div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">All Plans</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="profile-row" style="cursor:pointer;" onclick="openPaywall('plus')">
+            <div class="profile-row-icon" style="background:rgba(251,191,36,0.12);"><i class="ti ti-star" style="color:var(--yellow);"></i></div>
+            <div class="profile-row-info">
+              <div class="profile-row-label">Plus — $9/mo</div>
+              <div class="profile-row-value" style="font-size:13px;">Unlimited trees &amp; nodes, media, export, search</div>
+            </div>
+            <i class="ti ti-chevron-right" style="color:var(--text3);"></i>
+          </div>
+          <div class="profile-row" style="cursor:pointer;" onclick="openPaywall('pro')">
+            <div class="profile-row-icon" style="background:rgba(108,142,255,0.12);"><i class="ti ti-crown" style="color:var(--accent2);"></i></div>
+            <div class="profile-row-info">
+              <div class="profile-row-label">Pro — $19/mo</div>
+              <div class="profile-row-value" style="font-size:13px;">Everything in Plus + colors, tags, extended notes, stats</div>
+            </div>
+            <i class="ti ti-chevron-right" style="color:var(--text3);"></i>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // Check for existing session on page load
-        async function checkSession() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                verifyAdminStatus(session.user.id);
-            }
+    <!-- Usage Tab -->
+    <div class="acct-pane" id="acct-pane-usage">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:4px;">Your usage across all trees.</div>
+      <div class="usage-bar-wrap" id="usage-trees-wrap">
+        <div class="usage-bar-label"><span>Trees</span><span id="usage-trees-txt">0 / 3</span></div>
+        <div class="usage-bar-track"><div class="usage-bar-fill" id="usage-trees-bar" style="width:0%"></div></div>
+      </div>
+      <div class="usage-bar-wrap" id="usage-nodes-wrap">
+        <div class="usage-bar-label"><span>Nodes</span><span id="usage-nodes-txt">0 / 20</span></div>
+        <div class="usage-bar-track"><div class="usage-bar-fill" id="usage-nodes-bar" style="width:0%"></div></div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:8px;" id="usage-detail"></div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="acct-pane" id="acct-pane-settings">
+      <!-- Appearance sub-tabs -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+        <button class="btn-sm btn-accent" id="stab-appearance" onclick="switchSettingsTab('appearance')" style="font-size:12px;padding:5px 12px;">Appearance</button>
+        <button class="btn-sm btn-outline" id="stab-layout" onclick="switchSettingsTab('layout')" style="font-size:12px;padding:5px 12px;">Layout</button>
+        <button class="btn-sm btn-outline" id="stab-behavior" onclick="switchSettingsTab('behavior')" style="font-size:12px;padding:5px 12px;">Behavior</button>
+      </div>
+
+      <!-- Appearance -->
+      <div id="settings-pane-appearance" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:2px;">Theme &amp; Colors</div>
+        <div class="settings-row">
+          <div class="settings-row-label">Accent Color</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <div class="theme-swatch" style="background:#6c8eff;" onclick="savePref('accentColor','#6c8eff')" title="Blue" data-color="#6c8eff"></div>
+            <div class="theme-swatch" style="background:#a78bfa;" onclick="savePref('accentColor','#a78bfa')" title="Purple" data-color="#a78bfa"></div>
+            <div class="theme-swatch" style="background:#4ade80;" onclick="savePref('accentColor','#4ade80')" title="Green" data-color="#4ade80"></div>
+            <div class="theme-swatch" style="background:#fb923c;" onclick="savePref('accentColor','#fb923c')" title="Orange" data-color="#fb923c"></div>
+            <div class="theme-swatch" style="background:#f472b6;" onclick="savePref('accentColor','#f472b6')" title="Pink" data-color="#f472b6"></div>
+            <div class="theme-swatch" style="background:#fbbf24;" onclick="savePref('accentColor','#fbbf24')" title="Gold" data-color="#fbbf24"></div>
+            <div class="theme-swatch" style="background:#f87171;" onclick="savePref('accentColor','#f87171')" title="Red" data-color="#f87171"></div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Background Tone</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <div class="theme-swatch" style="background:#0f1117;border:2px solid var(--border);" onclick="savePref('bgTone','dark')" title="Dark (default)" data-bg="dark"></div>
+            <div class="theme-swatch" style="background:#0a0f1e;" onclick="savePref('bgTone','midnight')" title="Midnight" data-bg="midnight"></div>
+            <div class="theme-swatch" style="background:#0d1b0d;" onclick="savePref('bgTone','forest')" title="Forest" data-bg="forest"></div>
+            <div class="theme-swatch" style="background:#1a0f0a;" onclick="savePref('bgTone','ember')" title="Ember" data-bg="ember"></div>
+            <div class="theme-swatch" style="background:#1a1a1a;" onclick="savePref('bgTone','carbon')" title="Carbon" data-bg="carbon"></div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">UI Font</div>
+          <select class="tb-select" style="width:100%;" onchange="savePref('uiFont',this.value)" id="pref-ui-font">
+            <option value="DM Sans">DM Sans (Default)</option>
+            <option value="Inter">Inter</option>
+            <option value="system-ui">System UI</option>
+            <option value="Georgia">Georgia (Serif)</option>
+            <option value="Courier New">Courier New (Mono)</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Base Font Size</div>
+          <input type="range" min="12" max="18" step="1" id="pref-font-size" oninput="savePref('fontSize',+this.value);document.getElementById('font-size-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="font-size-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">14px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Node Border Radius</div>
+          <input type="range" min="0" max="20" step="2" id="pref-radius" oninput="savePref('nodeRadius',+this.value);document.getElementById('radius-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="radius-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">10px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Canvas Background</div>
+          <select class="tb-select" style="width:100%;" onchange="savePref('canvasBg',this.value)" id="pref-canvas-bg">
+            <option value="solid">Solid Dark</option>
+            <option value="dots">Dot Grid</option>
+            <option value="lines">Line Grid</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Layout -->
+      <div id="settings-pane-layout" style="display:none;flex-direction:column;gap:12px;">
+        <div class="settings-row">
+          <div class="settings-row-label">Node Card Width</div>
+          <input type="range" min="160" max="340" step="20" id="pref-node-width" oninput="savePref('nodeWidth',+this.value);document.getElementById('node-width-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="node-width-val" style="font-size:12px;color:var(--text3);min-width:36px;text-align:right;">220px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Node Title Size</div>
+          <input type="range" min="11" max="18" step="1" id="pref-node-title-size" oninput="savePref('nodeTitleSize',+this.value);document.getElementById('node-title-size-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="node-title-size-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">13px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Horizontal Gap</div>
+          <input type="range" min="30" max="120" step="10" id="pref-gap-x" oninput="savePref('gapX',+this.value);document.getElementById('gap-x-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="gap-x-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">60px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Vertical Gap</div>
+          <input type="range" min="8" max="40" step="4" id="pref-gap-y" oninput="savePref('gapY',+this.value);document.getElementById('gap-y-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="gap-y-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">16px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Sidebar Width</div>
+          <input type="range" min="200" max="380" step="20" id="pref-sidebar-w" oninput="savePref('sidebarW',+this.value);document.getElementById('sidebar-w-val').textContent=this.value+'px'" style="flex:1;">
+          <span id="sidebar-w-val" style="font-size:12px;color:var(--text3);min-width:36px;text-align:right;">280px</span>
+        </div>
+        <button class="btn-cancel" style="font-size:12px;margin-top:4px;" onclick="resetLayout()">↺ Reset Layout Defaults</button>
+      </div>
+
+      <!-- Behavior -->
+      <div id="settings-pane-behavior" style="display:none;flex-direction:column;gap:12px;">
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Auto-open detail panel</div><div class="profile-row-value" style="font-size:12px;">Open on node select</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-auto-detail" onchange="savePref('autoDetail',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Show descriptions on cards</div><div class="profile-row-value" style="font-size:12px;">Display node description text</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-show-desc" onchange="savePref('showDesc',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Show notes preview on cards</div><div class="profile-row-value" style="font-size:12px;">Show note snippet on node card</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-show-notes" onchange="savePref('showNotes',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Animate transitions</div><div class="profile-row-value" style="font-size:12px;">Smooth hover &amp; open effects</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-animate" onchange="savePref('animate',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+      </div>
+
+      <!-- Danger Zone always visible -->
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
+        <div class="danger-zone">
+          <div class="danger-zone-title"><i class="ti ti-alert-triangle"></i> Danger Zone</div>
+          <p>Permanently delete your account and all data. This cannot be undone.</p>
+          <button class="btn-danger" onclick="confirmDeleteAccount()"><i class="ti ti-trash"></i> Delete Account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Paywall Modal -->
+<div class="modal-overlay hidden" id="paywall-modal">
+  <div class="modal paywall-modal">
+    <div class="modal-header">
+      <h3>Upgrade ResearchTree</h3>
+      <button class="icon-btn" onclick="closeModal('paywall-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="plans-grid">
+        <!-- Free -->
+        <div class="plan-card" id="plan-free-card">
+          <div class="plan-name">Free</div>
+          <div class="plan-price">$0<span>/mo</span></div>
+          <div class="plan-features">
+            <div class="plan-feature"><i class="ti ti-check"></i>3 trees</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>20 nodes total</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Unlimited depth</div>
+            <div class="plan-feature locked"><i class="ti ti-lock"></i>No media</div>
+            <div class="plan-feature locked"><i class="ti ti-lock"></i>No export</div>
+            <div class="plan-feature locked"><i class="ti ti-lock"></i>No search</div>
+          </div>
+          <div class="plan-btn current" id="plan-free-btn">Current Plan</div>
+        </div>
+        <!-- Plus -->
+        <div class="plan-card" id="plan-plus-card">
+          <div class="plan-name">Plus</div>
+          <div class="plan-price">$9<span>/mo</span></div>
+          <div class="plan-features">
+            <div class="plan-feature"><i class="ti ti-check"></i>Unlimited trees</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Unlimited nodes</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Image attachments</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Video embeds</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Node search</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>JSON/MD/CSV export</div>
+          </div>
+          <button class="plan-btn accent" id="plan-plus-btn" onclick="goToStripe('plus')"><i class="ti ti-credit-card"></i> Upgrade — $9/mo</button>
+        </div>
+        <!-- Pro -->
+        <div class="plan-card popular" id="plan-pro-card">
+          <div class="plan-popular-badge">Most Popular</div>
+          <div class="plan-name">Pro</div>
+          <div class="plan-price">$19<span>/mo</span></div>
+          <div class="plan-features">
+            <div class="plan-feature"><i class="ti ti-check"></i>Everything in Plus</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Color labels</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Node tags</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Extended notes</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Tree statistics</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Priority support</div>
+          </div>
+          <button class="plan-btn gold" id="plan-pro-btn" onclick="goToStripe('pro')"><i class="ti ti-crown"></i> Go Pro — $19/mo</button>
+        </div>
+      </div>
+    </div>
+    <div class="paywall-note">
+      <div>Payments processed securely by Stripe. Cancel anytime.</div>
+      <div class="stripe-badge"><i class="ti ti-lock"></i> SSL encrypted · No card details stored</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Full-Screen Note Editor -->
+<div id="note-editor-overlay" class="hidden">
+
+  <!-- Top bar -->
+  <div class="ne-topbar">
+    <button class="ne-back-btn" onclick="closeNoteEditor()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>
+      Back to Tree
+    </button>
+    <div class="ne-node-title" id="ne-node-title">Notes</div>
+    <div class="ne-node-breadcrumb" id="ne-breadcrumb"></div>
+    <div class="ne-status" id="ne-save-status">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg>
+      <span id="ne-save-text">All saved</span>
+    </div>
+  </div>
+
+  <!-- Formatting Toolbar -->
+  <div class="ne-toolbar" id="ne-toolbar">
+    <!-- Text style -->
+    <div class="ne-toolbar-group">
+      <select class="tb-select" id="ne-block-select" onchange="neBlockFormat(this.value)">
+        <option value="p">Paragraph</option>
+        <option value="h1">Heading 1</option>
+        <option value="h2">Heading 2</option>
+        <option value="h3">Heading 3</option>
+        <option value="blockquote">Quote</option>
+        <option value="pre">Code Block</option>
+      </select>
+    </div>
+    <!-- Inline formatting -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" id="tb-bold" onclick="neExec('bold')" title="Bold (Ctrl+B)"><strong>B</strong></div>
+      <div class="tb-btn" id="tb-italic" onclick="neExec('italic')" title="Italic (Ctrl+I)"><em>I</em></div>
+      <div class="tb-btn" id="tb-underline" onclick="neExec('underline')" title="Underline (Ctrl+U)"><u>U</u></div>
+      <div class="tb-btn" id="tb-strikeThrough" onclick="neExec('strikeThrough')" title="Strikethrough"><s>S</s></div>
+      <div class="tb-btn" id="tb-highlight" onclick="neHighlight()" title="Highlight">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 19h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M12.5 6.5l4 4"/><path d="M3 19h-1" opacity="0.5"/></svg>
+      </div>
+    </div>
+    <!-- Lists -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" id="tb-insertUnorderedList" onclick="neExec('insertUnorderedList')" title="Bullet list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l11 0"/><path d="M9 12l11 0"/><path d="M9 18l11 0"/><path d="M5 6l0 .01"/><path d="M5 12l0 .01"/><path d="M5 18l0 .01"/></svg>
+      </div>
+      <div class="tb-btn" id="tb-insertOrderedList" onclick="neExec('insertOrderedList')" title="Numbered list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 6h9"/><path d="M11 12h9"/><path d="M11 18h9"/><path d="M4 10h2v-6l-2 2"/><path d="M4 16a2 2 0 1 1 4 0c0 .667 -.333 1.333 -1 2l-3 2h4"/></svg>
+      </div>
+      <div class="tb-btn" onclick="neInsertTaskList()" title="Task / checklist">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3l8 -8"/><path d="M20 12v6a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h9"/></svg>
+      </div>
+    </div>
+    <!-- Indent -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" onclick="neExec('indent')" title="Indent">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4l-4 4"/><path d="M11 6h9"/><path d="M11 12h9"/><path d="M11 18h9"/></svg>
+      </div>
+      <div class="tb-btn" onclick="neExec('outdent')" title="Outdent">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 8l-4 4l4 4"/><path d="M11 6h9"/><path d="M11 12h9"/><path d="M11 18h9"/></svg>
+      </div>
+    </div>
+    <!-- Alignment -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" onclick="neExec('justifyLeft')" title="Align left">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l16 0"/><path d="M4 12l10 0"/><path d="M4 18l14 0"/></svg>
+      </div>
+      <div class="tb-btn" onclick="neExec('justifyCenter')" title="Align center">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l16 0"/><path d="M7 12l10 0"/><path d="M5 18l14 0"/></svg>
+      </div>
+    </div>
+    <!-- Insert -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" onclick="neInsertHR()" title="Divider">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/><path d="M4 6h2"/><path d="M4 18h2"/></svg>
+      </div>
+      <div class="tb-btn" onclick="neInsertLink()" title="Insert link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54 .54l3 -3a5 5 0 0 0 -7.07 -7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0 -7.54 -.54l-3 3a5 5 0 0 0 7.07 7.07l1.71 -1.71"/></svg>
+      </div>
+    </div>
+    <!-- Clear -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" onclick="neExec('removeFormat')" title="Clear formatting">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 15l4 4m0 -4l-4 4"/><path d="M7 6v-1h11v1"/><path d="M7 10h4"/><path d="M13 20l-4 -10"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Page -->
+  <div class="ne-doc-wrap">
+    <div class="ne-doc-page">
+      <div id="ne-editor" contenteditable="true" spellcheck="true"></div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="ne-statusbar">
+    <span id="ne-wordcount">0 words</span>
+    <span id="ne-charcount">0 characters</span>
+    <span id="ne-linecount">0 lines</span>
+    <span style="flex:1;"></span>
+    <span style="color:var(--text3);">Ctrl+S to save · Esc to close</span>
+  </div>
+</div>
+
+<!-- Context Menu -->
+<div id="context-menu">
+  <div class="ctx-item" id="ctx-add-child" onclick="ctxAddChild()"><i class="ti ti-plus"></i> Add Child Node</div>
+  <div class="ctx-item" id="ctx-edit" onclick="ctxEdit()"><i class="ti ti-edit"></i> Edit Node</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ctx-delete" onclick="ctxDelete()"><i class="ti ti-trash"></i> Delete Node</div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Supabase SDK -->
+<script>
+// ─── Supabase SDK loader with fallback ───
+(function() {
+  var TIMEOUT_MS = 8000;
+  var loaded = false;
+
+  function showLoadError(msg) {
+    var spinner = document.getElementById('loading-spinner');
+    var msgEl   = document.getElementById('loading-msg');
+    if (spinner) spinner.style.display = 'none';
+    if (msgEl)   { msgEl.style.display = 'block'; msgEl.innerHTML = msg; }
+  }
+
+  // Timeout fallback — if SDK doesn't load in 8s, show error
+  var timer = setTimeout(function() {
+    if (!loaded) {
+      showLoadError(
+        '<strong style="color:var(--red);">⚠️ Could not connect</strong><br><br>' +
+        'The app requires an internet connection to load.<br>' +
+        'If you're previewing this file locally, please deploy it to ' +
+        '<a href="https://pages.github.com" target="_blank" style="color:var(--accent);">GitHub Pages</a> first.<br><br>' +
+        '<button onclick="window.location.reload()" style="margin-top:8px;padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Retry</button>'
+      );
+    }
+  }, TIMEOUT_MS);
+
+  var script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+  script.onload = function() {
+    loaded = true;
+    clearTimeout(timer);
+    // Kick off app init once SDK is confirmed loaded
+    if (typeof initApp === 'function') initApp();
+  };
+  script.onerror = function() {
+    clearTimeout(timer);
+    // Try fallback CDN
+    var fallback = document.createElement('script');
+    fallback.src = 'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+    fallback.onload = function() {
+      loaded = true;
+      if (typeof initApp === 'function') initApp();
+    };
+    fallback.onerror = function() {
+      showLoadError(
+        '<strong style="color:var(--red);">⚠️ Could not load Supabase SDK</strong><br><br>' +
+        'This file needs to be served from <strong>GitHub Pages</strong> or another web host — ' +
+        'it cannot run as a local <code>file://</code> URL.<br><br>' +
+        '<a href="https://pages.github.com" target="_blank" style="color:var(--accent);">Deploy to GitHub Pages →</a><br><br>' +
+        '<button onclick="window.location.reload()" style="margin-top:8px;padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Retry</button>'
+      );
+    };
+    document.head.appendChild(fallback);
+  };
+  document.head.appendChild(script);
+})();
+</script>
+<script>
+
+// ─── Inline SVG Icon System ───
+const SVG_ICONS = {'alert-triangle': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.871l-8.106 -13.534a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" />', 'arrow-up': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M18 11l-6 -6" /><path d="M6 11l6 -6" />', 'arrows-maximize': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M16 4l4 0l0 4" /><path d="M14 10l6 -6" /><path d="M8 20l-4 0l0 -4" /><path d="M4 20l6 -6" /><path d="M16 20l4 0l0 -4" /><path d="M14 14l6 6" /><path d="M8 4l-4 0l0 4" /><path d="M4 4l6 6" />', 'brand-github': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />', 'brand-google': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20.945 11a9 9 0 1 1 -3.284 -5.997l-2.655 2.392a5.5 5.5 0 1 0 2.119 6.605h-4.125v-3h7.945z" />', 'calendar': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M4 11h16" /><path d="M11 15h1" /><path d="M12 15v3" />', 'chart-bar': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M9 8m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M15 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M4 20l14 0" />', 'check': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" />', 'chevron-left': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6" />', 'chevron-right': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" />', 'circle-check': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 12l2 2l4 -4" />', 'credit-card': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 5m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z" /><path d="M3 10l18 0" /><path d="M7 15l.01 0" /><path d="M11 15l2 0" />', 'crown': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6l4 6l5 -4l-2 10h-14l-2 -10l5 4z" />', 'device-floppy': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" />', 'download': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" /><path d="M7 11l5 5l5 -5" /><path d="M12 4l0 12" />', 'edit': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" />', 'external-link': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6" /><path d="M11 13l9 -9" /><path d="M15 4h5v5" />', 'file-code': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M10 13l-1 2l1 2" /><path d="M14 13l1 2l-1 2" />', 'info-circle': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" />', 'layout-kanban': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4l6 0l0 8l-6 0l0 -8z" /><path d="M4 16l6 0l0 4l-6 0l0 -4z" /><path d="M14 12l6 0l0 8l-6 0l0 -8z" /><path d="M14 4l6 0l0 4l-6 0l0 -4z" />', 'layout-sidebar': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" /><path d="M9 4l0 16" />', 'loader': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6l0 -3" /><path d="M16.25 7.75l2.125 -2.125" /><path d="M18 12l3 0" /><path d="M16.25 16.25l2.125 2.125" /><path d="M12 18l0 3" /><path d="M7.75 16.25l-2.125 2.125" /><path d="M6 12l-3 0" /><path d="M7.75 7.75l-2.125 -2.125" />', 'lock': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M8 11v-4a4 4 0 1 1 8 0v4" />', 'logout': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" /><path d="M9 12h12l-3 -3" /><path d="M18 15l3 -3" />', 'mail': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z" /><path d="M3 7l9 6l9 -6" />', 'markdown': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 5m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M7 15v-6l2 2l2 -2v6" /><path d="M14 13l2 2l2 -2" /><path d="M16 15v-6" />', 'menu-2': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 6l16 0" /><path d="M4 12l16 0" /><path d="M4 18l16 0" />', 'notes': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 3m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" /><path d="M9 7l6 0" /><path d="M9 11l6 0" /><path d="M9 15l4 0" />', 'plus': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" />', 'printer': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2" /><path d="M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4" /><path d="M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z" />', 'search': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" />', 'settings': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />', 'star': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z" />', 'table': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14z" /><path d="M3 10h18" /><path d="M10 3v18" />', 'trash': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />', 'tree': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 3l4 4l-2 0l0 3l3 0l0 -2l4 4l-4 4l0 -2l-3 0l0 3l2 0l-4 4l-4 -4l2 0l0 -3l-3 0l0 2l-4 -4l4 -4l0 2l3 0l0 -3l-2 0z" />', 'user': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />', 'x': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" />', 'alert-circle': '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 8v4" /><path d="M12 16h.01" />'};
+
+function renderIcons(root) {
+  const els = (root || document).querySelectorAll('[class*="ti ti-"]');
+  els.forEach(el => {
+    // Skip if already has SVG child
+    if (el.querySelector('svg')) return;
+    const classes = Array.from(el.classList);
+    const iconClass = classes.find(c => c.startsWith('ti-') && c !== 'ti');
+    if (!iconClass) return;
+    const name = iconClass.replace('ti-', '');
+    const paths = SVG_ICONS[name];
+    if (!paths) return;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.style.width = '1em';
+    svg.style.height = '1em';
+    svg.style.verticalAlign = '-0.125em';
+    svg.style.flexShrink = '0';
+    svg.innerHTML = paths;
+    el.appendChild(svg);
+    el.style.display = 'inline-flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+  });
+}
+
+// Run on load and observe DOM mutations for dynamically added icons
+document.addEventListener('DOMContentLoaded', () => renderIcons());
+const _iconObserver = new MutationObserver(muts => {
+  muts.forEach(m => m.addedNodes.forEach(n => {
+    if (n.nodeType === 1) renderIcons(n);
+  }));
+});
+_iconObserver.observe(document.body, { childList: true, subtree: true });
+
+// ─── Config ───
+const SUPABASE_URL = 'https://iplsdmdaviuwabtclvsw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwbHNkbWRhdml1d2FidGNsdnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NzI1NzIsImV4cCI6MjA5NjU0ODU3Mn0.f0X9ox4RCfHvAJqDP-YhCPve6NwADG5Cr3PE_WqHVU4';
+
+// ─── Stripe Payment Links ───
+// IMPORTANT: Replace these with your actual Stripe Payment Links
+// In Stripe Dashboard: Products → Create Product → Create Price → Payment Links → Create Link
+// Set success_url on each link to: https://YOUR_GITHUB_PAGES_URL/?plan=plus (or pro)
+const STRIPE_PLUS_LINK = 'https://buy.stripe.com/YOUR_PLUS_LINK_HERE';
+const STRIPE_PRO_LINK = 'https://buy.stripe.com/YOUR_PRO_LINK_HERE';
+
+// ─── Supabase Client ───
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ─── State ───
+let currentUser = null;
+let currentPlan = 'free'; // 'free' | 'plus' | 'pro'
+let trees = []; // [{id, name, icon, color, nodes:[]}]
+let activeTreeId = null;
+let selectedNodeId = null;
+let contextNodeId = null;
+let nodeModalParentId = null;
+let nodeModalEditId = null;
+let isMobile = window.innerWidth <= 768;
+let saveDebounceTimer = null;
+let selectedEmoji = '🌳';
+let tsSelectedEmoji = '🌳';
+
+const EMOJIS = ['🌳','🔬','📚','💡','🧠','🔭','🎯','🗺️','⚡','🌐','🏗️','🎨','💎','🚀','📊','🔑','🔩','🌿','🧩','📝'];
+const COLORS = ['#6c8eff','#4ade80','#fbbf24','#f87171','#a78bfa','#fb923c'];
+const NODE_COLORS = ['blue','green','yellow','red','purple','orange'];
+
+// ─── Init ───
+async function init() {
+  // Check for plan update in URL (from Stripe redirect)
+  const params = new URLSearchParams(window.location.search);
+  const planParam = params.get('plan');
+
+  const { data: { session } } = await sbClient.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await loadUserProfile();
+    if (planParam && (planParam === 'plus' || planParam === 'pro')) {
+      await updatePlanFromStripe(planParam);
+    }
+    showApp();
+    await loadTrees();
+  } else {
+    showAuth();
+  }
+
+  // Listen for auth changes
+  sbClient.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      currentUser = session.user;
+      await loadUserProfile();
+      showApp();
+      await loadTrees();
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      currentPlan = 'free';
+      trees = [];
+      activeTreeId = null;
+      showAuth();
+    }
+  });
+
+  setupEmojiPickers();
+  setupClickOutside();
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+}
+
+function checkMobile() {
+  isMobile = window.innerWidth <= 768;
+  const toggle = document.getElementById('sidebar-toggle');
+  if (toggle) toggle.style.display = isMobile ? 'flex' : 'none';
+}
+
+// ─── Auth ───
+function showAuth() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').classList.add('hidden');
+}
+
+function showApp() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').classList.remove('hidden');
+  updateUserUI();
+}
+
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0 && tab==='signin')||(i===1 && tab==='signup')));
+  document.getElementById('signin-form').classList.toggle('hidden', tab !== 'signin');
+  document.getElementById('signup-form').classList.toggle('hidden', tab !== 'signup');
+  clearAuthError();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function clearAuthError() {
+  const el = document.getElementById('auth-error');
+  el.style.display = 'none';
+}
+
+async function signInEmail() {
+  const email = document.getElementById('signin-email').value.trim();
+  const password = document.getElementById('signin-password').value;
+  const rememberMe = document.getElementById('remember-me')?.checked !== false;
+  if (!email || !password) return showAuthError('Please enter email and password.');
+  clearAuthError();
+
+  // Set session persistence based on Remember Me
+  // Supabase JS v2 uses localStorage by default (persistent).
+  // If "remember me" is unchecked we use sessionStorage instead.
+  if (!rememberMe) {
+    // Recreate client with sessionStorage for this sign-in
+    const tempClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { storage: window.sessionStorage, persistSession: true }
+    });
+    const { error } = await tempClient.auth.signInWithPassword({ email, password });
+    if (error) { showAuthError(error.message); return; }
+    // Reload so the session-storage client takes over
+    window.location.reload();
+    return;
+  }
+
+  const { error } = await sbClient.auth.signInWithPassword({ email, password });
+  if (error) showAuthError(error.message);
+}
+
+function openForgotPassword() {
+  const email = document.getElementById('signin-email').value.trim();
+  const d = document.createElement('div');
+  d.className = 'modal-overlay';
+  d.style.zIndex = '600';
+  d.innerHTML = \`<div class="modal" style="max-width:400px;">
+    <div class="modal-header"><h3>Reset Password</h3><button class="icon-btn" onclick="this.closest('.modal-overlay').remove()"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);">Enter your email and we'll send a reset link.</p>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="forgot-email" value="\${email}" placeholder="you@example.com" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);outline:none;width:100%;">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      <button class="btn-accent btn-sm" onclick="sendForgotPassword(this)"><i class="ti ti-mail"></i> Send Reset Link</button>
+    </div>
+  </div>\`;
+  document.body.appendChild(d);
+  renderIcons(d);
+  setTimeout(() => d.querySelector('#forgot-email').focus(), 100);
+}
+
+async function sendForgotPassword(btn) {
+  const email = document.getElementById('forgot-email')?.value.trim();
+  if (!email) { showToast('Enter your email.', 'error'); return; }
+  btn.disabled = true; btn.textContent = 'Sending...';
+  const { error } = await sbClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  btn.closest('.modal-overlay').remove();
+  if (error) showToast('Error: ' + error.message, 'error');
+  else showToast('Password reset email sent! Check your inbox.', 'success');
+}
+
+async function signUpEmail() {
+  const name = (document.getElementById('signup-name') ? document.getElementById('signup-name').value.trim() : '');
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  if (!name) return showAuthError('Please enter your name.');
+  if (!email || !password) return showAuthError('Please fill in all fields.');
+  if (password.length < 6) return showAuthError('Password must be at least 6 characters.');
+  clearAuthError();
+  const { data, error } = await sbClient.auth.signUp({ email, password, options: { data: { full_name: name, display_name: name } } });
+  if (error) showAuthError(error.message);
+  else {
+    // Save name to profile
+    if (data?.user) {
+      await sbClient.from('profiles').upsert({ id: data.user.id, plan: 'free', display_name: name, updated_at: new Date().toISOString() });
+    }
+    showToast('Account created! Check your email to verify.', 'success');
+  }
+}
+
+async function signInGoogle() {
+  const { error } = await sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
+  if (error) showAuthError(error.message);
+}
+
+async function signInGitHub() {
+  const { error } = await sbClient.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: window.location.href } });
+  if (error) showAuthError(error.message);
+}
+
+async function signOut() {
+  closeModal('account-modal');
+  await sbClient.auth.signOut();
+  showToast('Signed out.', 'info');
+}
+
+// ─── Profile / Plan ───
+let currentDisplayName = '';
+
+async function loadUserProfile() {
+  console.log('[ResearchTree] Loading profile for user:', currentUser.id, currentUser.email);
+
+  const { data, error } = await sbClient
+    .from('profiles')
+    .select('plan, display_name')
+    .eq('id', currentUser.id)
+    .single();
+
+  console.log('[ResearchTree] Profile query result:', { data, error });
+
+  if (data) {
+    currentPlan = data.plan || 'free';
+    currentDisplayName = data.display_name || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+    console.log('[ResearchTree] Plan loaded:', currentPlan, '| Name:', currentDisplayName);
+  } else if (error) {
+    console.warn('[ResearchTree] Profile error:', error.code, error.message);
+    if (error.code === 'PGRST116') {
+      // Row doesn't exist — create it
+      const nameFromMeta = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+      const { error: insertErr } = await sbClient.from('profiles').insert({
+        id: currentUser.id, plan: 'free', display_name: nameFromMeta
+      });
+      console.log('[ResearchTree] Created profile, insertErr:', insertErr);
+      currentPlan = 'free';
+      currentDisplayName = nameFromMeta;
+    } else {
+      // RLS or other error — try upsert to ensure row exists
+      console.warn('[ResearchTree] Unexpected profile error, attempting upsert...');
+      await sbClient.from('profiles').upsert({
+        id: currentUser.id, plan: 'free', updated_at: new Date().toISOString()
+      }, { onConflict: 'id', ignoreDuplicates: true });
+      currentPlan = 'free';
+    }
+  }
+}
+
+// Dev helper — call refreshPlan() in browser console to force re-read without logout
+async function refreshPlan() {
+  if (!currentUser) { console.warn('Not logged in'); return; }
+  await loadUserProfile();
+  updateUserUI();
+  renderCanvas();
+  console.log('[ResearchTree] Plan refreshed:', currentPlan);
+  showToast('Plan refreshed: ' + currentPlan, 'success');
+}
+
+async function updatePlanFromStripe(plan) {
+  // This updates plan after successful Stripe redirect
+  const { error } = await sbClient.from('profiles').upsert({ id: currentUser.id, plan: plan, updated_at: new Date().toISOString() });
+  if (!error) {
+    currentPlan = plan;
+    updateUserUI();
+    showToast(`🎉 You're now on the ${plan.toUpperCase()} plan!`, 'success');
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+}
+
+function updateUserUI() {
+  if (!currentUser) return;
+  const email = currentUser.email || 'User';
+  const displayName = currentDisplayName || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || email.split('@')[0];
+  const initial = displayName[0].toUpperCase();
+  document.getElementById('user-avatar').textContent = initial;
+  const nameEl = document.getElementById('user-name-display');
+  if (nameEl) nameEl.textContent = displayName;
+  document.getElementById('user-email-display').textContent = email;
+  const badge = document.getElementById('plan-badge');
+  badge.textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
+  badge.className = 'plan-badge ' + currentPlan;
+
+  // Profile tab
+  const emailEl = document.getElementById('acct-email');
+  if (emailEl) emailEl.textContent = email;
+  const nameDisp = document.getElementById('acct-name-display');
+  if (nameDisp) nameDisp.textContent = displayName;
+  const planLabel = document.getElementById('acct-plan-label');
+  if (planLabel) {
+    const planNames = { free: 'Free Plan', plus: 'Plus Plan — $9/mo', pro: 'Pro Plan — $19/mo' };
+    planLabel.textContent = planNames[currentPlan] || 'Free Plan';
+  }
+  const joinedEl = document.getElementById('acct-joined');
+  if (joinedEl && currentUser.created_at) {
+    joinedEl.textContent = new Date(currentUser.created_at).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  }
+  const upgradeShortcut = document.getElementById('acct-upgrade-shortcut');
+  if (upgradeShortcut) upgradeShortcut.style.display = currentPlan === 'pro' ? 'none' : '';
+
+  // Plan tab
+  const planIcons = { free: '🌱', plus: '⭐', pro: '👑' };
+  const planDescs = {
+    free: 'Basic access · 3 trees · 20 nodes',
+    plus: 'Unlimited trees & nodes · Media · Export · Search',
+    pro: 'All Plus features · Colors · Tags · Extended notes · Stats'
+  };
+  const planIconEl = document.getElementById('current-plan-icon');
+  const planNameEl = document.getElementById('current-plan-name');
+  const planDescEl = document.getElementById('current-plan-desc');
+  if (planIconEl) planIconEl.textContent = planIcons[currentPlan] || '🌱';
+  if (planNameEl) planNameEl.textContent = (currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)) + ' Plan';
+  if (planDescEl) planDescEl.textContent = planDescs[currentPlan] || '';
+
+  // Plan action buttons
+  const actionRow = document.getElementById('plan-action-row');
+  if (actionRow) {
+    if (currentPlan === 'free') {
+      actionRow.innerHTML = `
+        <button class="btn-sm btn-outline" onclick="openPaywall('plus')" style="flex:1;justify-content:center;"><i class="ti ti-star"></i> Plus — $9/mo</button>
+        <button class="btn-sm btn-accent" onclick="openPaywall('pro')" style="flex:1;justify-content:center;"><i class="ti ti-crown"></i> Pro — $19/mo</button>`;
+    } else if (currentPlan === 'plus') {
+      actionRow.innerHTML = `
+        <button class="btn-sm btn-accent" onclick="openPaywall('pro')" style="flex:1;justify-content:center;"><i class="ti ti-crown"></i> Upgrade to Pro</button>
+        <button class="btn-danger" onclick="cancelPlan()" style="flex:1;"><i class="ti ti-x"></i> Cancel to Free</button>`;
+    } else if (currentPlan === 'pro') {
+      actionRow.innerHTML = `
+        <button class="btn-sm btn-outline" onclick="downgradeTo('plus')" style="flex:1;justify-content:center;"><i class="ti ti-star"></i> Downgrade to Plus</button>
+        <button class="btn-danger" onclick="cancelPlan()" style="flex:1;"><i class="ti ti-x"></i> Cancel to Free</button>`;
+    }
+  }
+}
+
+function switchAcctTab(tab) {
+  document.querySelectorAll('.acct-tab').forEach((t,i) => {
+    const tabs = ['profile','plan','usage','settings'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.acct-pane').forEach(p => p.classList.remove('active'));
+  const pane = document.getElementById('acct-pane-' + tab);
+  if (pane) pane.classList.add('active');
+  if (tab === 'usage') renderUsageTab();
+}
+
+function renderUsageTab() {
+  const treeCount = trees.length;
+  const nodeCount = countAllNodes();
+  const maxTrees = currentPlan === 'free' ? 3 : '∞';
+  const maxNodes = currentPlan === 'free' ? 20 : '∞';
+
+  const treePct = currentPlan === 'free' ? Math.min(100, (treeCount/3)*100) : (treeCount > 0 ? 20 : 0);
+  const nodePct = currentPlan === 'free' ? Math.min(100, (nodeCount/20)*100) : (nodeCount > 0 ? 10 : 0);
+
+  const treesBar = document.getElementById('usage-trees-bar');
+  const nodesBar = document.getElementById('usage-nodes-bar');
+  const treesTxt = document.getElementById('usage-trees-txt');
+  const nodesTxt = document.getElementById('usage-nodes-txt');
+  if (treesBar) { treesBar.style.width = treePct + '%'; treesBar.className = 'usage-bar-fill' + (treePct>=100?' full':treePct>=80?' warn':''); }
+  if (nodesBar) { nodesBar.style.width = nodePct + '%'; nodesBar.className = 'usage-bar-fill' + (nodePct>=100?' full':nodePct>=80?' warn':''); }
+  if (treesTxt) treesTxt.textContent = treeCount + ' / ' + maxTrees;
+  if (nodesTxt) nodesTxt.textContent = nodeCount + ' / ' + maxNodes;
+
+  // Detail stats
+  const detail = document.getElementById('usage-detail');
+  if (detail) {
+    let mediaCount = 0, linkCount = 0, tagCount = 0;
+    function countDeep(nodes) { for (const n of nodes) { mediaCount += (n.media||[]).length; linkCount += (n.links||[]).length; tagCount += (n.tags||[]).length; countDeep(n.children||[]); } }
+    trees.forEach(t => countDeep(t.nodes||[]));
+    detail.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--accent);">${treeCount}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Trees</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--accent);">${nodeCount}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Total Nodes</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--purple);">${mediaCount}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Media Items</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--green);">${linkCount}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Links</div>
+        </div>
+      </div>`;
+  }
+}
+
+function openChangePassword() {
+  const email = currentUser?.email || '';
+  const d = document.createElement('div');
+  d.className = 'modal-overlay';
+  d.style.zIndex = '600';
+  d.innerHTML = `<div class="modal" style="max-width:400px;">
+    <div class="modal-header"><h3>Change Password</h3><button class="icon-btn" onclick="this.closest('.modal-overlay').remove()"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);">We'll send a password reset link to <strong>${email}</strong>.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      <button class="btn-accent btn-sm" onclick="sendPasswordReset(this,'${email}')"><i class="ti ti-mail"></i> Send Reset Email</button>
+    </div>
+  </div>`;
+  document.body.appendChild(d);
+}
+
+async function editDisplayName() {
+  const current = currentDisplayName || '';
+  const newName = prompt('Enter your display name:', current);
+  if (newName === null) return; // cancelled
+  const trimmed = newName.trim();
+  if (!trimmed) { showToast('Name cannot be empty.', 'error'); return; }
+  const { error } = await sbClient.from('profiles').upsert({ id: currentUser.id, display_name: trimmed, updated_at: new Date().toISOString() });
+  if (error) { showToast('Failed to update name: ' + error.message, 'error'); return; }
+  currentDisplayName = trimmed;
+  updateUserUI();
+  showToast('Display name updated!', 'success');
+}
+
+async function sendPasswordReset(btn, email) {
+  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> Sending...';
+  const { error } = await sbClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+  btn.closest('.modal-overlay').remove();
+  if (error) showToast('Failed: ' + error.message, 'error');
+  else showToast('Password reset email sent! Check your inbox.', 'success');
+}
+
+async function cancelPlan() {
+  if (!confirm('Cancel your plan and move to Free? You will lose access to paid features immediately.')) return;
+  const { error } = await sbClient.from('profiles').upsert({ id: currentUser.id, plan: 'free', updated_at: new Date().toISOString() });
+  if (error) { showToast('Failed to cancel plan: ' + error.message, 'error'); return; }
+  currentPlan = 'free';
+  updateUserUI();
+  renderCanvas(); // re-gate features
+  showToast('Plan cancelled. You are now on Free.', 'info');
+  switchAcctTab('plan');
+}
+
+async function downgradeTo(plan) {
+  const labels = { free: 'Free', plus: 'Plus ($9/mo)' };
+  if (!confirm('Downgrade to ' + (labels[plan]||plan) + '? Some features may be locked.')) return;
+  const { error } = await sbClient.from('profiles').upsert({ id: currentUser.id, plan: plan, updated_at: new Date().toISOString() });
+  if (error) { showToast('Failed to change plan: ' + error.message, 'error'); return; }
+  currentPlan = plan;
+  updateUserUI();
+  renderCanvas();
+  showToast('Plan changed to ' + (labels[plan]||plan) + '.', 'success');
+  switchAcctTab('plan');
+}
+
+function confirmDeleteAccount() {
+  if (!confirm('This will permanently delete your account and ALL your research trees. This cannot be undone. Are you absolutely sure?')) return;
+  if (!confirm('Last chance — your data will be gone forever. Delete account?')) return;
+  deleteAccount();
+}
+
+async function deleteAccount() {
+  showToast('Deleting account...', 'info');
+  // Delete all trees first
+  await sbClient.from('trees').delete().eq('user_id', currentUser.id);
+  await sbClient.from('profiles').delete().eq('id', currentUser.id);
+  // Note: user deletion from auth requires service role key; sign them out and show message
+  await sbClient.auth.signOut();
+  showToast('Account data deleted. You have been signed out.', 'info');
+}
+
+// Preferences
+let prefs = { autoDetail: true, wideNodes: false };
+function loadPrefs() {
+  try { const p = localStorage.getItem('rt_prefs'); if (p) prefs = {...prefs, ...JSON.parse(p)}; } catch(e) {}
+  applyPrefs();
+}
+function savePref(key, val) {
+  prefs[key] = val;
+  localStorage.setItem('rt_prefs', JSON.stringify(prefs));
+  applyPrefs();
+}
+function switchSettingsTab(tab) {
+  ['appearance','layout','behavior'].forEach(t => {
+    const pane = document.getElementById('settings-pane-' + t);
+    const btn  = document.getElementById('stab-' + t);
+    if (pane) pane.style.display = t === tab ? 'flex' : 'none';
+    if (btn)  { btn.className = t === tab ? 'btn-sm btn-accent' : 'btn-sm btn-outline'; btn.style.fontSize = '12px'; btn.style.padding = '5px 12px'; }
+  });
+}
+
+function resetLayout() {
+  ['nodeWidth','gapX','gapY','sidebarW','nodeTitleSize'].forEach(k => delete prefs[k]);
+  localStorage.setItem('rt_prefs', JSON.stringify(prefs));
+  applyPrefs();
+  showToast('Layout reset to defaults.', 'info');
+}
+
+const BG_TONES = {
+  dark:     { bg:'#0f1117', bg2:'#161b27', bg3:'#1e2535', bg4:'#252d3d', border:'#2e3650', border2:'#3a4560' },
+  midnight: { bg:'#0a0f1e', bg2:'#111827', bg3:'#1a2234', bg4:'#222d42', border:'#2a3654', border2:'#364673' },
+  forest:   { bg:'#0d1b0d', bg2:'#121f12', bg3:'#1a2a1a', bg4:'#233023', border:'#2e4030', border2:'#3d5240' },
+  ember:    { bg:'#1a0f0a', bg2:'#211510', bg3:'#2a1c16', bg4:'#33221d', border:'#3d2a24', border2:'#50382f' },
+  carbon:   { bg:'#111111', bg2:'#1a1a1a', bg3:'#222222', bg4:'#2a2a2a', border:'#333', border2:'#444' },
+};
+
+function applyPrefs() {
+  const r = document.documentElement.style;
+  // Node width
+  r.setProperty('--node-w', (prefs.nodeWidth || 220) + 'px');
+  // Gaps
+  r.setProperty('--node-gap-x', (prefs.gapX || 60) + 'px');
+  r.setProperty('--node-gap-y', (prefs.gapY || 16) + 'px');
+  // Sidebar
+  r.setProperty('--sidebar-w', (prefs.sidebarW || 280) + 'px');
+  // Font size
+  document.body.style.fontSize = (prefs.fontSize || 14) + 'px';
+  // UI Font
+  if (prefs.uiFont) document.body.style.fontFamily = "'" + prefs.uiFont + "', sans-serif";
+  // Border radius
+  if (prefs.nodeRadius !== undefined) r.setProperty('--radius', prefs.nodeRadius + 'px');
+  // Accent color
+  if (prefs.accentColor) {
+    r.setProperty('--accent', prefs.accentColor);
+    r.setProperty('--accent2', prefs.accentColor + 'cc');
+    r.setProperty('--accent-dim', prefs.accentColor + '26');
+  }
+  // Background tone
+  if (prefs.bgTone && BG_TONES[prefs.bgTone]) {
+    const t = BG_TONES[prefs.bgTone];
+    Object.entries(t).forEach(([k,v]) => r.setProperty('--' + k.replace(/([A-Z])/g,'-$1').toLowerCase(), v));
+  }
+  // Canvas background
+  const canvas = document.getElementById('canvas-wrap');
+  if (canvas) {
+    canvas.classList.remove('canvas-dots','canvas-lines');
+    if (prefs.canvasBg === 'dots') canvas.classList.add('canvas-dots');
+    else if (prefs.canvasBg === 'lines') canvas.classList.add('canvas-lines');
+  }
+  // Transitions
+  if (prefs.animate === false) r.setProperty('--transition', '0s');
+  else r.setProperty('--transition', '0.18s ease');
+
+  // Sync UI controls
+  const syncCtrl = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  const syncChk  = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+  const syncTxt  = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  syncCtrl('pref-node-width',     prefs.nodeWidth     || 220);  syncTxt('node-width-val',      (prefs.nodeWidth||220)+'px');
+  syncCtrl('pref-gap-x',          prefs.gapX          || 60);   syncTxt('gap-x-val',            (prefs.gapX||60)+'px');
+  syncCtrl('pref-gap-y',          prefs.gapY          || 16);   syncTxt('gap-y-val',            (prefs.gapY||16)+'px');
+  syncCtrl('pref-sidebar-w',      prefs.sidebarW      || 280);  syncTxt('sidebar-w-val',        (prefs.sidebarW||280)+'px');
+  syncCtrl('pref-font-size',      prefs.fontSize      || 14);   syncTxt('font-size-val',        (prefs.fontSize||14)+'px');
+  syncCtrl('pref-radius',         prefs.nodeRadius    || 10);   syncTxt('radius-val',           (prefs.nodeRadius||10)+'px');
+  syncCtrl('pref-node-title-size',prefs.nodeTitleSize || 13);   syncTxt('node-title-size-val',  (prefs.nodeTitleSize||13)+'px');
+  if (prefs.nodeTitleSize) r.setProperty('--node-title-size', prefs.nodeTitleSize + 'px');
+  syncChk('pref-auto-detail', prefs.autoDetail !== false);
+  syncChk('pref-show-desc',   prefs.showDesc !== false);
+  syncChk('pref-show-notes',  prefs.showNotes !== false);
+  syncChk('pref-animate',     prefs.animate !== false);
+  const fontSel = document.getElementById('pref-ui-font');
+  if (fontSel && prefs.uiFont) fontSel.value = prefs.uiFont;
+  const bgSel = document.getElementById('pref-canvas-bg');
+  if (bgSel && prefs.canvasBg) bgSel.value = prefs.canvasBg;
+  // Highlight selected accent swatch
+  document.querySelectorAll('.theme-swatch[data-color]').forEach(s => {
+    s.classList.toggle('selected', s.dataset.color === prefs.accentColor);
+  });
+  document.querySelectorAll('.theme-swatch[data-bg]').forEach(s => {
+    s.classList.toggle('selected', s.dataset.bg === (prefs.bgTone||'dark'));
+  });
+}
+
+// ─── Paywall ───
+function openPaywall(targetPlan) {
+  closeModal('account-modal');
+  updatePaywallUI();
+  openModal('paywall-modal');
+  // Scroll to appropriate plan
+  setTimeout(() => {
+    const card = targetPlan === 'pro' ? document.getElementById('plan-pro-card') : document.getElementById('plan-plus-card');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
+}
+
+function updatePaywallUI() {
+  const freebtn = document.getElementById('plan-free-btn');
+  const plusbtn = document.getElementById('plan-plus-btn');
+  const probtn  = document.getElementById('plan-pro-btn');
+  if (!freebtn || !plusbtn || !probtn) return;
+  // Reset all
+  freebtn.className = 'plan-btn'; plusbtn.className = 'plan-btn accent'; probtn.className = 'plan-btn gold';
+  freebtn.onclick = null; plusbtn.onclick = null; probtn.onclick = null;
+  if (currentPlan === 'free') {
+    freebtn.innerHTML = '✓ Current Plan'; freebtn.className = 'plan-btn current';
+    plusbtn.innerHTML = '<i class="ti ti-credit-card"></i> Upgrade — $9/mo'; plusbtn.onclick = () => goToStripe('plus');
+    probtn.innerHTML  = '<i class="ti ti-crown"></i> Go Pro — $19/mo';       probtn.onclick  = () => goToStripe('pro');
+  } else if (currentPlan === 'plus') {
+    freebtn.innerHTML = '↓ Downgrade to Free'; freebtn.onclick = () => { closeModal('paywall-modal'); cancelPlan(); };
+    plusbtn.innerHTML = '✓ Current Plan'; plusbtn.className = 'plan-btn current';
+    probtn.innerHTML  = '<i class="ti ti-crown"></i> Upgrade to Pro — $19/mo'; probtn.onclick = () => goToStripe('pro');
+  } else if (currentPlan === 'pro') {
+    freebtn.innerHTML = '↓ Cancel to Free';  freebtn.onclick = () => { closeModal('paywall-modal'); cancelPlan(); };
+    plusbtn.innerHTML = '↓ Downgrade to Plus'; plusbtn.className = 'plan-btn'; plusbtn.onclick = () => { closeModal('paywall-modal'); downgradeTo('plus'); };
+    probtn.innerHTML  = '✓ Current Plan'; probtn.className = 'plan-btn current';
+  }
+}
+
+function goToStripe(plan) {
+  // Check if Stripe links are configured
+  const link = plan === 'pro' ? STRIPE_PRO_LINK : STRIPE_PLUS_LINK;
+  if (link.includes('YOUR_')) {
+    showToast('⚠️ Stripe Payment Links not configured yet. See setup instructions.', 'error');
+    showStripeSetupInstructions(plan);
+    return;
+  }
+  // Append user email and success URL for Stripe redirect
+  const successUrl = encodeURIComponent(window.location.origin + window.location.pathname + '?plan=' + plan);
+  const emailParam = currentUser?.email ? '&prefilled_email=' + encodeURIComponent(currentUser.email) : '';
+  window.open(link + '?success_url=' + successUrl + emailParam, '_blank');
+  showToast('Opening Stripe checkout...', 'info');
+}
+
+function showStripeSetupInstructions(plan) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.zIndex = '600';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:500px;">
+      <div class="modal-header"><h3>⚠️ Stripe Setup Required</h3><button class="icon-btn" onclick="this.closest('.modal-overlay').remove()"><i class="ti ti-x"></i></button></div>
+      <div class="modal-body" style="gap:10px;">
+        <p style="color:var(--text2);font-size:13px;">To enable real payments, you need to configure Stripe Payment Links. Here's how:</p>
+        <ol style="color:var(--text2);font-size:13px;padding-left:20px;display:flex;flex-direction:column;gap:8px;">
+          <li>Go to <a href="https://dashboard.stripe.com" target="_blank">dashboard.stripe.com</a></li>
+          <li>Products → <b>Add Product</b> → Name: "ResearchTree Plus", Price: $9/mo recurring</li>
+          <li>Payment Links → <b>Create Link</b> for Plus</li>
+          <li>In Link Settings, set <b>Success URL</b> to: <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">${window.location.href}?plan=plus</code></li>
+          <li>Copy the link URL (starts with buy.stripe.com)</li>
+          <li>Repeat for Pro ($19/mo) with <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">?plan=pro</code></li>
+          <li>In <b>index.html</b>, replace <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">STRIPE_PLUS_LINK</code> and <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">STRIPE_PRO_LINK</code> at the top of the JS</li>
+        </ol>
+        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text3);">
+          When a user pays, Stripe redirects them back to your app with <b>?plan=plus</b> or <b>?plan=pro</b> in the URL, which automatically upgrades their plan in Supabase.
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn-accent btn-sm" onclick="this.closest('.modal-overlay').remove()">Got it</button></div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+// Plan limit helpers
+function canCreateTree() {
+  if (currentPlan !== 'free') return true;
+  return trees.length < 3;
+}
+function countAllNodes() {
+  return trees.reduce((sum, t) => sum + countNodes(t.nodes || []), 0);
+}
+function countNodes(nodes) {
+  return nodes.reduce((s, n) => s + 1 + countNodes(n.children || []), 0);
+}
+function canAddNode() {
+  if (currentPlan !== 'free') return true;
+  return countAllNodes() < 20;
+}
+function canUseMedia() { return currentPlan === 'plus' || currentPlan === 'pro'; }
+function canExport() { return currentPlan === 'plus' || currentPlan === 'pro'; }
+function canSearch() { return currentPlan === 'plus' || currentPlan === 'pro'; }
+function canUseProFeatures() { return currentPlan === 'pro'; }
+
+// ─── Tree CRUD ───
+async function loadTrees() {
+  if (!currentUser) return;
+  setSyncState('syncing');
+  const { data, error } = await sbClient.from('trees').select('*').eq('user_id', currentUser.id).order('updated_at', { ascending: false });
+  setSyncState(error ? 'error' : 'saved');
+  if (error) { showToast('Failed to load trees: ' + error.message, 'error'); return; }
+  trees = (data || []).map(row => ({ ...row.data, id: row.id, _db_id: row.id }));
+  renderTreeList();
+}
+
+async function saveTreeToDb(treeId) {
+  if (!currentUser) return;
+  const tree = trees.find(t => t.id === treeId);
+  if (!tree) return;
+  setSyncState('syncing');
+  const { error } = await sbClient.from('trees').upsert({
+    id: tree.id, user_id: currentUser.id,
+    data: { id: tree.id, name: tree.name, icon: tree.icon, color: tree.color, nodes: tree.nodes || [] },
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'id' });
+  setSyncState(error ? 'error' : 'saved');
+  if (error) showToast('Save failed: ' + error.message, 'error');
+}
+
+function debouncedSave(treeId) {
+  clearTimeout(saveDebounceTimer);
+  setSyncState('syncing');
+  saveDebounceTimer = setTimeout(() => saveTreeToDb(treeId), 800);
+}
+
+function setSyncState(state) {
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot ' + (state === 'saved' ? '' : state);
+  dot.title = state === 'saved' ? 'All changes saved' : state === 'syncing' ? 'Saving...' : 'Save failed';
+}
+
+async function createTree() {
+  if (!canCreateTree()) {
+    closeModal('new-tree-modal');
+    showToast('Free plan limit: 3 trees. Upgrade to create more.', 'error');
+    openPaywall('plus');
+    return;
+  }
+  const name = document.getElementById('new-tree-name').value.trim();
+  if (!name) { showToast('Please enter a tree name.', 'error'); return; }
+  const tree = {
+    id: 'tree_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    name, icon: selectedEmoji, color: '#6c8eff', nodes: []
+  };
+  trees.unshift(tree);
+  closeModal('new-tree-modal');
+  document.getElementById('new-tree-name').value = '';
+  await saveTreeToDb(tree.id);
+  renderTreeList();
+  selectTree(tree.id);
+  showToast('Tree created!', 'success');
+}
+
+async function deleteTree(treeId) {
+  if (!confirm('Delete this tree? This cannot be undone.')) return;
+  const { error } = await sbClient.from('trees').delete().eq('id', treeId).eq('user_id', currentUser.id);
+  if (error) { showToast('Delete failed: ' + error.message, 'error'); return; }
+  trees = trees.filter(t => t.id !== treeId);
+  renderTreeList();
+  if (activeTreeId === treeId) {
+    activeTreeId = null; selectedNodeId = null;
+    renderCanvas(); closeDetailPanel();
+    document.getElementById('tree-title-display').textContent = 'Select or create a tree';
+    document.getElementById('tree-title-display').className = 'placeholder';
+    ['tree-settings-btn','export-btn','add-root-btn'].forEach(id => document.getElementById(id).style.display = 'none');
+  }
+  showToast('Tree deleted.', 'info');
+}
+
+function getActiveTree() { return trees.find(t => t.id === activeTreeId); }
+
+function selectTree(treeId) {
+  activeTreeId = treeId;
+  selectedNodeId = null;
+  const tree = getActiveTree();
+  if (!tree) return;
+  const title = document.getElementById('tree-title-display');
+  title.textContent = (tree.icon || '🌳') + '  ' + tree.name;
+  title.className = '';
+  ['tree-settings-btn','add-root-btn'].forEach(id => document.getElementById(id).style.display = '');
+  document.getElementById('export-btn').style.display = canExport() ? '' : 'none';
+  renderTreeList();
+  renderCanvas();
+  updateStatsBar();
+  closeDetailPanel();
+  if (isMobile) {
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    setMobileTab('canvas');
+  }
+}
+
+function renderTreeList() {
+  const list = document.getElementById('tree-list');
+  if (!trees.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">No trees yet.<br>Click + to create one.</div>';
+    return;
+  }
+  list.innerHTML = trees.map(t => {
+    const nodeCount = countNodes(t.nodes || []);
+    return `<div class="tree-item ${t.id === activeTreeId ? 'active' : ''}" onclick="selectTree('${t.id}')">
+      <div class="tree-item-icon">${t.icon || '🌳'}</div>
+      <div class="tree-item-name">${esc(t.name)}</div>
+      <div class="tree-item-count">${nodeCount}</div>
+      <button class="icon-btn tree-item-menu" onclick="event.stopPropagation();deleteTree('${t.id}')" title="Delete tree" style="width:24px;height:24px;">
+        <i class="ti ti-trash" style="font-size:13px;color:var(--red);"></i>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+// ─── Node CRUD ───
+function generateNodeId() {
+  return 'node_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+}
+
+function findNode(nodes, id) {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    const found = findNode(n.children || [], id);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findParentArray(nodes, id) {
+  for (const n of nodes) {
+    if ((n.children || []).some(c => c.id === id)) return n.children;
+    const found = findParentArray(n.children || [], id);
+    if (found) return found;
+  }
+  return null;
+}
+
+function deleteNode(nodes, id) {
+  const idx = nodes.findIndex(n => n.id === id);
+  if (idx !== -1) { nodes.splice(idx, 1); return true; }
+  for (const n of nodes) {
+    if (deleteNode(n.children || [], id)) return true;
+  }
+  return false;
+}
+
+function openNewNodeModal(parentId) {
+  if (!activeTreeId) { showToast('Select a tree first.', 'error'); return; }
+  if (!canAddNode()) {
+    showToast('Free plan limit: 20 nodes. Upgrade to add more.', 'error');
+    openPaywall('plus'); return;
+  }
+  nodeModalParentId = parentId;
+  nodeModalEditId = null;
+  document.getElementById('node-modal-title').textContent = parentId ? 'Add Child Node' : 'Add Root Node';
+  document.getElementById('node-title-input').value = '';
+  document.getElementById('node-desc-input').value = '';
+  document.getElementById('node-save-btn').textContent = 'Save Node';
+  openModal('node-modal');
+  setTimeout(() => document.getElementById('node-title-input').focus(), 100);
+}
+
+function openEditNodeModal(nodeId) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes || [], nodeId); if (!node) return;
+  nodeModalParentId = null;
+  nodeModalEditId = nodeId;
+  document.getElementById('node-modal-title').textContent = 'Edit Node';
+  document.getElementById('node-title-input').value = node.title || '';
+  document.getElementById('node-desc-input').value = node.desc || '';
+  document.getElementById('node-save-btn').innerHTML = '<i class="ti ti-check"></i> Save Changes';
+  openModal('node-modal');
+  setTimeout(() => document.getElementById('node-title-input').focus(), 100);
+}
+
+function saveNodeFromModal() {
+  const title = document.getElementById('node-title-input').value.trim();
+  if (!title) { showToast('Node title is required.', 'error'); document.getElementById('node-title-input').focus(); return; }
+  const desc = document.getElementById('node-desc-input').value.trim();
+  const tree = getActiveTree(); if (!tree) return;
+
+  if (nodeModalEditId) {
+    // Edit existing
+    const node = findNode(tree.nodes, nodeModalEditId);
+    if (node) { node.title = title; node.desc = desc; }
+    closeModal('node-modal');
+    debouncedSave(activeTreeId);
+    renderCanvas();
+    if (selectedNodeId === nodeModalEditId) renderDetailPanel(nodeModalEditId);
+    showToast('Node updated.', 'success');
+  } else {
+    // Create new
+    const newNode = {
+      id: generateNodeId(),
+      title, desc,
+      children: [], media: [], links: [],
+      tags: [], color: null, extNotes: '',
+      collapsed: false
+    };
+    if (nodeModalParentId) {
+      const parent = findNode(tree.nodes, nodeModalParentId);
+      if (parent) {
+        if (!parent.children) parent.children = [];
+        parent.children.push(newNode);
+      }
+    } else {
+      if (!tree.nodes) tree.nodes = [];
+      tree.nodes.push(newNode);
+    }
+    closeModal('node-modal');
+    debouncedSave(activeTreeId);
+    renderCanvas();
+    selectNode(newNode.id);
+    showToast('Node added!', 'success');
+  }
+}
+
+function deleteNodeById(nodeId) {
+  const tree = getActiveTree(); if (!tree) return;
+  if (!confirm('Delete this node and all its children?')) return;
+  deleteNode(tree.nodes, nodeId);
+  if (selectedNodeId === nodeId) { selectedNodeId = null; closeDetailPanel(); }
+  debouncedSave(activeTreeId);
+  renderCanvas();
+  showToast('Node deleted.', 'info');
+}
+
+// ─── Vertical connector line (clips to first/last child midpoints) ───
+function drawVLine(childCol) {
+  // Remove any existing vline
+  const existing = childCol.querySelector('.node-vline');
+  if (existing) existing.remove();
+  const wraps = childCol.querySelectorAll(':scope > .node-and-children > .node-wrap');
+  if (wraps.length < 1) return;
+  const colRect = childCol.getBoundingClientRect();
+  const first = wraps[0].getBoundingClientRect();
+  const last  = wraps[wraps.length - 1].getBoundingClientRect();
+  const topY    = (first.top  + first.height  / 2) - colRect.top;
+  const bottomY = (last.top   + last.height   / 2) - colRect.top;
+  const vline = document.createElement('div');
+  vline.className = 'node-vline';
+  vline.style.top    = topY + 'px';
+  vline.style.height = Math.max(0, bottomY - topY) + 'px';
+  childCol.insertBefore(vline, childCol.firstChild);
+}
+
+// ─── Canvas Rendering ───
+function renderCanvas() {
+  const canvas = document.getElementById('canvas');
+  const empty = document.getElementById('canvas-empty');
+  const tree = getActiveTree();
+
+  if (!tree) {
+    canvas.innerHTML = ''; canvas.appendChild(empty);
+    empty.style.display = 'flex';
+    empty.querySelector('p').textContent = 'No tree selected';
+    empty.querySelector('small').textContent = 'Create a new tree or select one from the sidebar';
+    return;
+  }
+  if (!tree.nodes || tree.nodes.length === 0) {
+    canvas.innerHTML = ''; canvas.appendChild(empty);
+    empty.style.display = 'flex';
+    empty.querySelector('p').textContent = 'This tree is empty';
+    empty.querySelector('small').textContent = 'Click "Add Node" to get started';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Render horizontally: root nodes in a column, children branch right
+  const container = document.createElement('div');
+  container.className = 'tree-root-container';
+  for (const node of tree.nodes) {
+    container.appendChild(renderNodeAndChildren(node, false));
+  }
+  canvas.innerHTML = '';
+  canvas.appendChild(empty);
+  canvas.appendChild(container);
+  updateStatsBar();
+  // Draw all vertical connector lines after layout
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
+  });
+}
+
+function renderNodeAndChildren(node, hasConnector) {
+  const wrap = document.createElement('div');
+  wrap.className = 'node-and-children';
+  wrap.style.alignItems = 'flex-start';
+
+  const nodeWrap = document.createElement('div');
+  nodeWrap.className = 'node-wrap';
+
+  if (hasConnector) {
+    const conn = document.createElement('div');
+    conn.className = 'node-connector';
+    nodeWrap.appendChild(conn);
+  }
+
+  nodeWrap.appendChild(buildNodeCard(node));
+  wrap.appendChild(nodeWrap);
+
+  const children = node.children || [];
+  if (children.length > 0) {
+    const childCol = document.createElement('div');
+    childCol.className = 'node-children' + (node.collapsed ? ' collapsed' : '');
+    childCol.id = 'children_' + node.id;
+    for (const child of children) {
+      childCol.appendChild(renderNodeAndChildren(child, true));
+    }
+    // Vertical rail drawn after DOM is attached — placed in rAF
+    wrap.appendChild(childCol);
+    if (!node.collapsed) {
+      requestAnimationFrame(() => drawVLine(childCol));
+    }
+  }
+
+  return wrap;
+}
+
+function buildNodeCard(node) {
+  const card = document.createElement('div');
+  card.className = 'node-card' + (node.id === selectedNodeId ? ' selected' : '') + (node.color ? ' has-color-' + node.color : '');
+  card.id = 'node_' + node.id;
+  card.onclick = (e) => { e.stopPropagation(); selectNode(node.id); };
+  card.oncontextmenu = (e) => { e.preventDefault(); showContextMenu(e, node.id); };
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'node-header';
+  const title = document.createElement('div');
+  title.className = 'node-title';
+  title.textContent = node.title;
+  header.appendChild(title);
+
+  const btns = document.createElement('div');
+  btns.className = 'node-btns';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'node-btn';
+  addBtn.title = 'Add child node';
+  addBtn.innerHTML = '<i class="ti ti-plus"></i>';
+  addBtn.onclick = (e) => { e.stopPropagation(); openNewNodeModal(node.id); };
+  const editBtn = document.createElement('button');
+  editBtn.className = 'node-btn';
+  editBtn.title = 'Edit node';
+  editBtn.innerHTML = '<i class="ti ti-edit"></i>';
+  editBtn.onclick = (e) => { e.stopPropagation(); openEditNodeModal(node.id); };
+  const delBtn = document.createElement('button');
+  delBtn.className = 'node-btn';
+  delBtn.title = 'Delete node';
+  delBtn.innerHTML = '<i class="ti ti-trash" style="color:var(--red)"></i>';
+  delBtn.onclick = (e) => { e.stopPropagation(); deleteNodeById(node.id); };
+  btns.appendChild(addBtn); btns.appendChild(editBtn); btns.appendChild(delBtn);
+  header.appendChild(btns);
+  card.appendChild(header);
+
+  // Description — always show if present
+  if (node.desc) {
+    const desc = document.createElement('div');
+    desc.className = 'node-desc';
+    desc.textContent = node.desc;
+    card.appendChild(desc);
+  }
+
+  // Extended notes preview (Pro)
+  if (node.extNotes && node.extNotes.trim()) {
+    // Strip HTML to get plain text preview
+    const tmp = document.createElement('div');
+    tmp.innerHTML = node.extNotes;
+    const plainText = (tmp.innerText || tmp.textContent || '').trim();
+    if (plainText) {
+      const preview = document.createElement('div');
+      preview.className = 'node-notes-preview';
+      preview.textContent = plainText;
+      preview.title = 'Open notes editor';
+      preview.onclick = (e) => { e.stopPropagation(); openNoteEditor(node.id); };
+      card.appendChild(preview);
+    }
+  }
+
+  // Tags (Pro)
+  if (node.tags && node.tags.length) {
+    const tags = document.createElement('div');
+    tags.className = 'node-tags';
+    node.tags.forEach(t => {
+      const tag = document.createElement('span');
+      tag.className = 'node-tag';
+      tag.textContent = '#' + t;
+      tags.appendChild(tag);
+    });
+    card.appendChild(tags);
+  }
+
+  // Media thumbnail (Plus+)
+  if (node.media && node.media.length && canUseMedia()) {
+    const first = node.media[0];
+    if (first.type === 'image') {
+      const thumb = document.createElement('div');
+      thumb.className = 'node-media-thumb';
+      thumb.innerHTML = `<img src="${esc(first.url)}" alt="${esc(first.label||'')}" loading="lazy" onerror="this.style.display='none'">`;
+      card.appendChild(thumb);
+    }
+  }
+
+  // Links
+  if (node.links && node.links.length) {
+    const links = document.createElement('div');
+    links.className = 'node-links';
+    node.links.slice(0,2).forEach(l => {
+      const lnk = document.createElement('a');
+      lnk.className = 'node-link';
+      lnk.href = l.url; lnk.target = '_blank';
+      lnk.innerHTML = `<i class="ti ti-external-link"></i>${esc(l.label || l.url)}`;
+      lnk.onclick = e => e.stopPropagation();
+      links.appendChild(lnk);
+    });
+    card.appendChild(links);
+  }
+
+  // Add child button at bottom
+  const addChildBtn = document.createElement('button');
+  addChildBtn.className = 'add-child-btn';
+  addChildBtn.innerHTML = '<i class="ti ti-plus"></i> Add child';
+  addChildBtn.onclick = (e) => { e.stopPropagation(); openNewNodeModal(node.id); };
+  card.appendChild(addChildBtn);
+
+  // Collapse toggle (if has children)
+  if (node.children && node.children.length) {
+    const colBtn = document.createElement('button');
+    colBtn.className = 'collapse-btn';
+    colBtn.title = node.collapsed ? 'Expand' : 'Collapse';
+    colBtn.innerHTML = node.collapsed ? '<i class="ti ti-chevron-right"></i>' : '<i class="ti ti-chevron-left"></i>';
+    colBtn.onclick = (e) => { e.stopPropagation(); toggleCollapse(node.id); };
+    card.appendChild(colBtn);
+  }
+
+  return card;
+}
+
+function toggleCollapse(nodeId) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node.collapsed = !node.collapsed;
+  debouncedSave(activeTreeId);
+  renderCanvas();
+  // Re-draw all vlines after layout settles
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
+  });
+}
+
+function selectNode(nodeId) {
+  const prev = selectedNodeId;
+  selectedNodeId = nodeId;
+  // Update card styles
+  if (prev) {
+    const prevCard = document.getElementById('node_' + prev);
+    if (prevCard) prevCard.classList.remove('selected');
+  }
+  const card = document.getElementById('node_' + nodeId);
+  if (card) card.classList.add('selected');
+  renderDetailPanel(nodeId);
+  if (isMobile) {
+    document.getElementById('detail-panel').classList.add('mobile-open');
+    document.getElementById('detail-panel').classList.remove('hidden');
+    setMobileTab('info');
+  }
+}
+
+// ─── Detail Panel ───
+function renderDetailPanel(nodeId) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  const panel = document.getElementById('detail-panel');
+  const body = document.getElementById('detail-body');
+  panel.classList.remove('hidden');
+
+  let html = '';
+
+  // Title & Desc
+  html += `<div class="detail-section">
+    <div class="detail-label">Title</div>
+    <input class="detail-input" id="dp-title" value="${esc(node.title || '')}" onchange="updateNodeField('${nodeId}','title',this.value)">
+  </div>
+  <div class="detail-section">
+    <div class="detail-label">Description</div>
+    <textarea class="detail-input" id="dp-desc" rows="4" onchange="updateNodeField('${nodeId}','desc',this.value)">${esc(node.desc || '')}</textarea>
+  </div>`;
+
+  // Links
+  html += `<div class="detail-section">
+    <div class="detail-label">Links</div>
+    <div class="link-list" id="dp-links">`;
+  (node.links || []).forEach((l,i) => {
+    html += `<div class="link-item">
+      <a href="${esc(l.url)}" target="_blank" class="node-link"><i class="ti ti-external-link"></i>${esc(l.label || l.url)}</a>
+      <button class="node-btn" onclick="removeLink('${nodeId}',${i})" title="Remove"><i class="ti ti-x" style="font-size:12px;"></i></button>
+    </div>`;
+  });
+  html += `</div>
+    <div class="add-link-form">
+      <input id="dp-link-url" placeholder="https://..." style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);outline:none;width:100%;">
+      <div class="add-row">
+        <input id="dp-link-label" placeholder="Label (optional)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);outline:none;">
+        <button class="btn-add-sm primary" onclick="addLink('${nodeId}')">Add</button>
+      </div>
+    </div>
+  </div>`;
+
+  // Media (Plus+)
+  html += `<div class="detail-section">
+    <div class="detail-label">Media ${!canUseMedia() ? '<span style="color:var(--yellow);font-size:10px;">PLUS</span>' : ''}</div>`;
+  if (!canUseMedia()) {
+    html += `<div style="font-size:12px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:var(--radius-sm);">
+      <a href="#" onclick="openPaywall('plus');return false;" style="color:var(--accent);">Upgrade to Plus</a> to attach images and videos.
+    </div>`;
+  } else {
+    html += `<div class="media-list" id="dp-media">`;
+    (node.media || []).forEach((m,i) => {
+      if (m.type === 'image') {
+        html += `<div class="media-item">
+          <img src="${esc(m.url)}" alt="${esc(m.label||'')}" loading="lazy" style="width:100%;max-height:140px;object-fit:cover;">
+          <div class="media-item-info"><span class="media-item-label">${esc(m.label||m.url)}</span>
+            <button class="node-btn" onclick="removeMedia('${nodeId}',${i})"><i class="ti ti-x" style="font-size:12px;"></i></button>
+          </div>
+        </div>`;
+      } else if (m.type === 'video') {
+        const videoId = extractVideoId(m.url);
+        html += `<div class="media-item">
+          ${videoId ? `<iframe width="100%" height="140" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="autoplay;encrypted-media" allowfullscreen style="display:block;"></iframe>` : `<div style="padding:10px;font-size:12px;color:var(--text2);">${esc(m.url)}</div>`}
+          <div class="media-item-info"><span class="media-item-label">${esc(m.label||m.url)}</span>
+            <button class="node-btn" onclick="removeMedia('${nodeId}',${i})"><i class="ti ti-x" style="font-size:12px;"></i></button>
+          </div>
+        </div>`;
+      }
+    });
+    html += `</div>
+      <div class="add-media-form">
+        <input id="dp-media-url" placeholder="Image URL or YouTube/Vimeo URL" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);outline:none;width:100%;">
+        <div class="add-row">
+          <input id="dp-media-label" placeholder="Label (optional)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);outline:none;">
+          <button class="btn-add-sm primary" onclick="addMedia('${nodeId}')">Add</button>
+        </div>
+      </div>`;
+  }
+  html += `</div>`;
+
+  // Color Labels (Pro)
+  html += `<div class="detail-section">
+    <div class="detail-label">Color Label ${!canUseProFeatures() ? '<span style="color:var(--accent2);font-size:10px;">PRO</span>' : ''}</div>`;
+  if (!canUseProFeatures()) {
+    html += `<div style="font-size:12px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:var(--radius-sm);">
+      <a href="#" onclick="openPaywall('pro');return false;" style="color:var(--accent);">Upgrade to Pro</a> for color labels.
+    </div>`;
+  } else {
+    html += `<div class="color-picker">`;
+    const colorHexes = {'blue':COLORS[0],'green':COLORS[1],'yellow':COLORS[2],'red':COLORS[3],'purple':COLORS[4],'orange':COLORS[5],'none':'transparent'};
+    ['none',...NODE_COLORS].forEach(c => {
+      html += `<div class="color-swatch ${node.color === c || (!node.color && c==='none') ? 'selected' : ''}" 
+        style="background:${c==='none'?'var(--bg4)':colorHexes[c]};${c==='none'?'border:1px dashed var(--border2);':''}" 
+        onclick="setNodeColor('${nodeId}','${c==='none'?'':c}')" title="${c}"></div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  // Tags (Pro)
+  html += `<div class="detail-section">
+    <div class="detail-label">Tags ${!canUseProFeatures() ? '<span style="color:var(--accent2);font-size:10px;">PRO</span>' : ''}</div>`;
+  if (!canUseProFeatures()) {
+    html += `<div style="font-size:12px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:var(--radius-sm);">
+      <a href="#" onclick="openPaywall('pro');return false;" style="color:var(--accent);">Upgrade to Pro</a> for node tags.
+    </div>`;
+  } else {
+    html += `<div class="add-row">
+      <input id="dp-tag-input" placeholder="Add tag, press Enter" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);outline:none;" 
+        onkeydown="if(event.key==='Enter'){addTag('${nodeId}');event.preventDefault();}">
+      <button class="btn-add-sm primary" onclick="addTag('${nodeId}')">Add</button>
+    </div>
+    <div class="tags-display">`;
+    (node.tags || []).forEach((t,i) => {
+      html += `<div class="tag-chip">#${esc(t)}<button onclick="removeTag('${nodeId}',${i})"><i class="ti ti-x"></i></button></div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  // Extended Notes (Pro) — opens full-screen editor
+  html += `<div class="detail-section">
+    <div class="detail-label" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Notes ${!canUseProFeatures() ? '<span style="color:var(--accent2);font-size:10px;">PRO</span>' : ''}</span>
+    </div>`;
+  if (!canUseProFeatures()) {
+    html += `<div style="font-size:12px;color:var(--text3);padding:10px 12px;background:var(--bg3);border-radius:var(--radius-sm);border:1px dashed var(--border);">
+      <a href="#" onclick="openPaywall('pro');return false;" style="color:var(--accent);">Upgrade to Pro</a> to unlock the full note editor — rich text, bullet lists, headings &amp; more.
+    </div>`;
+  } else {
+    // Show plain text preview of notes
+    const tmp2 = document.createElement('div');
+    tmp2.innerHTML = node.extNotes || '';
+    const previewText = (tmp2.innerText || tmp2.textContent || '').trim();
+    const wordCount = previewText ? previewText.split(/\s+/).filter(Boolean).length : 0;
+    if (previewText) {
+      html += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.6;max-height:100px;overflow:hidden;position:relative;cursor:pointer;" onclick="openNoteEditor('${nodeId}')">
+        ${esc(previewText.slice(0,200))}${previewText.length > 200 ? '...' : ''}
+        <div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,var(--bg3));"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">${wordCount} word${wordCount!==1?'s':''}</div>`;
+    }
+    html += `<button class="btn-add-sm primary" onclick="openNoteEditor('${nodeId}')" style="width:100%;justify-content:center;display:flex;align-items:center;gap:7px;padding:10px;">
+      <i class="ti ti-notes"></i> ${previewText ? 'Edit Notes' : 'Open Note Editor'}
+    </button>`;
+  }
+  html += `</div>`;
+
+  body.innerHTML = html;
+}
+
+function updateNodeField(nodeId, field, value) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node[field] = value;
+  debouncedSave(activeTreeId);
+  if (field === 'title') {
+    const card = document.getElementById('node_' + nodeId);
+    if (card) card.querySelector('.node-title').textContent = value;
+  }
+}
+
+function addLink(nodeId) {
+  const url = document.getElementById('dp-link-url').value.trim();
+  if (!url) { showToast('Enter a URL.', 'error'); return; }
+  const label = document.getElementById('dp-link-label').value.trim();
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  if (!node.links) node.links = [];
+  node.links.push({ url, label: label || url });
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+  showToast('Link added.', 'success');
+}
+
+function removeLink(nodeId, idx) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node.links.splice(idx, 1);
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+}
+
+function addMedia(nodeId) {
+  if (!canUseMedia()) { openPaywall('plus'); return; }
+  const url = document.getElementById('dp-media-url').value.trim();
+  if (!url) { showToast('Enter a URL.', 'error'); return; }
+  const label = document.getElementById('dp-media-label').value.trim();
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  if (!node.media) node.media = [];
+  const type = isVideoUrl(url) ? 'video' : 'image';
+  node.media.push({ url, label: label || url, type });
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+  showToast('Media added.', 'success');
+}
+
+function removeMedia(nodeId, idx) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node.media.splice(idx, 1);
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+}
+
+function setNodeColor(nodeId, color) {
+  if (!canUseProFeatures()) { openPaywall('pro'); return; }
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node.color = color || null;
+  debouncedSave(activeTreeId);
+  renderCanvas();
+  renderDetailPanel(nodeId);
+}
+
+function addTag(nodeId) {
+  if (!canUseProFeatures()) { openPaywall('pro'); return; }
+  const input = document.getElementById('dp-tag-input');
+  const tag = input.value.trim().replace(/^#/, '');
+  if (!tag) return;
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  if (!node.tags) node.tags = [];
+  if (!node.tags.includes(tag)) { node.tags.push(tag); }
+  input.value = '';
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+}
+
+function removeTag(nodeId, idx) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node.tags.splice(idx, 1);
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+}
+
+function closeDetailPanel() {
+  document.getElementById('detail-panel').classList.add('hidden');
+  document.getElementById('detail-panel').classList.remove('mobile-open');
+  selectedNodeId = null;
+  document.querySelectorAll('.node-card.selected').forEach(c => c.classList.remove('selected'));
+}
+
+// ─── Context Menu ───
+function showContextMenu(e, nodeId) {
+  contextNodeId = nodeId;
+  const menu = document.getElementById('context-menu');
+  menu.style.display = 'block';
+  const x = Math.min(e.clientX, window.innerWidth - 180);
+  const y = Math.min(e.clientY, window.innerHeight - 120);
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+}
+
+function hideContextMenu() { document.getElementById('context-menu').style.display = 'none'; }
+function ctxAddChild() { hideContextMenu(); openNewNodeModal(contextNodeId); }
+function ctxEdit() { hideContextMenu(); openEditNodeModal(contextNodeId); }
+function ctxDelete() { hideContextMenu(); deleteNodeById(contextNodeId); }
+
+// ─── Search ───
+function handleSearch(val) {
+  if (!canSearch()) {
+    if (val) { showToast('Node search requires Plus plan.', 'error'); openPaywall('plus'); }
+    return;
+  }
+  if (!val.trim()) { hideSearchResults(); return; }
+  const results = [];
+  for (const tree of trees) {
+    searchNodes(tree.nodes || [], val.toLowerCase(), tree, results);
+  }
+  displaySearchResults(results, val);
+}
+
+function searchNodes(nodes, query, tree, results) {
+  for (const n of nodes) {
+    if ((n.title||'').toLowerCase().includes(query) || (n.desc||'').toLowerCase().includes(query)) {
+      results.push({ node: n, tree });
+    }
+    searchNodes(n.children || [], query, tree, results);
+  }
+}
+
+function displaySearchResults(results, query) {
+  const el = document.getElementById('search-results');
+  if (!results.length) {
+    el.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">No results</div>';
+    el.style.display = 'block'; return;
+  }
+  el.innerHTML = results.slice(0,8).map(r =>
+    `<div class="search-result-item" onclick="jumpToNode('${r.tree.id}','${r.node.id}')">
+      <div>${esc(r.node.title)}</div>
+      <div class="sr-tree">${r.tree.icon||'🌳'} ${esc(r.tree.name)}</div>
+    </div>`
+  ).join('');
+  el.style.display = 'block';
+}
+
+function jumpToNode(treeId, nodeId) {
+  hideSearchResults();
+  document.getElementById('search-input').value = '';
+  if (activeTreeId !== treeId) selectTree(treeId);
+  setTimeout(() => {
+    selectedNodeId = nodeId;
+    renderCanvas();
+    selectNode(nodeId);
+    const card = document.getElementById('node_' + nodeId);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
+}
+
+function showSearchResults() {
+  const val = document.getElementById('search-input').value;
+  if (val) handleSearch(val);
+}
+
+function hideSearchResults() {
+  document.getElementById('search-results').style.display = 'none';
+}
+
+// ─── Export ───
+function openExportModal() {
+  if (!canExport()) { openPaywall('plus'); return; }
+  openModal('export-modal');
+}
+
+function exportTree(format) {
+  const tree = getActiveTree(); if (!tree) return;
+  closeModal('export-modal');
+
+  if (format === 'json') {
+    download(JSON.stringify(tree, null, 2), tree.name + '.json', 'application/json');
+
+  } else if (format === 'markdown') {
+    const md = [];
+    md.push('# ' + tree.name);
+    md.push('');
+    md.push('> *Exported from ResearchTree · ' + new Date().toLocaleDateString() + '*');
+    md.push('');
+    md.push('---');
+    md.push('');
+    function addMd(nodes, depth) {
+      for (const n of nodes) {
+        const hashes = '#'.repeat(Math.min(depth + 2, 6));
+        const indent = '  '.repeat(Math.max(0, depth - 1));
+        md.push(hashes + ' ' + n.title);
+        if (n.desc) { md.push(''); md.push(indent + n.desc); }
+        if (n.tags && n.tags.length) md.push(''); md.push((n.tags||[]).map(t => '`#' + t + '`').join(' '));
+        if (n.links && n.links.length) {
+          md.push('');
+          n.links.forEach(l => md.push('- 🔗 [' + (l.label||l.url) + '](' + l.url + ')'));
         }
-        
-        checkSession();
-
-        // Login Submission
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-
-            try {
-                const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-                if (authError) throw authError;
-
-                await verifyAdminStatus(authData.user.id);
-            } catch (err) {
-                showToast(err.message, 'error');
-            }
-        });
-
-        // Strict Admin Verification Function
-        async function verifyAdminStatus(userId) {
-            try {
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', userId)
-                    .single();
-
-                // Log the error to the console for easier debugging
-                if (profileError) {
-                    console.error("Profile Fetch Error:", profileError);
-                    await supabase.auth.signOut();
-                    
-                    if (profileError.code === 'PGRST116') {
-                        throw new Error("No profile found! You must manually insert a row in the 'profiles' table with your user ID (UUID).");
-                    }
-                    
-                    throw new Error("Error checking admin status: " + profileError.message);
-                }
-
-                // If error occurs (like row doesn't exist) or role isn't explicitly admin
-                if (!profile || !profile.role || profile.role.toLowerCase() !== 'admin') {
-                    console.warn("User Profile Data:", profile);
-                    await supabase.auth.signOut();
-                    throw new Error(`Access Denied: Your account role is '${profile?.role || 'undefined'}', not 'admin'. Please check the database.`);
-                }
-
-                // Success!
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('app-container').classList.remove('hidden');
-                showToast('Welcome to the dashboard!');
-
-            } catch (error) {
-                showToast(error.message, 'error');
-                await supabase.auth.signOut();
-            }
+        if (n.extNotes) {
+          const tmp = document.createElement('div');
+          tmp.innerHTML = n.extNotes;
+          const plain = (tmp.innerText||'').trim();
+          if (plain) { md.push(''); md.push('**Notes:**'); md.push(''); md.push(plain); }
         }
-
-        async function logout() {
-            await supabase.auth.signOut();
-            location.reload();
+        md.push('');
+        if ((n.children||[]).length) {
+          addMd(n.children, depth + 1);
         }
+      }
+    }
+    addMd(tree.nodes||[], 0);
+    download(md.join('\n'), tree.name + '.md', 'text/markdown');
 
-        // TICKETMASTER SYNC LOGIC
-        async function importFromTicketmaster() {
-            const apiKey = prompt("Enter your Ticketmaster Consumer API Key:");
-            if (!apiKey) return;
+  } else if (format === 'csv') {
+    const rows = [['Title','Description','Depth','Tags','Links','Has Notes']];
+    function addCsv(nodes, depth) {
+      for (const n of nodes) {
+        const linkStr = (n.links||[]).map(l => l.url).join('; ');
+        const hasNotes = (n.extNotes && n.extNotes.trim()) ? 'Yes' : 'No';
+        rows.push([
+          '"' + (n.title||'').replace(/"/g,'""') + '"',
+          '"' + (n.desc||'').replace(/"/g,'""') + '"',
+          depth,
+          '"' + (n.tags||[]).join(', ') + '"',
+          '"' + linkStr.replace(/"/g,'""') + '"',
+          hasNotes
+        ]);
+        addCsv(n.children||[], depth+1);
+      }
+    }
+    addCsv(tree.nodes||[], 0);
+    download(rows.map(r=>r.join(',')).join('\n'), tree.name + '.csv', 'text/csv');
 
-            showToast("Contacting Ticketmaster API...", "success");
-
-            try {
-                // Fetch Comedy Events/Attractions
-                const response = await fetch(`https://app.ticketmaster.com/discovery/v2/attractions.json?classificationName=Comedy&apikey=${apiKey}&size=50`);
-                
-                if (!response.ok) throw new Error("Failed to authenticate with Ticketmaster. Check your API key.");
-                
-                const data = await response.json();
-                const attractions = data._embedded?.attractions || [];
-                
-                if (attractions.length === 0) {
-                    showToast("No comedians found.", "error");
-                    return;
-                }
-
-                showToast(`Found ${attractions.length} comedians! Saving to database...`, "success");
-
-                // Map Ticketmaster data to match our database structure
-                const formattedData = attractions.map(comedian => {
-                    // Find the best quality image
-                    const bestImage = comedian.images?.sort((a, b) => b.width - a.width)[0]?.url || '';
-                    return {
-                        tm_id: comedian.id,
-                        name: comedian.name,
-                        image_url: bestImage
-                    };
-                });
-
-                // Upsert to Supabase (Insert new, update existing based on tm_id)
-                const { error } = await supabase
-                    .from('comedians')
-                    .upsert(formattedData, { onConflict: 'tm_id' });
-
-                if (error) {
-                    // If the table doesn't exist, provide a helpful error
-                    if (error.code === '42P01') {
-                        throw new Error("The 'comedians' table does not exist in Supabase yet. Please check the Guide.");
-                    }
-                    throw error;
-                }
-
-                showToast(`Successfully synced ${formattedData.length} comedians!`, "success");
-                document.getElementById('stat-comedians').innerText = formattedData.length;
-
-            } catch (error) {
-                console.error(error);
-                showToast(error.message, "error");
-            }
+  } else if (format === 'print') {
+    // Build a nice print page
+    const printWin = window.open('', '_blank');
+    let printBody = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>${tree.name}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #1a1a2e; line-height: 1.7; }
+  h1 { font-size: 28px; border-bottom: 3px solid #6c8eff; padding-bottom: 12px; margin-bottom: 6px; }
+  .meta { color: #888; font-size: 13px; margin-bottom: 32px; }
+  .node { margin-bottom: 20px; page-break-inside: avoid; }
+  .node-depth-0 { border-left: 4px solid #6c8eff; padding-left: 16px; }
+  .node-depth-1 { border-left: 3px solid #8fa8ff; padding-left: 16px; margin-left: 20px; }
+  .node-depth-2 { border-left: 2px solid #a78bfa; padding-left: 16px; margin-left: 40px; }
+  .node-depth-3 { border-left: 1px solid #ccc; padding-left: 16px; margin-left: 60px; }
+  .node-title { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+  .node-desc { color: #444; margin: 4px 0 8px; font-size: 14px; }
+  .node-notes { background: #f8f9ff; border-radius: 6px; padding: 12px 16px; margin: 8px 0; font-size: 14px; }
+  .node-notes h4 { margin: 0 0 6px; font-size: 13px; color: #6c8eff; text-transform: uppercase; letter-spacing: 0.5px; }
+  .node-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .node-tag { background: #eef; border-radius: 20px; padding: 2px 10px; font-size: 12px; color: #6c8eff; }
+  .node-links { margin: 6px 0; }
+  .node-links a { color: #6c8eff; font-size: 13px; display: block; }
+  @media print { body { margin: 20px; } }
+</style></head><body>`;
+    printBody += `<h1>${tree.icon || '🌳'} ${tree.name}</h1>`;
+    printBody += `<div class="meta">Exported from ResearchTree · ${new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'})}</div>`;
+    function addPrint(nodes, depth) {
+      for (const n of nodes) {
+        const tmp = document.createElement('div'); tmp.innerHTML = n.extNotes||'';
+        const notesHtml = (tmp.innerText||'').trim();
+        printBody += `<div class="node node-depth-${Math.min(depth,3)}">`;
+        printBody += `<div class="node-title">${n.title||''}</div>`;
+        if (n.desc) printBody += `<div class="node-desc">${n.desc}</div>`;
+        if (n.tags && n.tags.length) {
+          printBody += `<div class="node-tags">` + n.tags.map(t=>`<span class="node-tag">#${t}</span>`).join('') + `</div>`;
         }
-
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = message;
-            container.appendChild(toast);
-            setTimeout(() => toast.classList.add('show'), 10);
-            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
+        if (n.links && n.links.length) {
+          printBody += `<div class="node-links">` + n.links.map(l=>`<a href="${l.url}">${l.label||l.url}</a>`).join('') + `</div>`;
         }
-    </script>
+        if (notesHtml) {
+          printBody += `<div class="node-notes"><h4>Notes</h4>${n.extNotes}</div>`;
+        }
+        printBody += `</div>`;
+        addPrint(n.children||[], depth+1);
+      }
+    }
+    addPrint(tree.nodes||[], 0);
+    printBody += `</body></html>`;
+    printWin.document.write(printBody);
+    printWin.document.close();
+    printWin.onload = () => { printWin.print(); };
+  }
+  showToast('Export complete!', 'success');
+}
+
+function download(content, filename, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = filename; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ─── Tree Settings ───
+function openTreeSettings() {
+  const tree = getActiveTree(); if (!tree) return;
+  document.getElementById('ts-name').value = tree.name;
+  tsSelectedEmoji = tree.icon || '🌳';
+  buildEmojiPicker('ts-emoji-picker', 'ts');
+  openModal('tree-settings-modal');
+}
+
+function saveTreeSettings() {
+  const tree = getActiveTree(); if (!tree) return;
+  const name = document.getElementById('ts-name').value.trim();
+  if (!name) { showToast('Enter a tree name.', 'error'); return; }
+  tree.name = name;
+  tree.icon = tsSelectedEmoji;
+  closeModal('tree-settings-modal');
+  const title = document.getElementById('tree-title-display');
+  title.textContent = tsSelectedEmoji + '  ' + name;
+  debouncedSave(activeTreeId);
+  renderTreeList();
+  showToast('Tree settings saved.', 'success');
+}
+
+// ─── Emoji Pickers ───
+function setupEmojiPickers() {
+  buildEmojiPicker('emoji-picker', 'new');
+}
+
+function buildEmojiPicker(containerId, type) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = EMOJIS.map(e =>
+    `<div class="emoji-opt ${(type==='new'?selectedEmoji:tsSelectedEmoji)===e?'selected':''}" onclick="selectEmoji('${e}','${type}')">${e}</div>`
+  ).join('');
+}
+
+function selectEmoji(emoji, type) {
+  if (type === 'new') {
+    selectedEmoji = emoji;
+    buildEmojiPicker('emoji-picker', 'new');
+  } else {
+    tsSelectedEmoji = emoji;
+    buildEmojiPicker('ts-emoji-picker', 'ts');
+  }
+}
+
+// ─── Account Modal ───
+function openAccountModal() {
+  updateUserUI();
+  applyPrefs();
+  // Reset to profile tab
+  switchAcctTab('profile');
+  openModal('account-modal');
+}
+
+// ─── Modal Utilities ───
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function openNewTreeModal() {
+  document.getElementById('new-tree-name').value = '';
+  selectedEmoji = '🌳';
+  buildEmojiPicker('emoji-picker', 'new');
+  openModal('new-tree-modal');
+  setTimeout(() => document.getElementById('new-tree-name').focus(), 100);
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+}
+
+// ─── Mobile Nav ───
+function mobileNavTrees() { document.getElementById('sidebar').classList.toggle('mobile-open'); setMobileTab('trees'); }
+function mobileNavCanvas() { document.getElementById('sidebar').classList.remove('mobile-open'); document.getElementById('detail-panel').classList.remove('mobile-open'); setMobileTab('canvas'); }
+function mobileNavInfo() {
+  if (selectedNodeId) {
+    document.getElementById('detail-panel').classList.toggle('mobile-open');
+    document.getElementById('detail-panel').classList.remove('hidden');
+  } else { showToast('Select a node first.', 'info'); }
+  setMobileTab('info');
+}
+function setMobileTab(tab) {
+  ['trees','canvas','info','account'].forEach(t => {
+    const el = document.getElementById('nav-'+t);
+    if (el) el.classList.toggle('active', t === tab);
+  });
+}
+
+// ─── Helpers ───
+function esc(str) {
+  return (str||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function isVideoUrl(url) {
+  return /youtube\.com|youtu\.be|vimeo\.com/.test(url);
+}
+
+function extractVideoId(url) {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function showToast(msg, type='info') {
+  const tc = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = `<i class="ti ti-${type==='success'?'check':'error'===type?'alert-circle':'info-circle'}"></i><span>${msg}</span>`;
+  tc.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(100%)'; t.style.transition='0.3s'; setTimeout(()=>t.remove(),300); }, 3500);
+}
+
+function setupClickOutside() {
+  document.addEventListener('click', (e) => {
+    // Context menu
+    if (!e.target.closest('#context-menu')) hideContextMenu();
+    // Search results
+    if (!e.target.closest('#search-wrap')) hideSearchResults();
+    // Modal overlays
+    document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(mo => {
+      if (e.target === mo) closeModal(mo.id);
+    });
+  });
+  // Enter key in node modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(mo => closeModal(mo.id));
+      hideContextMenu();
+    }
+  });
+  // Enter in new tree name
+  document.getElementById('new-tree-name')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') createTree();
+  });
+  // Enter in node title
+  document.getElementById('node-title-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveNodeFromModal();
+  });
+}
+
+
+// ─── Full-Screen Note Editor ───
+let neNodeId = null;
+let neSaveTimer = null;
+let neIsOpen = false;
+
+function openNoteEditor(nodeId) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  neNodeId = nodeId;
+  neIsOpen = true;
+
+  // Set title / breadcrumb
+  document.getElementById('ne-node-title').textContent = node.title;
+  document.getElementById('ne-breadcrumb').textContent = tree.icon + ' ' + tree.name;
+
+  // Load content — stored as HTML
+  const editor = document.getElementById('ne-editor');
+  editor.innerHTML = node.extNotes || '';
+
+  // Show overlay
+  const overlay = document.getElementById('note-editor-overlay');
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // Focus
+  setTimeout(() => { editor.focus(); neUpdateCounts(); }, 80);
+
+  // Wire up events
+  editor.oninput = () => {
+    neUpdateCounts();
+    neSetStatus('saving');
+    clearTimeout(neSaveTimer);
+    neSaveTimer = setTimeout(() => neSave(), 800);
+  };
+
+  editor.onkeydown = (e) => {
+    // Ctrl+S
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); neSave(); return; }
+    // Escape
+    if (e.key === 'Escape') { closeNoteEditor(); return; }
+    // Tab → indent
+    if (e.key === 'Tab') { e.preventDefault(); document.execCommand(e.shiftKey ? 'outdent' : 'indent'); }
+  };
+
+  editor.onselectionchange = () => neUpdateToolbarState();
+  document.addEventListener('selectionchange', neUpdateToolbarState);
+
+  renderIcons(overlay);
+}
+
+// Alias for backward compat with detail panel buttons
+function openExtNotes(nodeId) { openNoteEditor(nodeId); }
+function closeExtNotes() { closeNoteEditor(); }
+
+function closeNoteEditor() {
+  neSave();
+  neIsOpen = false;
+  neNodeId = null;
+  document.getElementById('note-editor-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  document.removeEventListener('selectionchange', neUpdateToolbarState);
+  // Refresh detail panel + canvas to show updated preview
+  if (selectedNodeId) renderDetailPanel(selectedNodeId);
+  renderCanvas();
+}
+
+function neSave() {
+  if (!neNodeId) return;
+  const editor = document.getElementById('ne-editor');
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, neNodeId); if (!node) return;
+  // Store innerHTML (rich HTML)
+  node.extNotes = editor.innerHTML === '<br>' ? '' : editor.innerHTML;
+  debouncedSave(activeTreeId);
+  neSetStatus('saved');
+}
+
+function neSetStatus(state) {
+  const el = document.getElementById('ne-save-status');
+  const txt = document.getElementById('ne-save-text');
+  if (!el || !txt) return;
+  if (state === 'saved') {
+    el.className = 'ne-status saved';
+    txt.textContent = 'All saved';
+  } else {
+    el.className = 'ne-status';
+    txt.textContent = 'Saving...';
+  }
+}
+
+function neUpdateCounts() {
+  const editor = document.getElementById('ne-editor');
+  if (!editor) return;
+  const text = editor.innerText || '';
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const chars = text.length;
+  const lines = text.split('\n').length;
+  const wc = document.getElementById('ne-wordcount');
+  const cc = document.getElementById('ne-charcount');
+  const lc = document.getElementById('ne-linecount');
+  if (wc) wc.textContent = words + ' word' + (words !== 1 ? 's' : '');
+  if (cc) cc.textContent = chars + ' char' + (chars !== 1 ? 's' : '');
+  if (lc) lc.textContent = lines + ' line' + (lines !== 1 ? 's' : '');
+}
+
+function neExec(cmd, value) {
+  document.getElementById('ne-editor').focus();
+  document.execCommand(cmd, false, value || null);
+  neUpdateToolbarState();
+}
+
+function neBlockFormat(tag) {
+  const editor = document.getElementById('ne-editor');
+  editor.focus();
+  if (tag === 'p') { document.execCommand('formatBlock', false, 'p'); }
+  else if (tag === 'pre') {
+    document.execCommand('formatBlock', false, 'pre');
+  } else {
+    document.execCommand('formatBlock', false, tag);
+  }
+  neUpdateToolbarState();
+}
+
+function neHighlight() {
+  document.getElementById('ne-editor').focus();
+  document.execCommand('hiliteColor', false, 'rgba(251,191,36,0.35)');
+  neUpdateToolbarState();
+}
+
+function neInsertHR() {
+  const editor = document.getElementById('ne-editor');
+  editor.focus();
+  document.execCommand('insertHTML', false, '<hr><p>​</p>');
+}
+
+function neInsertLink() {
+  const url = prompt('Enter URL:');
+  if (!url) return;
+  const text = window.getSelection().toString() || url;
+  document.getElementById('ne-editor').focus();
+  document.execCommand('insertHTML', false, '<a href="' + url + '" target="_blank">' + text + '</a>');
+}
+
+function neInsertTaskList() {
+  const editor = document.getElementById('ne-editor');
+  editor.focus();
+  document.execCommand('insertHTML', false,
+    '<ul style="list-style:none;padding-left:0;">' +
+    '<li class="task-item"><input type="checkbox"> Task item</li>' +
+    '<li class="task-item"><input type="checkbox"> Another task</li>' +
+    '</ul><p>​</p>'
+  );
+}
+
+function neUpdateToolbarState() {
+  const cmds = ['bold','italic','underline','strikeThrough','insertUnorderedList','insertOrderedList'];
+  cmds.forEach(cmd => {
+    const btn = document.getElementById('tb-' + cmd);
+    if (btn) btn.classList.toggle('active', document.queryCommandState(cmd));
+  });
+  // Update block select
+  const sel = document.getElementById('ne-block-select');
+  if (sel) {
+    try {
+      const block = document.queryCommandValue('formatBlock').toLowerCase().replace(/^<|>$/g,'') || 'p';
+      const map = { 'h1':'h1','h2':'h2','h3':'h3','blockquote':'blockquote','pre':'pre' };
+      sel.value = map[block] || 'p';
+    } catch(e) {}
+  }
+}
+
+// Keep updateExtNotesWordCount as alias (used elsewhere)
+function updateExtNotesWordCount() { neUpdateCounts(); }
+function saveExtNotes() { neSave(); }
+
+// ─── Stats Bar ───
+function updateStatsBar() {
+  const tree = getActiveTree();
+  const bar = document.getElementById('stats-bar');
+  if (!bar) return;
+  if (!tree || !canUseProFeatures()) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  let nodeCount = 0, mediaCount = 0, linkCount = 0;
+  function calcDepth(nodes, d) {
+    let max = d;
+    for (const n of nodes) { nodeCount++; mediaCount += (n.media||[]).length; linkCount += (n.links||[]).length; const cd = calcDepth(n.children||[], d+1); if (cd > max) max = cd; }
+    return max;
+  }
+  const depth = calcDepth(tree.nodes||[], 0);
+  const roots = (tree.nodes||[]).length;
+  document.getElementById('stat-nodes').textContent = nodeCount;
+  document.getElementById('stat-roots').textContent = roots;
+  document.getElementById('stat-depth').textContent = depth;
+  document.getElementById('stat-media').textContent = mediaCount;
+  document.getElementById('stat-links').textContent = linkCount;
+}
+
+// ─── Start ───
+// initApp() is called by the SDK loader above once Supabase is ready.
+// Falls back to DOMContentLoaded if the script tag already ran.
+function initApp() {
+  loadPrefs();
+  init();
+}
+// If SDK loaded synchronously (cached), kick off now
+if (window.supabase) {
+  loadPrefs();
+  init();
+}
+</script>
 </body>
 </html>
