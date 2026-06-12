@@ -315,7 +315,7 @@ h1,h2,h3,h4 { font-family: 'Raleway', sans-serif; font-weight: 300; letter-spaci
 .node-card.has-color-orange { border-left: 3px solid var(--orange); }
 .node-card.has-color-blue { border-left: 3px solid var(--accent); }
 .node-header { display: flex; align-items: flex-start; gap: 8px; }
-.node-title { font-size: 13px; font-weight: 600; flex: 1; word-break: break-word; }
+.node-title { font-size: calc(var(--node-title-size, 13px) * var(--inv-scale, 1)); font-weight: 600; flex: 1; word-break: break-word; }
 .node-btns { display: flex; gap: 2px; opacity: 0; transition: var(--transition); flex-shrink: 0; }
 .node-card:hover .node-btns { opacity: 1; }
 .node-btn {
@@ -2485,16 +2485,41 @@ function drawVLine(childCol) {
   const wraps = childCol.querySelectorAll(':scope > .node-and-children > .node-wrap');
   if (wraps.length < 1) return;
   const colRect = childCol.getBoundingClientRect();
+  const isLeft  = childCol.classList.contains('side-left');
+  // Account for current canvas zoom so pixel math stays correct
+  const scale = (typeof cvScale === 'number' && cvScale > 0) ? cvScale : 1;
+
   const first = wraps[0].getBoundingClientRect();
   const last  = wraps[wraps.length - 1].getBoundingClientRect();
-  const topY    = (first.top  + first.height  / 2) - colRect.top;
-  const bottomY = (last.top   + last.height   / 2) - colRect.top;
-  const isLeft  = childCol.classList.contains('side-left');
-  const vline   = document.createElement('div');
+  const topY    = ((first.top + first.height / 2) - colRect.top) / scale;
+  const bottomY = ((last.top  + last.height  / 2) - colRect.top) / scale;
+
+  const vline = document.createElement('div');
   vline.className = 'node-vline' + (isLeft ? ' vline-left' : '');
   vline.style.top    = topY + 'px';
   vline.style.height = Math.max(0, bottomY - topY) + 'px';
   childCol.insertBefore(vline, childCol.firstChild);
+
+  // Size each child's horizontal connector to exactly bridge
+  // from the card edge to the column edge (vline position).
+  wraps.forEach(w => {
+    const conn = w.querySelector(':scope > .node-connector');
+    if (!conn) return;
+    const wRect = w.getBoundingClientRect();
+    if (isLeft) {
+      // span from card's RIGHT edge to column's RIGHT edge
+      const span = (colRect.right - wRect.right) / scale;
+      conn.style.width = Math.max(0, span) + 'px';
+      conn.style.right = (-Math.max(0, span)) + 'px';
+      conn.style.left  = 'auto';
+    } else {
+      // span from card's LEFT edge to column's LEFT edge
+      const span = (wRect.left - colRect.left) / scale;
+      conn.style.width = Math.max(0, span) + 'px';
+      conn.style.left  = (-Math.max(0, span)) + 'px';
+      conn.style.right = 'auto';
+    }
+  });
 }
 
 function redrawAllVLines() {
@@ -2503,56 +2528,58 @@ function redrawAllVLines() {
   }));
 }
 
-function renderNodeAndChildren(node, hasConnector) {
-  // node.side = 'right' (default) or 'left'
-  // 'right': children column appears RIGHT of parent card
-  // 'left':  children column appears LEFT of parent card
-  const isLeft = (node.side || 'right') === 'left';
+function renderNodeAndChildren(node, hasConnector, positionSide) {
+  // MIND-MAP SEMANTICS:
+  // node.side ('left'|'right') = which side of its PARENT this node sits on.
+  // Layout per node: [left children col] [node card] [right children col]
+  // positionSide = which column THIS node was placed in by its parent
+  //                (controls which direction its connector points).
+  const sitsLeft = positionSide === 'left';
 
   const wrap = document.createElement('div');
   wrap.className = 'node-and-children';
-  // NO row-reverse — we control order explicitly via DOM append order below
 
   const nodeWrap = document.createElement('div');
   nodeWrap.className = 'node-wrap';
 
   if (hasConnector) {
     const conn = document.createElement('div');
-    // RIGHT child: connector extends LEFT (toward vline on left edge of sibling childCol)
-    // LEFT child:  connector extends RIGHT (toward vline on right edge of sibling childCol)
-    conn.className = 'node-connector' + (isLeft ? ' connector-left' : '');
+    // Node in RIGHT column → connector extends LEFT toward parent's vline
+    // Node in LEFT column  → connector extends RIGHT toward parent's vline
+    conn.className = 'node-connector' + (sitsLeft ? ' connector-left' : '');
     nodeWrap.appendChild(conn);
   }
-  nodeWrap.appendChild(buildNodeCard(node, isLeft));
+  nodeWrap.appendChild(buildNodeCard(node, sitsLeft));
 
-  const children = node.children || [];
-  if (children.length > 0) {
-    const childCol = document.createElement('div');
-    childCol.className = 'node-children' +
-      (node.collapsed ? ' collapsed' : '') +
-      (isLeft ? ' side-left' : '');
-    childCol.id = 'children_' + node.id;
+  // Split children by THEIR OWN side choice
+  const kids = node.children || [];
+  const leftKids  = kids.filter(c => (c.side || 'right') === 'left');
+  const rightKids = kids.filter(c => (c.side || 'right') !== 'left');
 
-    for (const child of children) {
-      childCol.appendChild(renderNodeAndChildren(child, true));
+  // LEFT column (before the card in DOM = appears left)
+  if (leftKids.length > 0) {
+    const leftCol = document.createElement('div');
+    leftCol.className = 'node-children side-left' + (node.collapsed ? ' collapsed' : '');
+    leftCol.id = 'children_left_' + node.id;
+    for (const child of leftKids) {
+      leftCol.appendChild(renderNodeAndChildren(child, true, 'left'));
     }
+    wrap.appendChild(leftCol);
+    if (!node.collapsed) requestAnimationFrame(() => drawVLine(leftCol));
+  }
 
-    if (isLeft) {
-      // LEFT: append childCol FIRST so it appears left, then nodeWrap on right
-      wrap.appendChild(childCol);
-      wrap.appendChild(nodeWrap);
-    } else {
-      // RIGHT (default): nodeWrap first, childCol to its right
-      wrap.appendChild(nodeWrap);
-      wrap.appendChild(childCol);
-    }
+  wrap.appendChild(nodeWrap);
 
-    if (!node.collapsed) {
-      requestAnimationFrame(() => drawVLine(childCol));
+  // RIGHT column (after the card in DOM = appears right)
+  if (rightKids.length > 0) {
+    const rightCol = document.createElement('div');
+    rightCol.className = 'node-children' + (node.collapsed ? ' collapsed' : '');
+    rightCol.id = 'children_right_' + node.id;
+    for (const child of rightKids) {
+      rightCol.appendChild(renderNodeAndChildren(child, true, 'right'));
     }
-  } else {
-    // No children — just the node card
-    wrap.appendChild(nodeWrap);
+    wrap.appendChild(rightCol);
+    if (!node.collapsed) requestAnimationFrame(() => drawVLine(rightCol));
   }
 
   return wrap;
@@ -2691,11 +2718,13 @@ function buildNodeCard(node, isLeft) {
 
   // Collapse toggle (if has children)
   if (node.children && node.children.length) {
+    // Place collapse button on the side where children actually are
+    const kidsArr = node.children || [];
+    const onlyLeftKids = kidsArr.length > 0 && kidsArr.every(c => (c.side || 'right') === 'left');
     const colBtn = document.createElement('button');
-    colBtn.className = 'collapse-btn' + (isLeft ? ' collapse-left' : '');
+    colBtn.className = 'collapse-btn' + (onlyLeftKids ? ' collapse-left' : '');
     colBtn.title = node.collapsed ? 'Expand' : 'Collapse';
-    // Arrow points toward children
-    if (isLeft) {
+    if (onlyLeftKids) {
       colBtn.innerHTML = node.collapsed ? '<i class="ti ti-chevron-left"></i>' : '<i class="ti ti-chevron-right"></i>';
     } else {
       colBtn.innerHTML = node.collapsed ? '<i class="ti ti-chevron-right"></i>' : '<i class="ti ti-chevron-left"></i>';
@@ -3451,9 +3480,15 @@ function applyCV() {
   el.style.transform = `translate(${cvX}px,${cvY}px) scale(${cvScale})`;
   const lv = document.getElementById('zoom-level');
   if (lv) lv.textContent = Math.round(cvScale*100)+'%';
-  // Counter-scale node card text so it stays the same visual size
-  // Disabled: user sees zoom working naturally on cards.
-  // Title size is controlled by --node-title-size CSS var set via prefs.
+  // Counter-scale node titles so they stay the same visual size at any zoom.
+  // Clamped so extreme zoom-out doesn't produce absurdly huge text.
+  const inv = Math.min(2.5, Math.max(0.5, 1 / cvScale));
+  document.documentElement.style.setProperty('--inv-scale', inv);
+  // Connector spans depend on zoom — re-measure after transform applies
+  clearTimeout(window._vlineZoomTimer);
+  window._vlineZoomTimer = setTimeout(() => {
+    document.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
+  }, 80);
 }
 
 function zoomIn()  { setZoom(cvScale * 1.2); }
