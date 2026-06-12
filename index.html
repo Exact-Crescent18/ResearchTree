@@ -965,6 +965,39 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   transition: var(--transition);
 }
 .avatar-upload-label:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ─── Settings UI ─── */
+.settings-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; background: var(--bg3);
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+}
+.settings-row-label { font-size: 12px; font-weight: 500; color: var(--text2); flex-shrink: 0; min-width: 110px; }
+.theme-swatch {
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: var(--transition); flex-shrink: 0;
+}
+.theme-swatch:hover { transform: scale(1.15); }
+.theme-swatch.selected { border-color: var(--text) !important; box-shadow: 0 0 0 2px var(--accent); }
+.canvas-dots { background-image: radial-gradient(circle, var(--border2) 1px, transparent 1px); background-size: 24px 24px; }
+.canvas-lines {
+  background-image: linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ─── Zoom anti-blur ─── */
+#canvas-transform {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+#canvas * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 </style>
 </head>
 <body>
@@ -1298,33 +1331,109 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
     <!-- Settings Tab -->
     <div class="acct-pane" id="acct-pane-settings">
-      <div style="font-size:13px;font-weight:600;margin-bottom:2px;">Preferences</div>
-      <div class="profile-row">
-        <div class="profile-row-icon"><i class="ti ti-layout-sidebar"></i></div>
-        <div class="profile-row-info">
-          <div class="profile-row-label">Auto-open detail panel</div>
-          <div class="profile-row-value" style="font-size:13px;">Open details when selecting a node</div>
+      <!-- Sub-tabs -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn-sm btn-accent" id="stab-appearance" onclick="switchSettingsTab('appearance')" style="font-size:12px;padding:5px 12px;">Appearance</button>
+        <button class="btn-sm btn-outline" id="stab-layout" onclick="switchSettingsTab('layout')" style="font-size:12px;padding:5px 12px;">Layout</button>
+        <button class="btn-sm btn-outline" id="stab-behavior" onclick="switchSettingsTab('behavior')" style="font-size:12px;padding:5px 12px;">Behavior</button>
+      </div>
+
+      <!-- Appearance -->
+      <div id="settings-pane-appearance" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;font-weight:600;">Accent Color</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="accent-swatches">
+          <div class="theme-swatch" style="background:#6c8eff;" onclick="savePref('accentColor','#6c8eff')" data-color="#6c8eff" title="Blue"></div>
+          <div class="theme-swatch" style="background:#a78bfa;" onclick="savePref('accentColor','#a78bfa')" data-color="#a78bfa" title="Purple"></div>
+          <div class="theme-swatch" style="background:#4ade80;" onclick="savePref('accentColor','#4ade80')" data-color="#4ade80" title="Green"></div>
+          <div class="theme-swatch" style="background:#fb923c;" onclick="savePref('accentColor','#fb923c')" data-color="#fb923c" title="Orange"></div>
+          <div class="theme-swatch" style="background:#f472b6;" onclick="savePref('accentColor','#f472b6')" data-color="#f472b6" title="Pink"></div>
+          <div class="theme-swatch" style="background:#fbbf24;" onclick="savePref('accentColor','#fbbf24')" data-color="#fbbf24" title="Gold"></div>
+          <div class="theme-swatch" style="background:#f87171;" onclick="savePref('accentColor','#f87171')" data-color="#f87171" title="Red"></div>
         </div>
-        <div class="profile-row-action">
-          <label class="toggle-switch">
-            <input type="checkbox" id="pref-auto-detail" onchange="savePref('autoDetail',this.checked)" checked>
-            <span class="toggle-track"></span>
-          </label>
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;font-weight:600;margin-top:4px;">Background Tone</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="bg-swatches">
+          <div class="theme-swatch" style="background:#0f1117;border:2px solid var(--border2);" onclick="savePref('bgTone','dark')" data-bg="dark" title="Dark"></div>
+          <div class="theme-swatch" style="background:#0a0f1e;" onclick="savePref('bgTone','midnight')" data-bg="midnight" title="Midnight"></div>
+          <div class="theme-swatch" style="background:#0d1b0d;" onclick="savePref('bgTone','forest')" data-bg="forest" title="Forest"></div>
+          <div class="theme-swatch" style="background:#1a0f0a;" onclick="savePref('bgTone','ember')" data-bg="ember" title="Ember"></div>
+          <div class="theme-swatch" style="background:#1a1a1a;" onclick="savePref('bgTone','carbon')" data-bg="carbon" title="Carbon"></div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">UI Font</div>
+          <select class="tb-select" style="flex:1;" onchange="savePref('uiFont',this.value)" id="pref-ui-font">
+            <option value="DM Sans">DM Sans (Default)</option>
+            <option value="Inter">Inter</option>
+            <option value="system-ui">System UI</option>
+            <option value="Georgia">Georgia (Serif)</option>
+            <option value="Courier New">Mono</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Font Size</div>
+          <input type="range" min="12" max="18" step="1" id="pref-font-size" oninput="savePref('fontSize',+this.value);document.getElementById('font-size-val').textContent=this.value+'px'" style="flex:1;accent-color:var(--accent);">
+          <span id="font-size-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">14px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Border Radius</div>
+          <input type="range" min="0" max="20" step="2" id="pref-radius" oninput="savePref('nodeRadius',+this.value);document.getElementById('radius-val').textContent=this.value+'px'" style="flex:1;accent-color:var(--accent);">
+          <span id="radius-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">10px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Canvas Background</div>
+          <select class="tb-select" style="flex:1;" onchange="savePref('canvasBg',this.value)" id="pref-canvas-bg">
+            <option value="solid">Solid</option>
+            <option value="dots">Dot Grid</option>
+            <option value="lines">Line Grid</option>
+          </select>
         </div>
       </div>
-      <div class="profile-row">
-        <div class="profile-row-icon"><i class="ti ti-arrows-maximize"></i></div>
-        <div class="profile-row-info">
-          <div class="profile-row-label">Wide node cards</div>
-          <div class="profile-row-value" style="font-size:13px;">Increase node card width to 280px</div>
+
+      <!-- Layout -->
+      <div id="settings-pane-layout" style="display:none;flex-direction:column;gap:10px;">
+        <div class="settings-row">
+          <div class="settings-row-label">Node Width</div>
+          <input type="range" min="160" max="360" step="20" id="pref-node-width" oninput="savePref('nodeWidth',+this.value);document.getElementById('node-width-val').textContent=this.value+'px'" style="flex:1;accent-color:var(--accent);">
+          <span id="node-width-val" style="font-size:12px;color:var(--text3);min-width:36px;text-align:right;">220px</span>
         </div>
-        <div class="profile-row-action">
-          <label class="toggle-switch">
-            <input type="checkbox" id="pref-wide-nodes" onchange="savePref('wideNodes',this.checked)">
-            <span class="toggle-track"></span>
-          </label>
+        <div class="settings-row">
+          <div class="settings-row-label">Title Size</div>
+          <input type="range" min="11" max="18" step="1" id="pref-node-title-size" oninput="savePref('nodeTitleSize',+this.value);document.getElementById('node-title-size-val').textContent=this.value+'px'" style="flex:1;accent-color:var(--accent);">
+          <span id="node-title-size-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">13px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Horizontal Gap</div>
+          <input type="range" min="30" max="140" step="10" id="pref-gap-x" oninput="savePref('gapX',+this.value);document.getElementById('gap-x-val').textContent=this.value+'px'" style="flex:1;accent-color:var(--accent);">
+          <span id="gap-x-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">60px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Vertical Gap</div>
+          <input type="range" min="6" max="48" step="4" id="pref-gap-y" oninput="savePref('gapY',+this.value);document.getElementById('gap-y-val').textContent=this.value+'px'" style="flex:1;accent-color:var(--accent);">
+          <span id="gap-y-val" style="font-size:12px;color:var(--text3);min-width:32px;text-align:right;">16px</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Sidebar Width</div>
+          <input type="range" min="200" max="400" step="20" id="pref-sidebar-w" oninput="savePref('sidebarW',+this.value);document.getElementById('sidebar-w-val').textContent=this.value+'px'" style="flex:1;accent-color:var(--accent);">
+          <span id="sidebar-w-val" style="font-size:12px;color:var(--text3);min-width:36px;text-align:right;">280px</span>
+        </div>
+        <button class="btn-cancel" style="font-size:12px;" onclick="resetLayout()">↺ Reset Layout Defaults</button>
+      </div>
+
+      <!-- Behavior -->
+      <div id="settings-pane-behavior" style="display:none;flex-direction:column;gap:10px;">
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Auto-open detail panel</div><div style="font-size:12px;color:var(--text3);">Open on node select</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-auto-detail" onchange="savePref('autoDetail',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Show descriptions on cards</div><div style="font-size:12px;color:var(--text3);">Display node description</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-show-desc" onchange="savePref('showDesc',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Animate transitions</div><div style="font-size:12px;color:var(--text3);">Smooth hover effects</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-animate" onchange="savePref('animate',this.checked)" checked><span class="toggle-track"></span></label>
         </div>
       </div>
+
       <div style="border-top:1px solid var(--border);padding-top:14px;">
         <div class="danger-zone">
           <div class="danger-zone-title"><i class="ti ti-alert-triangle"></i> Danger Zone</div>
@@ -1891,23 +2000,100 @@ async function deleteAccount() {
 }
 
 // Preferences
-let prefs = { autoDetail: true, wideNodes: false };
+let prefs = { autoDetail: true, showDesc: true, animate: true };
+
 function loadPrefs() {
   try { const p = localStorage.getItem('rt_prefs'); if (p) prefs = {...prefs, ...JSON.parse(p)}; } catch(e) {}
   applyPrefs();
 }
+
 function savePref(key, val) {
   prefs[key] = val;
   localStorage.setItem('rt_prefs', JSON.stringify(prefs));
   applyPrefs();
-  if (['gapY','gapX','nodeWidth'].includes(key)) redrawAllVLines();
+  if (['gapY','gapX','nodeWidth','nodeTitleSize'].includes(key)) redrawAllVLines();
 }
+
+const BG_TONES = {
+  dark:     ['#0f1117','#161b27','#1e2535','#252d3d','#2e3650','#3a4560'],
+  midnight: ['#0a0f1e','#111827','#1a2234','#222d42','#2a3654','#364673'],
+  forest:   ['#0d1b0d','#121f12','#1a2a1a','#233023','#2e4030','#3d5240'],
+  ember:    ['#1a0f0a','#211510','#2a1c16','#33221d','#3d2a24','#50382f'],
+  carbon:   ['#111111','#1a1a1a','#222222','#2a2a2a','#333333','#444444'],
+};
+
 function applyPrefs() {
-  document.documentElement.style.setProperty('--node-w', prefs.wideNodes ? '280px' : '220px');
-  const wn = document.getElementById('pref-wide-nodes');
-  const ad = document.getElementById('pref-auto-detail');
-  if (wn) wn.checked = prefs.wideNodes;
-  if (ad) ad.checked = prefs.autoDetail;
+  const r = document.documentElement.style;
+  // Layout
+  r.setProperty('--node-w',       (prefs.nodeWidth    || 220) + 'px');
+  r.setProperty('--node-gap-x',   (prefs.gapX         || 60)  + 'px');
+  r.setProperty('--node-gap-y',   (prefs.gapY         || 16)  + 'px');
+  r.setProperty('--sidebar-w',    (prefs.sidebarW     || 280) + 'px');
+  r.setProperty('--radius',       (prefs.nodeRadius   !== undefined ? prefs.nodeRadius : 10) + 'px');
+  r.setProperty('--node-title-size', (prefs.nodeTitleSize || 13) + 'px');
+  // Font
+  document.body.style.fontSize   = (prefs.fontSize || 14) + 'px';
+  if (prefs.uiFont) document.body.style.fontFamily = "'" + prefs.uiFont + "', sans-serif";
+  // Transitions
+  r.setProperty('--transition', prefs.animate === false ? '0s' : '0.18s ease');
+  // Accent color
+  if (prefs.accentColor) {
+    r.setProperty('--accent',     prefs.accentColor);
+    r.setProperty('--accent2',    prefs.accentColor + 'cc');
+    r.setProperty('--accent-dim', prefs.accentColor + '26');
+  }
+  // Background tone
+  if (prefs.bgTone && BG_TONES[prefs.bgTone]) {
+    const t = BG_TONES[prefs.bgTone];
+    const keys = ['--bg','--bg2','--bg3','--bg4','--border','--border2'];
+    t.forEach((v,i) => r.setProperty(keys[i], v));
+  }
+  // Canvas background pattern
+  const cw = document.getElementById('canvas-wrap');
+  if (cw) {
+    cw.classList.remove('canvas-dots','canvas-lines');
+    if (prefs.canvasBg === 'dots')  cw.classList.add('canvas-dots');
+    if (prefs.canvasBg === 'lines') cw.classList.add('canvas-lines');
+  }
+
+  // Sync all controls
+  const set = (id, v) => { const e=document.getElementById(id); if(e) e.value=v; };
+  const chk = (id, v) => { const e=document.getElementById(id); if(e) e.checked=v; };
+  const txt = (id, v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+  set('pref-node-width',      prefs.nodeWidth      || 220);  txt('node-width-val',      (prefs.nodeWidth||220)+'px');
+  set('pref-gap-x',           prefs.gapX           || 60);   txt('gap-x-val',            (prefs.gapX||60)+'px');
+  set('pref-gap-y',           prefs.gapY           || 16);   txt('gap-y-val',            (prefs.gapY||16)+'px');
+  set('pref-sidebar-w',       prefs.sidebarW       || 280);  txt('sidebar-w-val',        (prefs.sidebarW||280)+'px');
+  set('pref-font-size',       prefs.fontSize       || 14);   txt('font-size-val',        (prefs.fontSize||14)+'px');
+  set('pref-radius',          prefs.nodeRadius !== undefined ? prefs.nodeRadius : 10); txt('radius-val', (prefs.nodeRadius !== undefined ? prefs.nodeRadius : 10)+'px');
+  set('pref-node-title-size', prefs.nodeTitleSize  || 13);   txt('node-title-size-val',  (prefs.nodeTitleSize||13)+'px');
+  chk('pref-auto-detail', prefs.autoDetail !== false);
+  chk('pref-show-desc',   prefs.showDesc   !== false);
+  chk('pref-animate',     prefs.animate    !== false);
+  const fs = document.getElementById('pref-ui-font');    if (fs && prefs.uiFont)   fs.value = prefs.uiFont;
+  const bs = document.getElementById('pref-canvas-bg');  if (bs && prefs.canvasBg) bs.value = prefs.canvasBg;
+  // Highlight swatches
+  document.querySelectorAll('.theme-swatch[data-color]').forEach(s =>
+    s.classList.toggle('selected', s.dataset.color === prefs.accentColor));
+  document.querySelectorAll('.theme-swatch[data-bg]').forEach(s =>
+    s.classList.toggle('selected', s.dataset.bg === (prefs.bgTone || 'dark')));
+}
+
+function switchSettingsTab(tab) {
+  ['appearance','layout','behavior'].forEach(t => {
+    const pane = document.getElementById('settings-pane-' + t);
+    const btn  = document.getElementById('stab-' + t);
+    if (pane) pane.style.display = t === tab ? 'flex' : 'none';
+    if (btn)  { btn.className = (t===tab ? 'btn-sm btn-accent' : 'btn-sm btn-outline'); btn.style.cssText='font-size:12px;padding:5px 12px;'; }
+  });
+}
+
+function resetLayout() {
+  ['nodeWidth','gapX','gapY','sidebarW','nodeTitleSize'].forEach(k => delete prefs[k]);
+  localStorage.setItem('rt_prefs', JSON.stringify(prefs));
+  applyPrefs();
+  redrawAllVLines();
+  showToast('Layout reset.', 'info');
 }
 
 // ─── Paywall ───
@@ -2294,20 +2480,24 @@ function redrawAllVLines() {
   }));
 }
 
-function renderNodeAndChildren(node, hasConnector, inheritedSide) {
-  const side = node.side || inheritedSide || 'right';
+function renderNodeAndChildren(node, hasConnector) {
+  // node.side controls which side THIS node's children appear on.
+  // Default is 'right'. 'left' puts children to the left of this node.
+  const side = node.side || 'right';
   const isLeft = side === 'left';
 
-  // row-reverse on the wrap puts children visually LEFT of parent
   const wrap = document.createElement('div');
+  // side-left triggers flex-direction:row-reverse so childCol appears LEFT of nodeWrap
   wrap.className = 'node-and-children' + (isLeft ? ' side-left' : '');
 
   const nodeWrap = document.createElement('div');
   nodeWrap.className = 'node-wrap';
 
+  // Connector points toward the parent:
+  // - right-side child: connector on left of card (extends left to vline on left of childCol)
+  // - left-side child: connector on right of card (extends right to vline on right of childCol)
   if (hasConnector) {
     const conn = document.createElement('div');
-    // left-side: connector extends RIGHT from child to vline (which is on right of column)
     conn.className = 'node-connector' + (isLeft ? ' connector-left' : '');
     nodeWrap.appendChild(conn);
   }
@@ -2318,10 +2508,12 @@ function renderNodeAndChildren(node, hasConnector, inheritedSide) {
   const children = node.children || [];
   if (children.length > 0) {
     const childCol = document.createElement('div');
+    // side-left on childCol: padding on right instead of left
     childCol.className = 'node-children' + (node.collapsed ? ' collapsed' : '') + (isLeft ? ' side-left' : '');
     childCol.id = 'children_' + node.id;
     for (const child of children) {
-      childCol.appendChild(renderNodeAndChildren(child, true, side));
+      // Children do NOT inherit side — each child has its own side setting (default: right)
+      childCol.appendChild(renderNodeAndChildren(child, true));
     }
     wrap.appendChild(childCol);
     if (!node.collapsed) {
