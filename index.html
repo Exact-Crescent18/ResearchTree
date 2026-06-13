@@ -766,7 +766,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   overflow: auto;
   background: var(--bg);
   display: flex; justify-content: center; align-items: flex-start;
-  padding: 40px 24px 80px 24px;
+  padding: 40px 24px 140px 24px;
 }
 /* Canvas spans wider than the page so images can sit in the side margins */
 .ne-canvas {
@@ -784,7 +784,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   width: 720px; max-width: 720px;
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: 12px; min-height: 500px; height: auto;
-  padding: 48px 56px;
+  padding: 48px 56px 72px 56px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.35);
   box-sizing: border-box; flex-shrink: 0;
   position: relative; z-index: 2;
@@ -803,6 +803,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   caret-color: var(--accent);
   word-wrap: break-word; overflow-wrap: break-word;
   white-space: pre-wrap;
+  padding-bottom: 24px;
 }
 #ne-editor:empty::before {
   content: 'Start writing your notes here...\A\AUse the toolbar above for formatting — headings, bold, italic, bullet lists, numbered lists, and more.';
@@ -1204,7 +1205,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 /* ─── Detail panel sticky footer ─── */
 .detail-footer {
   flex-shrink: 0; height: 53px; padding: 0 12px; box-sizing: border-box;
-  display: flex; align-items: center;
+  display: flex; align-items: center; justify-content: center;
   border-top: 1px solid var(--border); background: var(--bg2);
 }
 .detail-footer .btn-add-sm { padding: 8px 11px !important; }
@@ -1249,6 +1250,27 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 }
 .share-social:hover { border-color: var(--c); color: var(--c); background: var(--bg3); transform: translateY(-2px); }
 .share-social span { font-size: 11px; font-weight: 500; }
+
+/* Image web-link inline box */
+.ne-img-linkbox {
+  position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 20;
+  display: flex; gap: 4px; align-items: center;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 5px; box-shadow: var(--shadow); white-space: nowrap;
+}
+.ne-img-linkbox input {
+  width: 200px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 5px; padding: 6px 8px; color: var(--text); font-size: 12px; outline: none;
+}
+.ne-img-linkbox button {
+  border: none; border-radius: 5px; padding: 6px 9px; font-size: 12px;
+  cursor: pointer; background: var(--accent); color: #fff; font-weight: 600;
+}
+.ne-img-linkbox .ne-img-linkbox-clear { background: var(--bg4); color: var(--text2); }
+
+/* List items inherit the editor/text color (never default to white) */
+#ne-editor ul li, #ne-editor ol li, #ne-editor li { color: inherit; }
+#ne-editor ul, #ne-editor ol { color: inherit; }
 </style>
 </head>
 <body>
@@ -1281,6 +1303,10 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
         <label>Password</label>
         <input type="password" id="signin-password" placeholder="••••••••">
       </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;user-select:none;">
+        <input type="checkbox" id="signin-remember" checked style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer;">
+        Remember me
+      </label>
       <button class="btn-primary" onclick="signInEmail()">Sign In</button>
       <div class="auth-divider">or continue with</div>
       <div class="social-btns">
@@ -1368,7 +1394,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       <div class="topbar-btns">
         <div class="sync-dot" id="sync-dot" title="Saved"></div>
         <button class="btn-sm btn-outline" onclick="openTreeSettings()" id="tree-settings-btn" style="display:none" title="Tree settings"><i class="ti ti-settings"></i></button>
-        <button class="btn-sm btn-outline" onclick="openShareModal()" id="share-btn" style="display:none" title="Share"><i class="ti ti-share"></i></button>
+        <button class="btn-sm btn-outline" onclick="openShareModal()" id="share-btn" style="display:none" title="Share"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
         <button class="btn-sm btn-outline" onclick="openExportModal()" id="export-btn" style="display:none" title="Export / Print"><i class="ti ti-download"></i></button>
       </div>
     </div>
@@ -1405,7 +1431,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     </div>
     <!-- Sticky notes button — always present at the bottom -->
     <div class="detail-footer" id="detail-footer" style="display:none;">
-      <button class="btn-add-sm primary" id="detail-notes-btn" onclick="openNotesForSelected()" style="width:100%;justify-content:center;display:flex;align-items:center;gap:7px;padding:11px;font-size:13px;">
+      <button class="btn-add-sm primary" id="detail-notes-btn" onclick="openNotesForSelected()" style="width:100%;height:37px;justify-content:center;align-items:center;gap:7px;padding:0;font-size:13px;display:flex;">
         <i class="ti ti-notes"></i> <span id="detail-notes-btn-label">Open Note Editor</span>
       </button>
     </div>
@@ -2285,10 +2311,25 @@ function clearAuthError() {
 async function signInEmail() {
   const email = document.getElementById('signin-email').value.trim();
   const password = document.getElementById('signin-password').value;
+  const rememberEl = document.getElementById('signin-remember');
+  const remember = rememberEl ? rememberEl.checked : true;
   if (!email || !password) return showAuthError('Please enter email and password.');
   clearAuthError();
+  // Remember the preference; if unchecked, we clear the persisted session on tab close.
+  try { localStorage.setItem('rt_remember', remember ? '1' : '0'); } catch(e) {}
   const { error } = await sbClient.auth.signInWithPassword({ email, password });
-  if (error) showAuthError(error.message);
+  if (error) { showAuthError(error.message); return; }
+  if (!remember) {
+    // Don't persist across browser restarts — move the token to sessionStorage
+    try {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith('sb-') && k.includes('-auth-token')) {
+          sessionStorage.setItem(k, localStorage.getItem(k));
+          localStorage.removeItem(k);
+        }
+      });
+    } catch(e) {}
+  }
 }
 
 async function signUpEmail() {
@@ -3237,7 +3278,7 @@ function renderNodeAndChildren(node, hasConnector, positionSide) {
     conn.className = 'node-connector' + (sitsLeft ? ' connector-left' : '');
     nodeWrap.appendChild(conn);
   }
-  nodeWrap.appendChild(buildNodeCard(node, sitsLeft));
+  nodeWrap.appendChild(buildNodeCard(node, sitsLeft, positionSide === 'root'));
 
   // Split children by THEIR OWN side choice
   const kids = node.children || [];
@@ -3273,8 +3314,9 @@ function renderNodeAndChildren(node, hasConnector, positionSide) {
   return wrap;
 }
 
-function buildNodeCard(node, isLeft) {
+function buildNodeCard(node, isLeft, isRoot) {
   isLeft = !!isLeft;
+  isRoot = !!isRoot;
   const card = document.createElement('div');
   card.className = 'node-card' + (node.id === selectedNodeId ? ' selected' : '') + (node.color ? ' has-color-' + node.color : '');
   card.id = 'node_' + node.id;
@@ -3378,36 +3420,35 @@ function buildNodeCard(node, isLeft) {
     card.appendChild(links);
   }
 
-  // Add child button at bottom
-  // Add child row with compact R/L side toggle
+  // Add child button at bottom.
+  // Only ROOT nodes may branch children left or right; non-root children
+  // always branch the same direction as their root (no per-child L/R toggle).
   const addRow = document.createElement('div');
   addRow.className = 'add-child-row';
-  addRow.dataset.childSide = isLeft ? 'left' : 'right'; // default inherits parent
+  addRow.dataset.childSide = isLeft ? 'left' : 'right';
 
   const addChildBtn = document.createElement('button');
   addChildBtn.className = 'add-child-btn';
   addChildBtn.innerHTML = '<i class="ti ti-plus"></i> Add child';
   addChildBtn.onclick = (e) => { e.stopPropagation(); openNewNodeModal(node.id, addRow.dataset.childSide); };
-
-  const sideToggle = document.createElement('div');
-  sideToggle.className = 'side-toggle';
-  sideToggle.title = 'Branch direction';
-
-  const btnL = document.createElement('button');
-  btnL.className = 'side-toggle-btn' + (addRow.dataset.childSide === 'left' ? ' active' : '');
-  btnL.textContent = 'L';
-  const btnR = document.createElement('button');
-  btnR.className = 'side-toggle-btn' + (addRow.dataset.childSide !== 'left' ? ' active' : '');
-  btnR.textContent = 'R';
-
-  btnL.onclick = (e) => { e.stopPropagation(); addRow.dataset.childSide='left';  btnL.classList.add('active'); btnR.classList.remove('active'); };
-  btnR.onclick = (e) => { e.stopPropagation(); addRow.dataset.childSide='right'; btnR.classList.add('active'); btnL.classList.remove('active'); };
-
-  // L first, then R
-  sideToggle.appendChild(btnL);
-  sideToggle.appendChild(btnR);
   addRow.appendChild(addChildBtn);
-  addRow.appendChild(sideToggle);
+
+  if (isRoot) {
+    const sideToggle = document.createElement('div');
+    sideToggle.className = 'side-toggle';
+    sideToggle.title = 'Branch direction';
+    const btnL = document.createElement('button');
+    btnL.className = 'side-toggle-btn' + (addRow.dataset.childSide === 'left' ? ' active' : '');
+    btnL.textContent = 'L';
+    const btnR = document.createElement('button');
+    btnR.className = 'side-toggle-btn' + (addRow.dataset.childSide !== 'left' ? ' active' : '');
+    btnR.textContent = 'R';
+    btnL.onclick = (e) => { e.stopPropagation(); addRow.dataset.childSide='left';  btnL.classList.add('active'); btnR.classList.remove('active'); };
+    btnR.onclick = (e) => { e.stopPropagation(); addRow.dataset.childSide='right'; btnR.classList.add('active'); btnL.classList.remove('active'); };
+    sideToggle.appendChild(btnL);
+    sideToggle.appendChild(btnR);
+    addRow.appendChild(sideToggle);
+  }
   card.appendChild(addRow);
 
   // Collapse toggle (if has children)
@@ -3538,15 +3579,16 @@ function renderDetailPanel(nodeId) {
   }
   html += `</div>`;
 
-  // Branch Side (which side of parent this node sits on)
+  // Branch Side — only meaningful for ROOT nodes (top-level trees)
+  const isRootNode = (tree.nodes || []).some(rn => rn.id === nodeId);
   const curSide = node.side || 'right';
-  html += `<div class="detail-section">
+  if (isRootNode) html += `<div class="detail-section">
     <div class="detail-label">Branch Side</div>
     <div style="display:flex;gap:8px;">
       <button onclick="setNodeSide('${nodeId}','left')" style="flex:1;padding:8px;border-radius:var(--radius-sm);cursor:pointer;border:2px solid ${curSide==='left'?'var(--accent)':'var(--border)'};background:${curSide==='left'?'var(--accent-dim)':'var(--bg3)'};color:var(--text);font-size:13px;font-weight:600;">← Left</button>
       <button onclick="setNodeSide('${nodeId}','right')" style="flex:1;padding:8px;border-radius:var(--radius-sm);cursor:pointer;border:2px solid ${curSide==='right'?'var(--accent)':'var(--border)'};background:${curSide==='right'?'var(--accent-dim)':'var(--bg3)'};color:var(--text);font-size:13px;font-weight:600;">Right →</button>
     </div>
-    <div style="font-size:11px;color:var(--text3);margin-top:6px;">Which side of the parent this node branches to.</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px;">Which side this tree's children branch to.</div>
   </div>`;
 
   // Color Labels (Pro)
@@ -3867,8 +3909,10 @@ function openShareModal() {
   if (!tree) { showToast('Select a tree first.', 'error'); return; }
   neShareCachedLink = null;
   const input = document.getElementById('share-modal-link');
-  if (input) input.value = '';
+  if (input) input.value = 'Generating link...';
   openModal('share-modal');
+  // Pre-generate the link so social buttons open instantly (no popup blocker)
+  generateShareLink();
 }
 
 async function generateShareLink() {
@@ -3895,10 +3939,22 @@ async function generateShareLink() {
   return link;
 }
 
-async function shareToSocial(platform) {
-  let link = neShareCachedLink;
-  if (!link) link = await generateShareLink();
-  if (!link) return;
+function neBuildShareLinkSync() {
+  // Synchronous encoded fallback link — always available immediately
+  const tree = getActiveTree();
+  if (!tree) return null;
+  try {
+    const shareId = 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+    const snapshot = { id: shareId, name: tree.name, icon: tree.icon, nodes: tree.nodes, sharedAt: new Date().toISOString() };
+    return window.location.origin + window.location.pathname + '#shared=' + btoa(unescape(encodeURIComponent(JSON.stringify(snapshot))));
+  } catch (e) { return null; }
+}
+
+function shareToSocial(platform) {
+  // Use the pre-generated link; fall back to a synchronous encoded link so the
+  // popup opens inside this click handler (avoids popup blockers).
+  const link = neShareCachedLink || neBuildShareLinkSync();
+  if (!link) { showToast('Could not create link.', 'error'); return; }
   const tree = getActiveTree();
   const title = tree ? (tree.name + ' — ResearchTree') : 'ResearchTree';
   const enc = encodeURIComponent(link);
@@ -3917,7 +3973,7 @@ async function shareToSocial(platform) {
       navigator.clipboard.writeText(link).then(() => showToast('Link copied!', 'success'), () => showToast('Copy failed', 'error'));
       return;
   }
-  if (url) window.open(url, '_blank', 'width=600,height=500');
+  if (url) window.open(url, '_blank', 'noopener,width=620,height=560');
 }
 
 async function shareTreeLink() {
@@ -4499,11 +4555,24 @@ function neExec(cmd, value) {
   if (document.activeElement !== ed) ed.focus();
   document.execCommand('styleWithCSS', false, false);
   document.execCommand(cmd, false, value || null);
-  // When creating a list, give it the current text color so items aren't default-colored
-  if ((cmd === 'insertUnorderedList' || cmd === 'insertOrderedList') && neCurrentTextColor) {
+  // When creating a list, apply the active text color so items aren't default-colored.
+  if (cmd === 'insertUnorderedList' || cmd === 'insertOrderedList') {
     setTimeout(() => {
       const list = neCurrentList();
-      if (list) { list.style.color = neCurrentTextColor; list.querySelectorAll('li').forEach(li => li.style.color = neCurrentTextColor); }
+      if (!list) return;
+      // Prefer the explicitly chosen color; else the color at the caret
+      let color = neCurrentTextColor;
+      if (!color) {
+        const sel = window.getSelection();
+        if (sel && sel.anchorNode) {
+          let el = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+          if (el) color = getComputedStyle(el).color;
+        }
+      }
+      if (color) {
+        list.style.color = color;
+        list.querySelectorAll('li').forEach(li => li.style.color = color);
+      }
     }, 0);
   }
   // Record the explicit on/off state the user just set, so selectionchange
@@ -4771,17 +4840,7 @@ function neWireFloatingImage(wrap) {
   if (urlBtn) {
     urlBtn.addEventListener('mousedown', (e) => {
       e.preventDefault(); e.stopPropagation();
-      const current = wrap.dataset.href || '';
-      const url = prompt('Link this image to a website (leave blank to remove):', current);
-      if (url === null) return;
-      const trimmed = url.trim();
-      if (!trimmed) { delete wrap.dataset.href; wrap.classList.remove('has-href'); }
-      else {
-        let u = trimmed;
-        if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
-        wrap.dataset.href = u; wrap.classList.add('has-href');
-      }
-      neSave();
+      neShowImageLinkBox(wrap);
     });
   }
   // Ctrl/Cmd-click (or click when not selected) opens the web link
@@ -4851,6 +4910,40 @@ function neWireFloatingImage(wrap) {
       neStartLinking(wrap);
     });
   }
+}
+
+function neShowImageLinkBox(wrap) {
+  // Remove any existing box
+  wrap.querySelectorAll('.ne-img-linkbox').forEach(b => b.remove());
+  const box = document.createElement('div');
+  box.className = 'ne-img-linkbox';
+  box.contentEditable = 'false';
+  box.innerHTML =
+    '<input type="text" placeholder="https://source-website.com" value="' + (wrap.dataset.href || '').replace(/"/g,'&quot;') + '">' +
+    '<button class="ne-img-linkbox-save">Save</button>' +
+    '<button class="ne-img-linkbox-clear" title="Remove link">✕</button>';
+  wrap.appendChild(box);
+  const input = box.querySelector('input');
+  const save = box.querySelector('.ne-img-linkbox-save');
+  const clear = box.querySelector('.ne-img-linkbox-clear');
+  setTimeout(() => input.focus(), 0);
+  function commit() {
+    let u = input.value.trim();
+    if (!u) { delete wrap.dataset.href; wrap.classList.remove('has-href'); }
+    else {
+      if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+      wrap.dataset.href = u; wrap.classList.add('has-href');
+    }
+    box.remove(); neSave();
+  }
+  save.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); commit(); });
+  clear.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); delete wrap.dataset.href; wrap.classList.remove('has-href'); box.remove(); neSave(); });
+  input.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { e.preventDefault(); box.remove(); }
+  });
+  input.addEventListener('mousedown', (e) => e.stopPropagation());
 }
 
 function neSelectFloating(wrap) {
@@ -5042,11 +5135,19 @@ function neCurrentList() {
 }
 
 function neApplyColorToCurrentList() {
-  if (!neCurrentTextColor) return;
   const list = neCurrentList();
-  if (list) {
-    list.style.color = neCurrentTextColor;
-    list.querySelectorAll('li').forEach(li => li.style.color = neCurrentTextColor);
+  if (!list) return;
+  let color = neCurrentTextColor;
+  if (!color) {
+    const sel = window.getSelection();
+    if (sel && sel.anchorNode) {
+      let el = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+      if (el) color = getComputedStyle(el).color;
+    }
+  }
+  if (color) {
+    list.style.color = color;
+    list.querySelectorAll('li').forEach(li => li.style.color = color);
   }
 }
 
