@@ -844,7 +844,9 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 #ne-editor mark { background: rgba(251,191,36,0.3); color: var(--text); border-radius: 2px; padding: 0 2px; }
 #ne-editor s { text-decoration: line-through; color: var(--text3); }
 #ne-editor .task-item { display: flex; align-items: flex-start; gap: 8px; list-style: none; margin: 4px 0; }
-#ne-editor .task-item input[type=checkbox] { margin-top: 3px; accent-color: var(--accent); }
+#ne-editor .task-item input[type=checkbox] { margin-top: 5px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+#ne-editor .task-item .task-text { flex: 1; }
+#ne-editor .task-item.checked .task-text { text-decoration: line-through; color: var(--text3); }
 .ne-doc-page ::selection { background: rgba(108,142,255,0.25); }
 
 /* Bottom status bar */
@@ -1204,6 +1206,13 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   flex-shrink: 0; padding: 12px 16px;
   border-top: 1px solid var(--border); background: var(--bg2);
 }
+
+/* Font size stepper */
+.ne-size-stepper { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--bg3); }
+.ne-size-btn { width: 24px; height: 28px; border: none; background: transparent; color: var(--text2); cursor: pointer; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.ne-size-btn:hover { background: var(--bg4); color: var(--accent); }
+#ne-size-input { width: 36px; height: 28px; border: none; background: transparent; color: var(--text); text-align: center; font-size: 12px; outline: none; -moz-appearance: textfield; }
+#ne-size-input::-webkit-outer-spin-button, #ne-size-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 </style>
 </head>
 <body>
@@ -1323,7 +1332,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       <div class="topbar-btns">
         <div class="sync-dot" id="sync-dot" title="Saved"></div>
         <button class="btn-sm btn-outline" onclick="openTreeSettings()" id="tree-settings-btn" style="display:none" title="Tree settings"><i class="ti ti-settings"></i></button>
-        <button class="btn-sm btn-outline" onclick="openExportModal()" id="export-btn" style="display:none" title="Export"><i class="ti ti-download"></i></button>
+        <button class="btn-sm btn-outline" onclick="openExportModal()" id="export-btn" style="display:none" title="Share / Export"><i class="ti ti-share"></i></button>
       </div>
     </div>
     <div id="canvas-wrap">
@@ -1453,15 +1462,28 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 <div class="modal-overlay hidden" id="export-modal">
   <div class="modal">
     <div class="modal-header">
-      <h3>Export Tree</h3>
+      <h3>Share &amp; Export</h3>
       <button class="icon-btn" onclick="closeModal('export-modal')"><i class="ti ti-x"></i></button>
     </div>
     <div class="modal-body">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin-bottom:8px;">Share</div>
+      <div class="export-options">
+        <div class="export-opt" onclick="shareTreeLink()"><i class="ti ti-link"></i><span>Share Link</span></div>
+        <div class="export-opt" onclick="copyTreeText()"><i class="ti ti-clipboard"></i><span>Copy Text</span></div>
+      </div>
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin:14px 0 8px;">Export File</div>
       <div class="export-options">
         <div class="export-opt" onclick="exportTree('json')"><i class="ti ti-file-code"></i><span>JSON</span></div>
         <div class="export-opt" onclick="exportTree('markdown')"><i class="ti ti-markdown"></i><span>Markdown</span></div>
         <div class="export-opt" onclick="exportTree('csv')"><i class="ti ti-table"></i><span>CSV</span></div>
         <div class="export-opt" onclick="exportTree('print')"><i class="ti ti-printer"></i><span>Print / PDF</span></div>
+      </div>
+      <div id="share-link-result" style="display:none;margin-top:14px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Anyone with this link can view a read-only copy:</div>
+        <div style="display:flex;gap:6px;">
+          <input id="share-link-input" readonly style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;">
+          <button class="btn-sm btn-accent" onclick="copyShareLink()" style="flex-shrink:0;">Copy</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1880,16 +1902,11 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
         <option value="'Playfair Display', serif">Playfair</option>
         <option value="'Courier New', monospace">Mono</option>
       </select>
-      <select class="tb-select" id="ne-size-select" onmousedown="neSaveSelection()" onchange="neSetFontSize(this.value)" title="Text size" style="max-width:74px;">
-        <option value="">Size</option>
-        <option value="1">Tiny</option>
-        <option value="2">Small</option>
-        <option value="3">Normal</option>
-        <option value="4">Large</option>
-        <option value="5">X-Large</option>
-        <option value="6">Huge</option>
-        <option value="7">Giant</option>
-      </select>
+      <div class="ne-size-stepper" onmousedown="neSaveSelection()">
+        <button class="ne-size-btn" onmousedown="event.preventDefault();neStepFontSize(-1)" title="Decrease size">−</button>
+        <input id="ne-size-input" type="number" min="6" max="96" value="11" onchange="neApplyFontSizePx(+this.value)" onmousedown="neSaveSelection()" title="Font size (px)">
+        <button class="ne-size-btn" onmousedown="event.preventDefault();neStepFontSize(1)" title="Increase size">+</button>
+      </div>
     </div>
     <!-- Inline formatting -->
     <div class="ne-toolbar-group">
@@ -3754,6 +3771,123 @@ function openExportModal() {
   openModal('export-modal');
 }
 
+// ─── Sharing ───
+async function shareTreeLink() {
+  const tree = getActiveTree();
+  if (!tree) { showToast('Select a tree first.', 'error'); return; }
+  const resultBox = document.getElementById('share-link-result');
+  const input = document.getElementById('share-link-input');
+  showToast('Creating share link...', 'info');
+  // Try to save a public snapshot to a "shares" table. If it doesn't exist,
+  // fall back to an encoded link that carries the data itself.
+  const shareId = 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  const snapshot = { id: shareId, name: tree.name, icon: tree.icon, nodes: tree.nodes, sharedAt: new Date().toISOString() };
+  let usedDb = false;
+  try {
+    const { error } = await sbClient.from('shares').insert({
+      id: shareId, data: snapshot, created_by: currentUser ? currentUser.id : null
+    });
+    if (!error) usedDb = true;
+  } catch (e) {}
+
+  let link;
+  if (usedDb) {
+    link = window.location.origin + window.location.pathname + '?share=' + shareId;
+  } else {
+    // Fallback: encode the snapshot into the URL hash (works without a DB table)
+    try {
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(snapshot))));
+      link = window.location.origin + window.location.pathname + '#shared=' + encoded;
+    } catch (e) {
+      showToast('Could not create share link.', 'error');
+      return;
+    }
+  }
+  if (input) input.value = link;
+  if (resultBox) resultBox.style.display = 'block';
+  showToast('Share link ready!', 'success');
+}
+
+function copyShareLink() {
+  const input = document.getElementById('share-link-input');
+  if (!input || !input.value) return;
+  input.select();
+  navigator.clipboard.writeText(input.value).then(
+    () => showToast('Link copied!', 'success'),
+    () => { document.execCommand('copy'); showToast('Link copied!', 'success'); }
+  );
+}
+
+function copyTreeText() {
+  const tree = getActiveTree();
+  if (!tree) { showToast('Select a tree first.', 'error'); return; }
+  let text = (tree.icon || '') + ' ' + tree.name + '\n\n';
+  function walk(nodes, depth) {
+    nodes.forEach(n => {
+      text += '  '.repeat(depth) + '• ' + n.title + (n.desc ? ' — ' + n.desc : '') + '\n';
+      if (n.extNotes) {
+        const tmp = document.createElement('div'); tmp.innerHTML = n.extNotes;
+        const plain = (tmp.innerText || tmp.textContent || '').trim();
+        if (plain) text += '  '.repeat(depth+1) + plain.replace(/\n/g, '\n' + '  '.repeat(depth+1)) + '\n';
+      }
+      walk(n.children || [], depth + 1);
+    });
+  }
+  walk(tree.nodes || [], 0);
+  navigator.clipboard.writeText(text).then(
+    () => showToast('Tree copied to clipboard!', 'success'),
+    () => showToast('Copy failed — try again.', 'error')
+  );
+}
+
+// On load, check for a shared tree in the URL (read-only viewer)
+function checkForSharedTree() {
+  const params = new URLSearchParams(window.location.search);
+  const hash = window.location.hash;
+  // Encoded fallback share
+  if (hash.startsWith('#shared=')) {
+    try {
+      const json = decodeURIComponent(escape(atob(hash.slice(8))));
+      const snap = JSON.parse(json);
+      openSharedViewer(snap);
+      return true;
+    } catch (e) {}
+  }
+  // DB-backed share
+  const shareId = params.get('share');
+  if (shareId) {
+    sbClient.from('shares').select('data').eq('id', shareId).single().then(({data}) => {
+      if (data && data.data) openSharedViewer(data.data);
+      else showToast('Shared tree not found.', 'error');
+    }).catch(() => showToast('Shared tree not found.', 'error'));
+    return true;
+  }
+  return false;
+}
+
+function openSharedViewer(snap) {
+  // Render a simple read-only view of the shared tree
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:2000;background:var(--bg);overflow:auto;padding:40px 20px;';
+  let h = '<div style="max-width:760px;margin:0 auto;">';
+  h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:28px;">'+(snap.icon||'🌳')+'</span><h1 style="font-family:var(--title-font);font-weight:300;font-size:30px;">'+esc(snap.name||'Shared Tree')+'</h1></div>';
+  h += '<div style="font-size:12px;color:var(--text3);margin-bottom:24px;">Read-only shared view · <a href="'+window.location.pathname+'" style="color:var(--accent);">Open ResearchTree</a></div>';
+  function render(nodes, depth) {
+    nodes.forEach(n => {
+      h += '<div style="margin-left:'+(depth*20)+'px;padding:10px 0;border-bottom:1px solid var(--border);">';
+      h += '<div style="font-weight:600;font-size:15px;">'+esc(n.title)+'</div>';
+      if (n.desc) h += '<div style="color:var(--text2);font-size:13px;margin-top:2px;">'+esc(n.desc)+'</div>';
+      if (n.extNotes) h += '<div style="margin-top:8px;font-size:14px;line-height:1.7;color:var(--text);">'+n.extNotes+'</div>';
+      h += '</div>';
+      render(n.children || [], depth + 1);
+    });
+  }
+  render(snap.nodes || [], 0);
+  h += '</div>';
+  overlay.innerHTML = h;
+  document.body.appendChild(overlay);
+}
+
 function exportTree(format) {
   const tree = getActiveTree(); if (!tree) return;
   closeModal('export-modal');
@@ -3964,7 +4098,7 @@ function openNoteEditor(nodeId) {
       if (img) neCreateFloatingImage(img.src, parseFloat(d.dataset.left)||40, parseFloat(d.dataset.top)||40, parseFloat(d.dataset.width)||240, d.dataset.imgId);
     });
   }
-  setTimeout(() => { neWireImages(); neRedrawLinks(); }, 80);
+  setTimeout(() => { neWireImages(); neRedrawLinks(); neWireTaskboxes(); }, 80);
   // Redraw links when the doc area scrolls
   const dw = document.querySelector('.ne-doc-wrap');
   if (dw && !dw._linkScroll) { dw._linkScroll = true; dw.addEventListener('scroll', () => neRedrawLinks()); }
@@ -4047,57 +4181,85 @@ function openNoteEditor(nodeId) {
     if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); neRedo(); return; }
     // Escape
     if (e.key === 'Escape') { closeNoteEditor(); return; }
-    // Tab → indent
-    if (e.key === 'Tab') { e.preventDefault(); document.execCommand(e.shiftKey ? 'outdent' : 'indent'); return; }
-    // Space after "-" or "1." or "*" → start a list automatically
-    if (e.key === ' ') {
+    // Helper: is the caret in an empty list item?
+    function caretEmptyListItem() {
       const sel = window.getSelection();
-      if (sel && sel.rangeCount) {
-        const node = sel.anchorNode;
-        const text = (node && node.textContent ? node.textContent.slice(0, sel.anchorOffset) : '');
-        // Only at line start (trim leading)
-        const trimmed = text.replace(/^\s+/, '');
-        if (trimmed === '-' || trimmed === '*') {
-          e.preventDefault();
-          // remove the marker char
-          for (let i=0;i<trimmed.length;i++) document.execCommand('delete', false);
-          document.execCommand('insertUnorderedList');
-          setTimeout(neUpdateToolbarState,0);
-          return;
-        }
-        if (/^\d+\.$/.test(trimmed)) {
-          e.preventDefault();
-          for (let i=0;i<trimmed.length;i++) document.execCommand('delete', false);
-          document.execCommand('insertOrderedList');
-          setTimeout(neUpdateToolbarState,0);
-          return;
-        }
+      if (!sel || !sel.rangeCount) return null;
+      let li = sel.anchorNode;
+      while (li && li.nodeType === 3) li = li.parentNode;
+      const item = li && li.closest ? li.closest('li') : null;
+      if (item && item.textContent.replace(/[\u200b\s]/g,'') === '') return item;
+      return null;
+    }
+    // Helper: line text before caret
+    function lineBeforeCaret() {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return '';
+      const node = sel.anchorNode;
+      return (node && node.textContent ? node.textContent.slice(0, sel.anchorOffset) : '');
+    }
+
+    // Tab → start a bullet list if line is just "-"/"*", else indent (Apple Notes style)
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const trimmed = lineBeforeCaret().replace(/^\s+/, '');
+      if (!e.shiftKey && (trimmed === '-' || trimmed === '*')) {
+        for (let i=0;i<trimmed.length;i++) document.execCommand('delete', false);
+        document.execCommand('insertUnorderedList');
+        setTimeout(neUpdateToolbarState,0);
+        return;
+      }
+      document.execCommand(e.shiftKey ? 'outdent' : 'indent');
+      return;
+    }
+
+    // Space after "-", "*", "1.", "[]", "[ ]" → start the matching list
+    if (e.key === ' ') {
+      const trimmed = lineBeforeCaret().replace(/^\s+/, '');
+      if (trimmed === '-' || trimmed === '*') {
+        e.preventDefault();
+        for (let i=0;i<trimmed.length;i++) document.execCommand('delete', false);
+        document.execCommand('insertUnorderedList');
+        setTimeout(neUpdateToolbarState,0);
+        return;
+      }
+      if (/^\d+\.$/.test(trimmed)) {
+        e.preventDefault();
+        for (let i=0;i<trimmed.length;i++) document.execCommand('delete', false);
+        document.execCommand('insertOrderedList');
+        setTimeout(neUpdateToolbarState,0);
+        return;
+      }
+      if (trimmed === '[]' || trimmed === '[ ]') {
+        e.preventDefault();
+        for (let i=0;i<trimmed.length;i++) document.execCommand('delete', false);
+        neInsertTaskList();
+        setTimeout(neUpdateToolbarState,0);
+        return;
       }
     }
-    // Enter inside an empty list item → exit the list (native behavior in most browsers,
-    // but we ensure double-enter breaks out)
-    if (e.key === 'Enter') {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount) {
-        let li = sel.anchorNode;
-        while (li && li.nodeType === 3) li = li.parentNode;
-        const listItem = li && li.closest ? li.closest('li') : null;
-        if (listItem && listItem.textContent.trim() === '') {
-          e.preventDefault();
-          document.execCommand('insertParagraph');
-          document.execCommand('outdent');
-          // If still in list, break out fully
-          setTimeout(() => {
-            const s2 = window.getSelection();
-            let n2 = s2.anchorNode;
-            while (n2 && n2.nodeType === 3) n2 = n2.parentNode;
-            if (n2 && n2.closest && n2.closest('li')) {
-              document.execCommand('insertUnorderedList'); // toggles off
-            }
-            neUpdateToolbarState();
-          }, 0);
-          return;
+
+    // Enter: double-enter (empty list item) breaks out of the list
+    if (e.key === 'Enter' && !e.shiftKey) {
+      const empty = caretEmptyListItem();
+      if (empty) {
+        e.preventDefault();
+        const list = empty.parentNode;
+        // Remove the empty item and insert a normal paragraph after the list
+        const p = document.createElement('p');
+        p.innerHTML = '<br>';
+        empty.remove();
+        if (list.parentNode) {
+          list.parentNode.insertBefore(p, list.nextSibling);
+          if (!list.children.length) list.remove();
         }
+        const range = document.createRange();
+        range.setStart(p, 0); range.collapse(true);
+        const sel = window.getSelection();
+        sel.removeAllRanges(); sel.addRange(range);
+        neUpdateToolbarState();
+        neQueueSave();
+        return;
       }
     }
   };
@@ -4183,11 +4345,10 @@ function neUpdateCounts() {
 function neExec(cmd, value) {
   const ed = document.getElementById('ne-editor');
   if (document.activeElement !== ed) ed.focus();
-  // styleWithCSS=false → semantic tags (<b>,<i>,<u>,<strike>) which the browser
-  // adds/removes symmetrically. execCommand itself toggles; we just sync the button.
   document.execCommand('styleWithCSS', false, false);
   document.execCommand(cmd, false, value || null);
-  // Sync button highlight to the real state after the command applies
+  // Record the explicit on/off state the user just set, so selectionchange
+  // handlers don't immediately flip it back (the list-typing bug).
   setTimeout(() => {
     const btn = document.getElementById('tb-' + cmd);
     if (btn) {
@@ -4234,20 +4395,33 @@ function neIsHighlighted() {
   return false;
 }
 
+let neHighlightColor = 'rgba(251,191,36,0.5)';
+
 function neHighlight() {
   const ed = document.getElementById('ne-editor');
   if (document.activeElement !== ed) ed.focus();
   neRestoreSelection();
+  const sel = window.getSelection();
   document.execCommand('styleWithCSS', false, true);
   const wasOn = neIsHighlighted();
   if (wasOn) {
-    // Remove: hiliteColor transparent often fails to strip the span, so also
-    // try removeFormat which clears inline background reliably.
     document.execCommand('hiliteColor', false, 'transparent');
-    // Some engines keep the span — strip backgrounds in the selection manually
     neStripHighlight();
   } else {
-    document.execCommand('hiliteColor', false, 'rgba(251,191,36,0.45)');
+    // If text is selected, wrap it directly so the color shows IMMEDIATELY
+    if (sel && sel.rangeCount && !sel.isCollapsed) {
+      const range = sel.getRangeAt(0);
+      const span = document.createElement('span');
+      span.style.backgroundColor = neHighlightColor;
+      try {
+        range.surroundContents(span);
+      } catch (err) {
+        // Fallback for partial-node selections
+        document.execCommand('hiliteColor', false, neHighlightColor);
+      }
+    } else {
+      document.execCommand('hiliteColor', false, neHighlightColor);
+    }
   }
   setTimeout(() => {
     const btn = document.getElementById('tb-highlight');
@@ -4283,15 +4457,40 @@ function neSetFont(font) {
   setTimeout(neSaveSelection, 0);
 }
 
-function neSetFontSize(size) {
+function neApplyFontSizePx(px) {
+  px = Math.max(6, Math.min(96, px || 11));
   const ed = document.getElementById('ne-editor');
   ed.focus();
   neRestoreSelection();
-  if (!size) { setTimeout(neSaveSelection,0); return; }
-  // execCommand fontSize uses 1-7 scale
-  document.execCommand('fontSize', false, size);
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount && !sel.isCollapsed) {
+    // Wrap selection in a span with the exact pixel size.
+    // Use execCommand fontSize to create font tags, then convert to px.
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('fontSize', false, '7'); // temp marker size
+    ed.querySelectorAll('font[size="7"], span[style*="xxx-large"]').forEach(el => {
+      const span = document.createElement('span');
+      span.style.fontSize = px + 'px';
+      span.innerHTML = el.innerHTML;
+      el.replaceWith(span);
+    });
+    // Also catch styleWithCSS spans
+    ed.querySelectorAll('span').forEach(s => {
+      if (s.style.fontSize === 'xxx-large' || s.style.fontSize === '-webkit-xxx-large') s.style.fontSize = px + 'px';
+    });
+  }
+  const input = document.getElementById('ne-size-input');
+  if (input) input.value = px;
   neQueueSave();
   setTimeout(neSaveSelection, 0);
+}
+
+function neStepFontSize(delta) {
+  const input = document.getElementById('ne-size-input');
+  let v = parseInt(input ? input.value : '11', 10) || 11;
+  v = Math.max(6, Math.min(96, v + delta));
+  if (input) input.value = v;
+  neApplyFontSizePx(v);
 }
 
 // ─── Selection save/restore (color pickers steal focus) ───
@@ -4454,16 +4653,23 @@ function neWireImages() {
 // ─── Image → text link connectors ───
 let neLinks = [];            // [{imgId, anchorId}]
 let neLinkAnchorCounter = 0;
-let neLinkingFrom = null;    // image wrap currently drawing a link
+let neLinkClickHandler = null;   // currently active link-placement handler
 
 function neStartLinking(wrap) {
-  neLinkingFrom = wrap;
-  document.body.style.cursor = 'crosshair';
-  showToast('Click a spot in the text to link this image to.', 'info');
   const editor = document.getElementById('ne-editor');
+  // Cancel any in-progress linking from a previous image
+  if (neLinkClickHandler) {
+    editor.removeEventListener('click', neLinkClickHandler, true);
+    neLinkClickHandler = null;
+  }
+  // Capture THIS image's id now, in the closure — never read a shared variable later
+  const thisImgId = wrap.dataset.imgId;
+  document.body.style.cursor = 'crosshair';
+  showToast('Click a spot in the text to link this image.', 'info');
+
   const onClick = (e) => {
     e.preventDefault();
-    // Place an anchor marker at the clicked text position
+    e.stopPropagation();
     const anchorId = 'anc' + (++neLinkAnchorCounter);
     let range = null;
     if (document.caretRangeFromPoint) range = document.caretRangeFromPoint(e.clientX, e.clientY);
@@ -4474,16 +4680,18 @@ function neStartLinking(wrap) {
     const marker = document.createElement('span');
     marker.className = 'ne-link-anchor';
     marker.dataset.anchorId = anchorId;
-    marker.innerHTML = '&#8203;'; // zero-width
+    marker.innerHTML = '&#8203;';
     if (range) { range.insertNode(marker); }
     else { editor.appendChild(marker); }
-    neLinks.push({ imgId: neLinkingFrom.dataset.imgId, anchorId });
-    neLinkingFrom = null;
+    // Use the captured id — guaranteed to be the image the user clicked the 🔗 on
+    neLinks.push({ imgId: thisImgId, anchorId });
     document.body.style.cursor = '';
     editor.removeEventListener('click', onClick, true);
+    neLinkClickHandler = null;
     neRedrawLinks();
     neSave();
   };
+  neLinkClickHandler = onClick;
   editor.addEventListener('click', onClick, true);
 }
 
@@ -4597,23 +4805,53 @@ function neQuickLink() {
 function neInsertTaskList() {
   const editor = document.getElementById('ne-editor');
   editor.focus();
+  neRestoreSelection();
+  // Single empty checkbox item, no placeholder text. Caret lands ready to type.
   document.execCommand('insertHTML', false,
-    '<ul style="list-style:none;padding-left:0;">' +
-    '<li class="task-item"><input type="checkbox"> Task item</li>' +
-    '<li class="task-item"><input type="checkbox"> Another task</li>' +
-    '</ul><p>​</p>'
+    '<ul class="ne-tasklist" style="list-style:none;padding-left:4px;">' +
+    '<li class="task-item"><input type="checkbox" contenteditable="false"><span class="task-text">\u200b</span></li>' +
+    '</ul>'
   );
+  // Place caret inside the task text span
+  setTimeout(() => {
+    const span = editor.querySelector('.ne-tasklist li:last-child .task-text');
+    if (span) {
+      const range = document.createRange();
+      range.selectNodeContents(span); range.collapse(false);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    }
+    neWireTaskboxes();
+  }, 0);
+  neQueueSave();
+}
+
+// Wire checkboxes so clicking toggles checked (and persists)
+function neWireTaskboxes() {
+  const ed = document.getElementById('ne-editor');
+  if (!ed) return;
+  ed.querySelectorAll('.task-item input[type=checkbox]').forEach(cb => {
+    if (cb._wired) return;
+    cb._wired = true;
+    cb.contentEditable = 'false';
+    cb.addEventListener('change', () => {
+      const li = cb.closest('li');
+      if (li) li.classList.toggle('checked', cb.checked);
+      if (cb.checked) cb.setAttribute('checked','checked'); else cb.removeAttribute('checked');
+      neQueueSave();
+    });
+  });
+  // Enter on a task line creates a new task item (not a <div>)
 }
 
 function neUpdateToolbarState() {
-  // Only reflect state when the selection is inside the editor
   const ed = document.getElementById('ne-editor');
   if (!ed) return;
   const sel = window.getSelection();
   if (!sel || !sel.rangeCount || !ed.contains(sel.anchorNode)) return;
 
   neSaveSelection();
-  const cmds = ['bold','italic','underline','strikeThrough','insertUnorderedList','insertOrderedList'];
+  // Inline format buttons reflect the live caret/selection state.
+  const cmds = ['bold','italic','underline','strikeThrough'];
   cmds.forEach(cmd => {
     const btn = document.getElementById('tb-' + cmd);
     if (!btn) return;
@@ -4621,7 +4859,15 @@ function neUpdateToolbarState() {
     try { on = document.queryCommandState(cmd); } catch(e) {}
     btn.classList.toggle('active', on);
   });
-  // Highlight state
+  // List buttons
+  ['insertUnorderedList','insertOrderedList'].forEach(cmd => {
+    const btn = document.getElementById('tb-' + cmd);
+    if (!btn) return;
+    let on = false;
+    try { on = document.queryCommandState(cmd); } catch(e) {}
+    btn.classList.toggle('active', on);
+  });
+  // Highlight
   const hbtn = document.getElementById('tb-highlight');
   if (hbtn) hbtn.classList.toggle('active', neIsHighlighted());
   // Block select
@@ -5120,6 +5366,8 @@ document.addEventListener('click', (e) => {
 });
 
 // Start
+// If opened via a share link, show the read-only viewer instead of the app
+try { if (typeof checkForSharedTree === 'function') checkForSharedTree(); } catch(e){}
 loadPrefs();
 init();
 setTimeout(initCanvasPanZoom, 500);
