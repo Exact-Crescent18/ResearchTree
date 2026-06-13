@@ -441,7 +441,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6);
   display: flex; align-items: center; justify-content: center;
-  z-index: 500; padding: 20px;
+  z-index: 900; padding: 20px;
 }
 .modal-overlay.hidden { display: none; }
 .modal {
@@ -1204,11 +1204,15 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
 /* ─── Detail panel sticky footer ─── */
 .detail-footer {
-  flex-shrink: 0; height: 60px; padding: 0 12px; box-sizing: border-box;
+  flex-shrink: 0; height: 60px; padding: 11px 12px; box-sizing: border-box;
   display: flex; align-items: center; justify-content: center;
   border-top: 1px solid var(--border); background: var(--bg2);
 }
-.detail-footer .btn-add-sm { padding: 8px 11px !important; }
+.detail-footer .btn-add-sm {
+  width: 100%; height: 100%; padding: 0 11px !important;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  font-size: 13px; box-sizing: border-box;
+}
 
 /* Font size stepper */
 .ne-size-stepper { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--bg3); }
@@ -1271,6 +1275,24 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 /* List items inherit the editor/text color (never default to white) */
 #ne-editor ul li, #ne-editor ol li, #ne-editor li { color: inherit; }
 #ne-editor ul, #ne-editor ol { color: inherit; }
+
+/* Tools grid */
+.tools-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.tool-card {
+  display: flex; flex-direction: column; gap: 6px; padding: 16px;
+  border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer;
+  transition: var(--transition); background: var(--bg3);
+}
+.tool-card:hover { border-color: var(--accent); background: var(--bg4); transform: translateY(-2px); }
+.tool-card .tool-icon { color: var(--accent); }
+.tool-card .tool-name { font-size: 14px; font-weight: 600; }
+.tool-card .tool-desc { font-size: 11px; color: var(--text3); line-height: 1.4; }
+.history-item, .gsearch-item {
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.gsearch-item { cursor: pointer; transition: var(--transition); }
+.gsearch-item:hover { border-color: var(--accent); background: var(--bg3); }
 </style>
 </head>
 <body>
@@ -1342,6 +1364,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       <div class="sidebar-logo">Research<span>Tree</span></div>
       <div class="sidebar-actions">
         <button class="icon-btn" onclick="openNewTreeModal()" title="New tree"><i class="ti ti-plus"></i></button>
+        <button class="icon-btn" onclick="openToolsModal()" title="Tools"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="icon-btn" onclick="openAccountModal()" title="Account"><i class="ti ti-settings"></i></button>
       </div>
     </div>
@@ -1431,7 +1454,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     </div>
     <!-- Sticky notes button — always present at the bottom -->
     <div class="detail-footer" id="detail-footer" style="display:none;">
-      <button class="btn-add-sm primary" id="detail-notes-btn" onclick="openNotesForSelected()" style="width:100%;height:38px;justify-content:center;align-items:center;gap:7px;padding:0 11px;font-size:13px;display:flex;box-sizing:border-box;">
+      <button class="btn-add-sm primary" id="detail-notes-btn" onclick="openNotesForSelected()">
         <i class="ti ti-notes"></i> <span id="detail-notes-btn-label">Open Note Editor</span>
       </button>
     </div>
@@ -1571,6 +1594,94 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
         <div class="share-social" onclick="shareToSocial('teams')" style="--c:#5059C9;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg><span>Teams</span></div>
         <div class="share-social" onclick="shareToSocial('copy')" style="--c:#888;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0 -2 -2H6a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2"/></svg><span>Copy Link</span></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tools Modal -->
+<div class="modal-overlay hidden" id="tools-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3>Tools</h3>
+      <button class="icon-btn" onclick="closeModal('tools-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="tools-grid" id="tools-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Graph View Overlay -->
+<div id="graph-overlay" class="hidden" style="position:fixed;inset:0;z-index:850;background:var(--bg);display:flex;flex-direction:column;">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+    <button class="btn-sm btn-outline" onclick="closeGraphView()"><i class="ti ti-arrow-left"></i> Back</button>
+    <div style="font-family:var(--title-font);font-weight:300;font-size:18px;">Graph View</div>
+    <div style="flex:1;"></div>
+    <div style="font-size:12px;color:var(--text3);">Drag nodes · scroll to zoom</div>
+  </div>
+  <div style="flex:1;overflow:hidden;position:relative;"><svg id="graph-svg" style="width:100%;height:100%;cursor:grab;"></svg></div>
+</div>
+
+<!-- Study Mode Overlay -->
+<div id="study-overlay" class="hidden" style="position:fixed;inset:0;z-index:850;background:var(--bg);display:flex;flex-direction:column;align-items:center;">
+  <div style="width:100%;height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;box-sizing:border-box;">
+    <button class="btn-sm btn-outline" onclick="closeStudyMode()"><i class="ti ti-arrow-left"></i> Exit</button>
+    <div style="font-family:var(--title-font);font-weight:300;font-size:18px;">Study Mode</div>
+    <div style="flex:1;"></div>
+    <div id="study-progress" style="font-size:13px;color:var(--text3);"></div>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;width:100%;max-width:640px;padding:24px;box-sizing:border-box;">
+    <div id="study-card" onclick="studyFlip()" style="width:100%;min-height:300px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;cursor:pointer;text-align:center;">
+      <div id="study-card-content" style="font-size:20px;line-height:1.6;"></div>
+      <div id="study-hint" style="font-size:12px;color:var(--text3);margin-top:24px;">Click to reveal</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;padding:0 24px 32px;">
+    <button class="btn-sm btn-outline" onclick="studyPrev()">← Previous</button>
+    <button class="btn-sm btn-accent" onclick="studyNext()">Next →</button>
+  </div>
+</div>
+
+<!-- Version History Modal -->
+<div class="modal-overlay hidden" id="history-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>Version History</h3>
+      <button class="icon-btn" onclick="closeModal('history-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Snapshots of this tree. Click Restore to roll back.</div>
+      <div id="history-list" style="display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto;"></div>
+      <button class="btn-add-sm primary" onclick="saveVersionSnapshot(true)" style="width:100%;margin-top:12px;justify-content:center;display:flex;align-items:center;gap:6px;padding:10px;"><i class="ti ti-camera"></i> Save Snapshot Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- Templates Modal -->
+<div class="modal-overlay hidden" id="templates-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3>Templates</h3>
+      <button class="icon-btn" onclick="closeModal('templates-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Start a new tree from a template, or save the current tree as one.</div>
+      <div class="tools-grid" id="templates-grid"></div>
+      <button class="btn-add-sm primary" onclick="saveCurrentAsTemplate()" style="width:100%;margin-top:12px;justify-content:center;display:flex;align-items:center;gap:6px;padding:10px;"><i class="ti ti-bookmark"></i> Save Current Tree as Template</button>
+    </div>
+  </div>
+</div>
+
+<!-- Global Search Modal -->
+<div class="modal-overlay hidden" id="gsearch-modal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3>Search All Trees</h3>
+      <button class="icon-btn" onclick="closeModal('gsearch-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input id="gsearch-input" type="text" placeholder="Search across every tree..." oninput="globalSearch(this.value)" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;margin-bottom:12px;box-sizing:border-box;">
+      <div id="gsearch-results" style="display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto;"></div>
     </div>
   </div>
 </div>
@@ -2637,6 +2748,24 @@ async function deleteAccount() {
 }
 
 // Preferences
+// ─── Feature flags ───
+// AI features are built but HIDDEN until an API key is configured. To enable
+// them later: set FEATURES.ai = true (and wire AI_CONFIG.endpoint below).
+const FEATURES = {
+  ai: false,            // AI expand / summarize / suggest (hidden until paid API)
+  globalSearch: true,
+  templates: true,
+  backlinks: true,
+  graphView: true,
+  versionHistory: true,
+  studyMode: true,
+  publicGallery: true,
+  importExport: true,
+  pwa: true
+};
+// When AI is enabled later, fill this in (kept here so turning it on is trivial):
+const AI_CONFIG = { enabled: false, endpoint: 'https://api.anthropic.com/v1/messages', model: 'claude-sonnet-4-6' };
+
 let prefs = { autoDetail: true, showDesc: true, animate: true };
 
 function loadPrefs() {
@@ -3942,29 +4071,31 @@ async function generateShareLink() {
   neShareSnapshot = snapshot;
   const btn = document.getElementById('share-gen-btn');
   if (btn) { btn.disabled = true; btn.textContent = '...'; }
-  let link, usedDb = false;
+
+  // Always produce a SHORT link (?share=ID). Store the snapshot in the DB
+  // (cross-device) when the shares table exists; always also cache locally so
+  // the link resolves immediately and never embeds the whole tree in the URL.
+  try { localStorage.setItem('rt_share_' + snapshot.id, JSON.stringify(snapshot)); } catch(e) {}
   try {
-    const { error } = await sbClient.from('shares').insert({ id: snapshot.id, data: snapshot, created_by: currentUser ? currentUser.id : null });
-    if (!error) usedDb = true;
+    await sbClient.from('shares').insert({ id: snapshot.id, data: snapshot, created_by: currentUser ? currentUser.id : null });
   } catch(e) {}
-  if (usedDb) link = window.location.origin + window.location.pathname + '?share=' + snapshot.id;
-  else {
-    try { link = window.location.origin + window.location.pathname + '#shared=' + btoa(unescape(encodeURIComponent(JSON.stringify(snapshot)))); }
-    catch(e) { showToast('Could not create link.', 'error'); }
-  }
+
+  const link = window.location.origin + window.location.pathname + '?share=' + snapshot.id;
   neShareCachedLink = link;
   const input = document.getElementById('share-modal-link');
-  if (input && link) input.value = link;
+  if (input) input.value = link;
   if (btn) { btn.disabled = false; btn.textContent = 'Generate'; }
   return link;
 }
 
 function neBuildShareLinkSync() {
+  // Build a short link synchronously: cache locally, return ?share=ID
   const snapshot = neShareSnapshot || buildTreeSnapshot();
   if (!snapshot) return null;
-  try {
-    return window.location.origin + window.location.pathname + '#shared=' + btoa(unescape(encodeURIComponent(JSON.stringify(snapshot))));
-  } catch (e) { return null; }
+  try { localStorage.setItem('rt_share_' + snapshot.id, JSON.stringify(snapshot)); } catch(e) {}
+  // Fire-and-forget DB insert so the link also works cross-device if possible
+  try { sbClient.from('shares').insert({ id: snapshot.id, data: snapshot, created_by: currentUser ? currentUser.id : null }); } catch(e) {}
+  return window.location.origin + window.location.pathname + '?share=' + snapshot.id;
 }
 
 function shareToSocial(platform) {
@@ -3972,16 +4103,6 @@ function shareToSocial(platform) {
   // popup opens inside this click handler (avoids popup blockers).
   const link = neShareCachedLink || neBuildShareLinkSync();
   if (!link) { showToast('Could not create link.', 'error'); return; }
-  // Social platforms reject very long URLs. The encoded fallback embeds the
-  // whole tree, so warn + copy instead of opening a broken link.
-  const isEncoded = link.indexOf('#shared=') !== -1;
-  if (isEncoded && link.length > 1800 && platform !== 'email' && platform !== 'copy') {
-    navigator.clipboard.writeText(link).then(
-      () => showToast('This tree is large, so a direct platform link won\'t work. The link was copied — paste it into your post.', 'info'),
-      () => showToast('This tree is too large for a direct platform link. Set up the shares table for short links.', 'error')
-    );
-    return;
-  }
   const title = (neShareSnapshot ? neShareSnapshot.name : 'ResearchTree') + ' — ResearchTree';
   const enc = encodeURIComponent(link);
   const encT = encodeURIComponent(title);
@@ -4074,22 +4195,25 @@ function copyTreeText() {
 function checkForSharedTree() {
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash;
-  // Encoded fallback share
+  // Legacy encoded share (whole tree in URL)
   if (hash.startsWith('#shared=')) {
     try {
       const json = decodeURIComponent(escape(atob(hash.slice(8))));
-      const snap = JSON.parse(json);
-      openSharedViewer(snap);
+      openSharedViewer(JSON.parse(json));
       return true;
     } catch (e) {}
   }
-  // DB-backed share
+  // Short share link: ?share=ID — try localStorage first, then DB
   const shareId = params.get('share');
   if (shareId) {
+    let local = null;
+    try { const s = localStorage.getItem('rt_share_' + shareId); if (s) local = JSON.parse(s); } catch(e) {}
+    if (local) { openSharedViewer(local); return true; }
+    // Not in this browser — try the database
     sbClient.from('shares').select('data').eq('id', shareId).single().then(({data}) => {
       if (data && data.data) openSharedViewer(data.data);
-      else showToast('Shared tree not found.', 'error');
-    }).catch(() => showToast('Shared tree not found.', 'error'));
+      else showToast('This shared link was created on another device and the shares table isn\'t set up yet.', 'error');
+    }).catch(() => showToast('Shared item not found.', 'error'));
     return true;
   }
   return false;
@@ -5845,6 +5969,66 @@ document.addEventListener('click', (e) => {
     if (box) box.style.display = 'none';
   }
 });
+
+// ═══════════════════════════════════════════════════════════
+// AI FEATURES (hidden until FEATURES.ai = true and API wired)
+// All UI for these is gated on FEATURES.ai, so nothing shows until enabled.
+// ═══════════════════════════════════════════════════════════
+async function aiCall(prompt, maxTokens) {
+  // This is the single integration point. When you have an API, set
+  // AI_CONFIG.enabled = true. (In production, proxy this through a backend so
+  // the API key is never exposed in the client.)
+  if (!AI_CONFIG.enabled) {
+    showToast('AI features are coming soon.', 'info');
+    return null;
+  }
+  try {
+    const res = await fetch(AI_CONFIG.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: AI_CONFIG.model,
+        max_tokens: maxTokens || 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    return (data.content || []).map(b => b.type === 'text' ? b.text : '').join('').trim();
+  } catch (e) {
+    showToast('AI request failed.', 'error');
+    return null;
+  }
+}
+
+async function aiExpandNode(nodeId) {
+  if (!FEATURES.ai) return;
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  showToast('Generating sub-topics...', 'info');
+  const prompt = `Given the topic "${node.title}"${node.desc ? ' (' + node.desc + ')' : ''}, suggest 5 concise sub-topic titles that would be useful child nodes in a knowledge tree. Respond ONLY as a JSON array of strings, no other text.`;
+  const out = await aiCall(prompt, 500);
+  if (!out) return;
+  try {
+    const titles = JSON.parse(out.replace(/```json|```/g, '').trim());
+    if (!node.children) node.children = [];
+    titles.forEach(t => node.children.push({ id: 'node_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), title: String(t), desc: '', children: [], side: node.side || 'right' }));
+    node.collapsed = false;
+    debouncedSave(activeTreeId); renderCanvas();
+    showToast('Added ' + titles.length + ' sub-topics.', 'success');
+  } catch(e) { showToast('Could not parse AI response.', 'error'); }
+}
+
+async function aiSummarizeNotes(nodeId) {
+  if (!FEATURES.ai) return;
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = node.extNotes || '';
+  const plain = (tmp.innerText || tmp.textContent || '').trim();
+  if (!plain) { showToast('No notes to summarize.', 'info'); return; }
+  showToast('Summarizing...', 'info');
+  const out = await aiCall('Summarize these notes in 2-3 sentences:\n\n' + plain, 300);
+  if (out) { showToast('Summary ready.', 'success'); alert(out); }
+}
 
 // Start
 // If opened via a share link, show the read-only viewer instead of the app
