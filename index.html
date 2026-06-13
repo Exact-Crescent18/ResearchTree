@@ -315,7 +315,7 @@ h1,h2,h3,h4 { font-family: 'Raleway', sans-serif; font-weight: 300; letter-spaci
 .node-card.has-color-orange { border-left: 3px solid var(--orange); }
 .node-card.has-color-blue { border-left: 3px solid var(--accent); }
 .node-header { display: flex; align-items: flex-start; gap: 8px; }
-.node-title { font-size: calc(var(--node-title-size, 13px) * var(--inv-scale, 1)); font-weight: 600; flex: 1; word-break: break-word; }
+.node-title { font-size: var(--node-title-size, 13px); font-weight: 600; flex: 1; word-break: break-word; }
 .node-btns { display: flex; gap: 2px; opacity: 0; transition: var(--transition); flex-shrink: 0; }
 .node-card:hover .node-btns { opacity: 1; }
 .node-btn {
@@ -1026,16 +1026,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .tree-root-container.has-positioned { position: relative; min-height: 100%; min-width: 100%; }
 .root-tree-wrap { display: inline-block; }
 .tree-root-container:not(.has-positioned) .root-tree-wrap { display: block; }
-.root-drag-handle {
-  position: absolute; top: -22px; left: 0;
-  font-size: 10px; color: var(--text3); cursor: grab;
-  padding: 2px 8px; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 4px; opacity: 0; transition: opacity 0.15s;
-  display: flex; align-items: center; gap: 4px; white-space: nowrap; z-index: 5;
-}
-.root-tree-wrap:hover .root-drag-handle { opacity: 1; }
-.root-drag-handle:active { cursor: grabbing; }
-.root-tree-wrap.dragging { opacity: 0.85; z-index: 100; }
+.root-tree-wrap.dragging { opacity: 0.9; z-index: 100; }
 
 /* ─── Full-Screen Node View ─── */
 #node-view-overlay {
@@ -1100,6 +1091,26 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .nv-child-title { font-size: 14px; font-weight: 600; }
 .nv-child-desc { font-size: 12px; color: var(--text3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
 @media (max-width: 768px) { .nv-title { font-size: 26px; } .nv-body { padding: 24px 16px; } .nv-breadcrumb { max-width: 30vw; } }
+
+/* ─── Crisp zoom rendering ─── */
+#canvas-transform {
+  transform-origin: 0 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+#canvas-transform .node-card {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* ─── Font scale (Settings → Font Size) ─── */
+:root { --font-scale: 1; }
+.node-title { font-size: calc(var(--node-title-size, 13px) * var(--font-scale)) !important; }
+.node-desc { font-size: calc(12px * var(--font-scale)); }
+.tree-item-name { font-size: calc(13px * var(--font-scale)); }
+.detail-input, .detail-label { font-size: calc(13px * var(--font-scale)); }
+.node-notes-preview { font-size: calc(11px * var(--font-scale)); }
 </style>
 </head>
 <body>
@@ -1354,14 +1365,31 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
     <!-- Profile Tab -->
     <div class="acct-pane active" id="acct-pane-profile">
-      <div class="profile-row">
-        <div class="profile-row-icon"><i class="ti ti-user"></i></div>
-        <div class="profile-row-info">
-          <div class="profile-row-label">Email</div>
-          <div class="profile-row-value" id="acct-email">Loading...</div>
+      <!-- Avatar + name header -->
+      <div style="display:flex;align-items:center;gap:14px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);">
+        <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid var(--border);background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;color:#fff;flex-shrink:0;">
+          <img id="profile-avatar-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;">
+          <span id="profile-avatar-initial">?</span>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="acct-name-display">—</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;" id="acct-email">Loading...</div>
+        </div>
+        <button class="btn-add-sm" onclick="editDisplayName()" style="font-size:11px;padding:4px 10px;flex-shrink:0;">Edit Name</button>
+      </div>
+
+      <!-- Avatar picker -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);">Choose Avatar</div>
+        <div class="avatar-grid" id="avatar-grid">
+          <label class="avatar-upload-label" title="Upload custom photo">
+            <input type="file" accept="image/*" style="display:none;" onchange="uploadCustomAvatar(this)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M7 11l5-5 5 5"/><path d="M12 4v12"/></svg>
+          </label>
         </div>
       </div>
-      <div class="profile-row">
+
+      <div class="profile-row" style="margin-top:4px;">
         <div class="profile-row-icon"><i class="ti ti-calendar"></i></div>
         <div class="profile-row-info">
           <div class="profile-row-label">Member Since</div>
@@ -1400,7 +1428,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
           <div class="profile-row" style="cursor:pointer;" onclick="openPaywall('plus')">
             <div class="profile-row-icon" style="background:rgba(251,191,36,0.12);"><i class="ti ti-star" style="color:var(--yellow);"></i></div>
             <div class="profile-row-info">
-              <div class="profile-row-label">Plus — $9/mo</div>
+              <div class="profile-row-label">Plus — $2.99/mo</div>
               <div class="profile-row-value" style="font-size:13px;">Unlimited trees &amp; nodes, media, export, search</div>
             </div>
             <i class="ti ti-chevron-right" style="color:var(--text3);"></i>
@@ -1408,7 +1436,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
           <div class="profile-row" style="cursor:pointer;" onclick="openPaywall('pro')">
             <div class="profile-row-icon" style="background:rgba(108,142,255,0.12);"><i class="ti ti-crown" style="color:var(--accent2);"></i></div>
             <div class="profile-row-info">
-              <div class="profile-row-label">Pro — $19/mo</div>
+              <div class="profile-row-label">Pro — $5.99/mo</div>
               <div class="profile-row-value" style="font-size:13px;">Everything in Plus + colors, tags, extended notes, stats</div>
             </div>
             <i class="ti ti-chevron-right" style="color:var(--text3);"></i>
@@ -1531,8 +1559,38 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
           <label class="toggle-switch"><input type="checkbox" id="pref-show-desc" onchange="savePref('showDesc',this.checked)" checked><span class="toggle-track"></span></label>
         </div>
         <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Show notes preview</div><div style="font-size:12px;color:var(--text3);">Note snippet on cards</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-show-notes" onchange="savePref('showNotes',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
           <div class="profile-row-info"><div class="profile-row-label">Animate transitions</div><div style="font-size:12px;color:var(--text3);">Smooth hover effects</div></div>
           <label class="toggle-switch"><input type="checkbox" id="pref-animate" onchange="savePref('animate',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Double-click to open node</div><div style="font-size:12px;color:var(--text3);">Full-screen on dbl-click</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-dblclick" onchange="savePref('dblClickView',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Confirm before delete</div><div style="font-size:12px;color:var(--text3);">Ask before deleting nodes</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-confirm-delete" onchange="savePref('confirmDelete',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">New nodes auto-expand</div><div style="font-size:12px;color:var(--text3);">Show children immediately</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-auto-expand" onchange="savePref('autoExpand',this.checked)" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Default branch side</div>
+          <select class="tb-select" style="flex:1;" id="pref-default-side" onchange="savePref('defaultSide',this.value)">
+            <option value="right">Right</option>
+            <option value="left">Left</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Scroll wheel</div>
+          <select class="tb-select" style="flex:1;" id="pref-wheel-mode" onchange="savePref('wheelMode',this.value)">
+            <option value="zoom">Zoom canvas</option>
+            <option value="pan">Pan vertically</option>
+          </select>
         </div>
       </div>
 
@@ -1561,19 +1619,19 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
           <div class="plan-name">Free</div>
           <div class="plan-price">$0<span>/mo</span></div>
           <div class="plan-features">
-            <div class="plan-feature"><i class="ti ti-check"></i>3 trees</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>5 trees</div>
             <div class="plan-feature"><i class="ti ti-check"></i>20 nodes total</div>
-            <div class="plan-feature"><i class="ti ti-check"></i>Unlimited depth</div>
-            <div class="plan-feature locked"><i class="ti ti-lock"></i>No media</div>
-            <div class="plan-feature locked"><i class="ti ti-lock"></i>No export</div>
-            <div class="plan-feature locked"><i class="ti ti-lock"></i>No search</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>All features included</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Media &amp; export</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Search &amp; notes</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>Colors &amp; tags</div>
           </div>
           <div class="plan-btn current" id="plan-free-btn">Current Plan</div>
         </div>
         <!-- Plus -->
         <div class="plan-card" id="plan-plus-card">
           <div class="plan-name">Plus</div>
-          <div class="plan-price">$9<span>/mo</span></div>
+          <div class="plan-price">$2.99<span>/mo</span></div>
           <div class="plan-features">
             <div class="plan-feature"><i class="ti ti-check"></i>Unlimited trees</div>
             <div class="plan-feature"><i class="ti ti-check"></i>Unlimited nodes</div>
@@ -1582,13 +1640,13 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
             <div class="plan-feature"><i class="ti ti-check"></i>Node search</div>
             <div class="plan-feature"><i class="ti ti-check"></i>JSON/MD/CSV export</div>
           </div>
-          <button class="plan-btn accent" id="plan-plus-btn" onclick="goToStripe('plus')"><i class="ti ti-credit-card"></i> Upgrade — $9/mo</button>
+          <button class="plan-btn accent" id="plan-plus-btn" onclick="goToStripe('plus')"><i class="ti ti-credit-card"></i> Upgrade — $2.99/mo</button>
         </div>
         <!-- Pro -->
         <div class="plan-card popular" id="plan-pro-card">
           <div class="plan-popular-badge">Most Popular</div>
           <div class="plan-name">Pro</div>
-          <div class="plan-price">$19<span>/mo</span></div>
+          <div class="plan-price">$5.99<span>/mo</span></div>
           <div class="plan-features">
             <div class="plan-feature"><i class="ti ti-check"></i>Everything in Plus</div>
             <div class="plan-feature"><i class="ti ti-check"></i>Color labels</div>
@@ -1597,7 +1655,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
             <div class="plan-feature"><i class="ti ti-check"></i>Tree statistics</div>
             <div class="plan-feature"><i class="ti ti-check"></i>Priority support</div>
           </div>
-          <button class="plan-btn gold" id="plan-pro-btn" onclick="goToStripe('pro')"><i class="ti ti-crown"></i> Go Pro — $19/mo</button>
+          <button class="plan-btn gold" id="plan-pro-btn" onclick="goToStripe('pro')"><i class="ti ti-crown"></i> Go Pro — $5.99/mo</button>
         </div>
       </div>
     </div>
@@ -1950,40 +2008,51 @@ async function signOut() {
 let currentDisplayName = '';
 
 async function loadUserProfile() {
-  const { data, error } = await sbClient
+  // STEP 1: Read the plan column ONLY (guaranteed to exist).
+  // This is the critical value — never let optional columns break it.
+  const { data: planData, error: planErr } = await sbClient
     .from('profiles')
-    .select('plan, display_name, avatar_key, avatar_custom')
+    .select('plan')
     .eq('id', currentUser.id)
     .single();
 
-  if (data) {
-    currentPlan = data.plan || 'free';
-    currentAvatarKey = data.avatar_key || null;
-    currentAvatarCustom = data.avatar_custom || null;
-    currentDisplayName = data.display_name
-      || currentUser.user_metadata?.full_name
-      || currentUser.user_metadata?.name || '';
-    // Assign a default avatar if user has none
-    if (!currentAvatarKey && !currentAvatarCustom) {
-      const aKeys = Object.keys(PRESET_AVATARS);
-      currentAvatarKey = aKeys[Math.floor(Math.random() * aKeys.length)];
-      sbClient.from('profiles').update({ avatar_key: currentAvatarKey }).eq('id', currentUser.id);
+  if (planData) {
+    currentPlan = planData.plan || 'free';
+  } else if (planErr && planErr.code === 'PGRST116') {
+    // No profile row yet — create one
+    await sbClient.from('profiles').insert({ id: currentUser.id, plan: 'free' });
+    currentPlan = 'free';
+  } else {
+    // Plan read failed for some other reason — default free, do not overwrite DB
+    currentPlan = 'free';
+  }
+
+  // STEP 2: Try to read optional columns separately. If any column doesn't
+  // exist in this DB, this query fails but the plan is already safely set.
+  const nameFromMeta = currentUser.user_metadata?.full_name
+    || currentUser.user_metadata?.name || '';
+  try {
+    const { data: extra } = await sbClient
+      .from('profiles')
+      .select('display_name, avatar_key, avatar_custom')
+      .eq('id', currentUser.id)
+      .single();
+    if (extra) {
+      currentDisplayName = extra.display_name || nameFromMeta;
+      currentAvatarKey = extra.avatar_key || null;
+      currentAvatarCustom = extra.avatar_custom || null;
+    } else {
+      currentDisplayName = nameFromMeta;
     }
-  } else if (error && error.code === 'PGRST116') {
-    // No row — create with random default avatar
-    const nameFromMeta = currentUser.user_metadata?.full_name
-      || currentUser.user_metadata?.name || '';
-    const aKeys = Object.keys(PRESET_AVATARS);
-    const randomAvatar = aKeys[Math.floor(Math.random() * aKeys.length)];
-    await sbClient.from('profiles').insert({
-      id: currentUser.id, plan: 'free', display_name: nameFromMeta, avatar_key: randomAvatar
-    });
-    currentPlan = 'free';
+  } catch (e) {
     currentDisplayName = nameFromMeta;
-    currentAvatarKey = randomAvatar;
-    currentAvatarCustom = null;
-  } else if (error) {
-    currentPlan = 'free';
+  }
+
+  // STEP 3: Assign a default avatar if the user has none (best-effort)
+  if (!currentAvatarKey && !currentAvatarCustom) {
+    const aKeys = Object.keys(PRESET_AVATARS);
+    currentAvatarKey = aKeys[Math.floor(Math.random() * aKeys.length)];
+    try { await sbClient.from('profiles').update({ avatar_key: currentAvatarKey }).eq('id', currentUser.id); } catch(e) {}
   }
 }
 
@@ -2043,7 +2112,7 @@ function updateUserUI() {
   if (nameDisp) nameDisp.textContent = displayName;
   const planLabel = document.getElementById('acct-plan-label');
   if (planLabel) {
-    const planNames = { free: 'Free Plan', plus: 'Plus Plan — $9/mo', pro: 'Pro Plan — $19/mo' };
+    const planNames = { free: 'Free Plan', plus: 'Plus Plan — $2.99/mo', pro: 'Pro Plan — $5.99/mo' };
     planLabel.textContent = planNames[currentPlan] || 'Free Plan';
   }
   const joinedEl = document.getElementById('acct-joined');
@@ -2072,11 +2141,11 @@ function updateUserUI() {
   if (actionRow) {
     if (currentPlan === 'free') {
       actionRow.innerHTML = `
-        <button class="btn-sm btn-outline" onclick="openPaywall('plus')"><i class="ti ti-star"></i> Upgrade to Plus — $9/mo</button>
-        <button class="btn-sm btn-accent" onclick="openPaywall('pro')"><i class="ti ti-crown"></i> Go Pro — $19/mo</button>`;
+        <button class="btn-sm btn-outline" onclick="openPaywall('plus')"><i class="ti ti-star"></i> Upgrade to Plus — $2.99/mo</button>
+        <button class="btn-sm btn-accent" onclick="openPaywall('pro')"><i class="ti ti-crown"></i> Go Pro — $5.99/mo</button>`;
     } else if (currentPlan === 'plus') {
       actionRow.innerHTML = `
-        <button class="btn-sm btn-accent" onclick="openPaywall('pro')"><i class="ti ti-crown"></i> Upgrade to Pro — $19/mo</button>
+        <button class="btn-sm btn-accent" onclick="openPaywall('pro')"><i class="ti ti-crown"></i> Upgrade to Pro — $5.99/mo</button>
         <button class="btn-danger" onclick="cancelPlan()"><i class="ti ti-x"></i> Cancel to Free</button>`;
     } else if (currentPlan === 'pro') {
       actionRow.innerHTML = `
@@ -2217,9 +2286,13 @@ function applyPrefs() {
   r.setProperty('--sidebar-w',    (prefs.sidebarW     || 280) + 'px');
   r.setProperty('--radius',       (prefs.nodeRadius   !== undefined ? prefs.nodeRadius : 10) + 'px');
   r.setProperty('--node-title-size', (prefs.nodeTitleSize || 13) + 'px');
-  // Font
-  document.body.style.fontSize   = (prefs.fontSize || 14) + 'px';
+  // Font — set base size on :root so rem-based and var-based sizing scales
+  const fsize = prefs.fontSize || 14;
+  r.setProperty('--base-font-size', fsize + 'px');
+  r.setProperty('--font-scale', (fsize / 14).toFixed(3));
+  document.body.style.fontSize = fsize + 'px';
   if (prefs.uiFont) document.body.style.fontFamily = "'" + prefs.uiFont + "', sans-serif";
+  else document.body.style.fontFamily = "'DM Sans', sans-serif";
   // Transitions
   r.setProperty('--transition', prefs.animate === false ? '0s' : '0.18s ease');
   // Accent color
@@ -2255,7 +2328,13 @@ function applyPrefs() {
   set('pref-node-title-size', prefs.nodeTitleSize  || 13);   txt('node-title-size-val',  (prefs.nodeTitleSize||13)+'px');
   chk('pref-auto-detail', prefs.autoDetail !== false);
   chk('pref-show-desc',   prefs.showDesc   !== false);
+  chk('pref-show-notes',  prefs.showNotes  !== false);
   chk('pref-animate',     prefs.animate    !== false);
+  chk('pref-dblclick',    prefs.dblClickView !== false);
+  chk('pref-confirm-delete', prefs.confirmDelete !== false);
+  chk('pref-auto-expand', prefs.autoExpand !== false);
+  set('pref-default-side', prefs.defaultSide || 'right');
+  set('pref-wheel-mode',   prefs.wheelMode || 'zoom');
   const fs = document.getElementById('pref-ui-font');    if (fs && prefs.uiFont)   fs.value = prefs.uiFont;
   const bs = document.getElementById('pref-canvas-bg');  if (bs && prefs.canvasBg) bs.value = prefs.canvasBg;
   // Highlight swatches
@@ -2301,12 +2380,12 @@ function updatePaywallUI() {
   const probtn = document.getElementById('plan-pro-btn');
   if (currentPlan === 'free') {
     freebtn.textContent = '✓ Current Plan'; freebtn.className = 'plan-btn current';
-    plusbtn.innerHTML = '<i class="ti ti-credit-card"></i> Upgrade — $9/mo'; plusbtn.className = 'plan-btn accent'; plusbtn.onclick = () => goToStripe('plus');
-    probtn.innerHTML = '<i class="ti ti-crown"></i> Go Pro — $19/mo'; probtn.className = 'plan-btn gold'; probtn.onclick = () => goToStripe('pro');
+    plusbtn.innerHTML = '<i class="ti ti-credit-card"></i> Upgrade — $2.99/mo'; plusbtn.className = 'plan-btn accent'; plusbtn.onclick = () => goToStripe('plus');
+    probtn.innerHTML = '<i class="ti ti-crown"></i> Go Pro — $5.99/mo'; probtn.className = 'plan-btn gold'; probtn.onclick = () => goToStripe('pro');
   } else if (currentPlan === 'plus') {
     freebtn.textContent = 'Downgrade'; freebtn.className = 'plan-btn';
     plusbtn.textContent = '✓ Current Plan'; plusbtn.className = 'plan-btn current'; plusbtn.onclick = null;
-    probtn.innerHTML = '<i class="ti ti-crown"></i> Upgrade to Pro — $19/mo'; probtn.className = 'plan-btn gold'; probtn.onclick = () => goToStripe('pro');
+    probtn.innerHTML = '<i class="ti ti-crown"></i> Upgrade to Pro — $5.99/mo'; probtn.className = 'plan-btn gold'; probtn.onclick = () => goToStripe('pro');
   } else if (currentPlan === 'pro') {
     freebtn.textContent = 'Downgrade'; freebtn.className = 'plan-btn';
     plusbtn.textContent = 'Downgrade'; plusbtn.className = 'plan-btn'; plusbtn.onclick = null;
@@ -2340,11 +2419,11 @@ function showStripeSetupInstructions(plan) {
         <p style="color:var(--text2);font-size:13px;">To enable real payments, you need to configure Stripe Payment Links. Here's how:</p>
         <ol style="color:var(--text2);font-size:13px;padding-left:20px;display:flex;flex-direction:column;gap:8px;">
           <li>Go to <a href="https://dashboard.stripe.com" target="_blank">dashboard.stripe.com</a></li>
-          <li>Products → <b>Add Product</b> → Name: "ResearchTree Plus", Price: $9/mo recurring</li>
+          <li>Products → <b>Add Product</b> → Name: "ResearchTree Plus", Price: $2.99/mo recurring</li>
           <li>Payment Links → <b>Create Link</b> for Plus</li>
           <li>In Link Settings, set <b>Success URL</b> to: <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">${window.location.href}?plan=plus</code></li>
           <li>Copy the link URL (starts with buy.stripe.com)</li>
-          <li>Repeat for Pro ($19/mo) with <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">?plan=pro</code></li>
+          <li>Repeat for Pro ($5.99/mo) with <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">?plan=pro</code></li>
           <li>In <b>index.html</b>, replace <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">STRIPE_PLUS_LINK</code> and <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;">STRIPE_PRO_LINK</code> at the top of the JS</li>
         </ol>
         <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text3);">
@@ -2359,22 +2438,20 @@ function showStripeSetupInstructions(plan) {
 // Plan limit helpers
 function canCreateTree() {
   if (currentPlan !== 'free') return true;
-  return trees.length < 3;
+  return trees.length < 5;  // Free: up to 5 trees
 }
 function countAllNodes() {
   return trees.reduce((sum, t) => sum + countNodes(t.nodes || []), 0);
 }
-function countNodes(nodes) {
-  return nodes.reduce((s, n) => s + 1 + countNodes(n.children || []), 0);
-}
 function canAddNode() {
   if (currentPlan !== 'free') return true;
-  return countAllNodes() < 20;
+  return countAllNodes() < 20;  // Free: up to 20 nodes
 }
-function canUseMedia() { return currentPlan === 'plus' || currentPlan === 'pro'; }
-function canExport() { return currentPlan === 'plus' || currentPlan === 'pro'; }
-function canSearch() { return currentPlan === 'plus' || currentPlan === 'pro'; }
-function canUseProFeatures() { return currentPlan === 'pro'; }
+// Free tier now includes ALL features — only tree/node COUNT is limited.
+function canUseMedia() { return true; }
+function canExport() { return true; }
+function canSearch() { return true; }
+function canUseProFeatures() { return true; }
 
 // ─── Tree CRUD ───
 async function loadTrees() {
@@ -2416,7 +2493,7 @@ function setSyncState(state) {
 async function createTree() {
   if (!canCreateTree()) {
     closeModal('new-tree-modal');
-    showToast('Free plan limit: 3 trees. Upgrade to create more.', 'error');
+    showToast('Free plan limit reached: 5 trees. Upgrade for unlimited.', 'error');
     openPaywall('plus');
     return;
   }
@@ -2525,10 +2602,10 @@ function deleteNode(nodes, id) {
 }
 
 function openNewNodeModal(parentId, side) {
-  if (!side) side = 'right';
+  if (!side) side = (prefs.defaultSide || 'right');
   if (!activeTreeId) { showToast('Select a tree first.', 'error'); return; }
   if (!canAddNode()) {
-    showToast('Free plan limit: 20 nodes. Upgrade to add more.', 'error');
+    showToast('Free plan limit reached: 20 nodes. Upgrade for unlimited.', 'error');
     openPaywall('plus'); return;
   }
   nodeModalParentId = parentId;
@@ -2600,7 +2677,7 @@ function saveNodeFromModal() {
 
 function deleteNodeById(nodeId) {
   const tree = getActiveTree(); if (!tree) return;
-  if (!confirm('Delete this node and all its children?')) return;
+  if (prefs.confirmDelete !== false && !confirm('Delete this node and all its children?')) return;
   deleteNode(tree.nodes, nodeId);
   if (selectedNodeId === nodeId) { selectedNodeId = null; closeDetailPanel(); }
   debouncedSave(activeTreeId);
@@ -2780,8 +2857,13 @@ function buildNodeCard(node, isLeft) {
   card.className = 'node-card' + (node.id === selectedNodeId ? ' selected' : '') + (node.color ? ' has-color-' + node.color : '');
   card.id = 'node_' + node.id;
   card.onclick = (e) => { e.stopPropagation(); selectNode(node.id); };
-  card.ondblclick = (e) => { e.stopPropagation(); openNodeView(node.id); };
+  card.ondblclick = (e) => { e.stopPropagation(); if (prefs.dblClickView !== false) openNodeView(node.id); };
   card.oncontextmenu = (e) => { e.preventDefault(); showContextMenu(e, node.id); };
+  // Click-and-hold to drag (root nodes only)
+  card.addEventListener('mousedown', (e) => {
+    if (e.target.closest('button, a, input, textarea, .side-toggle')) return;
+    maybeStartCardDrag(e, node.id);
+  });
 
   // Header
   const header = document.createElement('div');
@@ -3031,6 +3113,17 @@ function renderDetailPanel(nodeId) {
   }
   html += `</div>`;
 
+  // Branch Side (which side of parent this node sits on)
+  const curSide = node.side || 'right';
+  html += `<div class="detail-section">
+    <div class="detail-label">Branch Side</div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="setNodeSide('${nodeId}','left')" style="flex:1;padding:8px;border-radius:var(--radius-sm);cursor:pointer;border:2px solid ${curSide==='left'?'var(--accent)':'var(--border)'};background:${curSide==='left'?'var(--accent-dim)':'var(--bg3)'};color:var(--text);font-size:13px;font-weight:600;">← Left</button>
+      <button onclick="setNodeSide('${nodeId}','right')" style="flex:1;padding:8px;border-radius:var(--radius-sm);cursor:pointer;border:2px solid ${curSide==='right'?'var(--accent)':'var(--border)'};background:${curSide==='right'?'var(--accent-dim)':'var(--bg3)'};color:var(--text);font-size:13px;font-weight:600;">Right →</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px;">Which side of the parent this node branches to.</div>
+  </div>`;
+
   // Color Labels (Pro)
   html += `<div class="detail-section">
     <div class="detail-label">Color Label ${!canUseProFeatures() ? '<span style="color:var(--accent2);font-size:10px;">PRO</span>' : ''}</div>`;
@@ -3159,6 +3252,16 @@ function removeMedia(nodeId, idx) {
   debouncedSave(activeTreeId);
   renderDetailPanel(nodeId);
   renderCanvas();
+}
+
+function setNodeSide(nodeId, side) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  node.side = side;
+  debouncedSave(activeTreeId);
+  renderCanvas();
+  renderDetailPanel(nodeId);
+  redrawAllVLines();
 }
 
 function setNodeColor(nodeId, color) {
@@ -3667,14 +3770,11 @@ function getCT() { return document.getElementById('canvas-transform'); }
 
 function applyCV() {
   const el = getCT(); if (!el) return;
+  // Uniform scale — everything zooms together, no counter-scaling.
   el.style.transform = `translate(${cvX}px,${cvY}px) scale(${cvScale})`;
   const lv = document.getElementById('zoom-level');
   if (lv) lv.textContent = Math.round(cvScale*100)+'%';
-  // Counter-scale node titles so they stay the same visual size at any zoom.
-  // Clamped so extreme zoom-out doesn't produce absurdly huge text.
-  const inv = Math.min(2.5, Math.max(0.5, 1 / cvScale));
-  document.documentElement.style.setProperty('--inv-scale', inv);
-  // Connector spans depend on zoom — re-measure after transform applies
+  // Re-measure connector lines after transform applies
   clearTimeout(window._vlineZoomTimer);
   window._vlineZoomTimer = setTimeout(() => {
     document.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
@@ -3710,63 +3810,84 @@ function centerTrees() {
 // Make each root tree draggable via a handle
 let rootDrag = null;
 function enableRootDragging() {
-  document.querySelectorAll('.root-tree-wrap').forEach(wrap => {
-    // Add a drag handle if not present
-    if (wrap.querySelector('.root-drag-handle')) return;
-    const handle = document.createElement('div');
-    handle.className = 'root-drag-handle';
-    handle.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg> drag';
-    handle.onmousedown = (e) => startRootDrag(e, wrap);
-    wrap.style.position = wrap.style.position || 'relative';
-    wrap.appendChild(handle);
-  });
+  // Drag is handled by click-and-hold on the root node's card (see startRootDragFromCard).
+  // No drag handle element needed.
 }
 
-function startRootDrag(e, wrap) {
-  e.stopPropagation();
-  e.preventDefault();
+// Called from the root node card's mousedown: hold ~180ms then drag
+function maybeStartCardDrag(e, nodeId) {
+  if (e.button !== 0) return;
   const tree = getActiveTree(); if (!tree) return;
-  const rootId = wrap.dataset.rootId;
+  // Only root nodes are draggable
+  const isRoot = (tree.nodes || []).some(n => n.id === nodeId);
+  if (!isRoot) return;
+  const wrap = document.querySelector(`.root-tree-wrap[data-root-id="${nodeId}"]`);
+  if (!wrap) return;
+
+  const startX = e.clientX, startY = e.clientY;
+  let dragging = false;
+  let holdTimer = setTimeout(() => { dragging = true; beginRootDrag(); }, 160);
+
+  function beginRootDrag() {
+    startRootDragProgrammatic(startX, startY, wrap, nodeId);
+    cleanup();
+  }
+  function onMove(ev) {
+    // If moved more than 5px before hold completes, start drag immediately
+    if (!dragging && (Math.abs(ev.clientX-startX) > 5 || Math.abs(ev.clientY-startY) > 5)) {
+      dragging = true;
+      clearTimeout(holdTimer);
+      beginRootDrag();
+    }
+  }
+  function onUp() { cleanup(); }
+  function cleanup() {
+    clearTimeout(holdTimer);
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+function startRootDragProgrammatic(startX, startY, wrap, rootId) {
+  const tree = getActiveTree(); if (!tree) return;
   const node = (tree.nodes || []).find(n => n.id === rootId);
   if (!node) return;
-
   const container = wrap.parentElement;
   container.classList.add('has-positioned');
 
-  // If this is the first drag, convert ALL roots to absolute using current offsets
+  // Convert all roots to absolute on first drag
   const containerRect = container.getBoundingClientRect();
   tree.nodes.forEach(n => {
     if (!n._pos) {
       const w = container.querySelector(`.root-tree-wrap[data-root-id="${n.id}"]`);
       if (w) {
         const r = w.getBoundingClientRect();
-        n._pos = {
-          x: (r.left - containerRect.left) / cvScale,
-          y: (r.top  - containerRect.top)  / cvScale
-        };
+        n._pos = { x: (r.left - containerRect.left)/cvScale, y: (r.top - containerRect.top)/cvScale };
         w.style.position = 'absolute';
         w.style.left = n._pos.x + 'px';
-        w.style.top  = n._pos.y + 'px';
+        w.style.top = n._pos.y + 'px';
       }
     }
   });
 
   wrap.classList.add('dragging');
-  const startX = e.clientX, startY = e.clientY;
+  document.body.style.cursor = 'grabbing';
   const origX = node._pos.x, origY = node._pos.y;
 
   function onMove(ev) {
-    const dx = (ev.clientX - startX) / cvScale;
-    const dy = (ev.clientY - startY) / cvScale;
+    const dx = (ev.clientX - startX)/cvScale;
+    const dy = (ev.clientY - startY)/cvScale;
     node._pos.x = origX + dx;
     node._pos.y = origY + dy;
     wrap.style.left = node._pos.x + 'px';
-    wrap.style.top  = node._pos.y + 'px';
-    // redraw connector lines live
+    wrap.style.top = node._pos.y + 'px';
     wrap.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
   }
   function onUp() {
     wrap.classList.remove('dragging');
+    document.body.style.cursor = '';
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
     debouncedSave(activeTreeId);
@@ -3774,6 +3895,8 @@ function startRootDrag(e, wrap) {
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
 }
+
+// startRootDrag removed — replaced by click-and-hold (maybeStartCardDrag)
 
 function initCanvasPanZoom() {
   const wrap = document.getElementById('canvas-wrap'); if (!wrap) return;
@@ -3823,6 +3946,20 @@ function getAvatarSrc() {
   if (currentAvatarCustom) return currentAvatarCustom;
   if (currentAvatarKey && PRESET_AVATARS[currentAvatarKey]) return PRESET_AVATARS[currentAvatarKey].src;
   return null;
+}
+
+async function editDisplayName() {
+  const current = currentDisplayName || '';
+  const newName = prompt('Enter your display name:', current);
+  if (newName === null) return;
+  const trimmed = newName.trim();
+  if (!trimmed) { showToast('Name cannot be empty.', 'error'); return; }
+  try {
+    await sbClient.from('profiles').update({ display_name: trimmed }).eq('id', currentUser.id);
+  } catch(e) {}
+  currentDisplayName = trimmed;
+  updateUserUI();
+  showToast('Name updated!', 'success');
 }
 
 function renderAvatarUI() {
