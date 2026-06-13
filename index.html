@@ -236,7 +236,7 @@ h1,h2,h3,h4 { font-family: 'Raleway', sans-serif; font-weight: 300; letter-spaci
   position: relative; min-width: 600px;
 }
 #canvas-empty {
-  position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column;
+  position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 16px; color: var(--text3);
   pointer-events: none;
 }
@@ -852,7 +852,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   transition: var(--transition);
 }
 .acct-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.acct-pane { display: none; padding: 20px; flex-direction: column; gap: 16px; }
+.acct-pane { display: none; padding: 20px; flex-direction: column; gap: 16px; overflow-y: auto; max-height: calc(90vh - 120px); }
 .acct-pane.active { display: flex; }
 
 /* ─── Profile Info Rows ─── */
@@ -1214,14 +1214,13 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       </div>
     </div>
     <div id="canvas-wrap">
-      <div id="canvas-transform">
-      <div id="canvas">
-        <div id="canvas-empty">
-          <i class="ti ti-tree"></i>
-          <p>No tree selected</p>
-          <small>Create a new tree or select one from the sidebar</small>
-        </div>
+      <div id="canvas-empty">
+        <i class="ti ti-tree"></i>
+        <p>No tree selected</p>
+        <small>Create a new tree or select one from the sidebar</small>
       </div>
+      <div id="canvas-transform">
+      <div id="canvas"></div>
       </div>
       <div id="zoom-controls"><button class="zoom-btn" onclick="zoomIn()" title="Zoom in">+</button><div id="zoom-level">100%</div><button class="zoom-btn" onclick="zoomOut()" title="Zoom out">−</button><button class="zoom-btn" onclick="centerTrees()" title="Center & reset positions" style="font-size:13px;">⊕</button></div>
     </div>
@@ -1549,7 +1548,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       </div>
 
       <!-- Behavior -->
-      <div id="settings-pane-behavior" style="display:none;flex-direction:column;gap:10px;">
+      <div id="settings-pane-behavior" style="display:none;flex-direction:column;gap:10px;padding-bottom:8px;">
         <div class="profile-row">
           <div class="profile-row-info"><div class="profile-row-label">Auto-open detail panel</div><div style="font-size:12px;color:var(--text3);">Open on node select</div></div>
           <label class="toggle-switch"><input type="checkbox" id="pref-auto-detail" onchange="savePref('autoDetail',this.checked)" checked><span class="toggle-track"></span></label>
@@ -1591,6 +1590,10 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
             <option value="zoom">Zoom canvas</option>
             <option value="pan">Pan vertically</option>
           </select>
+        </div>
+        <div class="profile-row">
+          <div class="profile-row-info"><div class="profile-row-label">Snap trees to grid</div><div style="font-size:12px;color:var(--text3);">Align dragged trees to a grid</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="pref-snap-grid" onchange="savePref('snapGrid',this.checked)"><span class="toggle-track"></span></label>
         </div>
       </div>
 
@@ -2335,6 +2338,7 @@ function applyPrefs() {
   chk('pref-auto-expand', prefs.autoExpand !== false);
   set('pref-default-side', prefs.defaultSide || 'right');
   set('pref-wheel-mode',   prefs.wheelMode || 'zoom');
+  chk('pref-snap-grid', prefs.snapGrid === true);
   const fs = document.getElementById('pref-ui-font');    if (fs && prefs.uiFont)   fs.value = prefs.uiFont;
   const bs = document.getElementById('pref-canvas-bg');  if (bs && prefs.canvasBg) bs.value = prefs.canvasBg;
   // Highlight swatches
@@ -2436,6 +2440,16 @@ function showStripeSetupInstructions(plan) {
 }
 
 // Plan limit helpers
+function countNodes(nodes) {
+  if (!Array.isArray(nodes)) return 0;
+  let count = 0;
+  for (const n of nodes) {
+    count += 1;
+    if (n.children && n.children.length) count += countNodes(n.children);
+  }
+  return count;
+}
+
 function canCreateTree() {
   if (currentPlan !== 'free') return true;
   return trees.length < 5;  // Free: up to 5 trees
@@ -2491,25 +2505,44 @@ function setSyncState(state) {
 }
 
 async function createTree() {
-  if (!canCreateTree()) {
+  try {
+    if (!canCreateTree()) {
+      closeModal('new-tree-modal');
+      showToast('Free plan limit reached: 5 trees. Upgrade for unlimited.', 'error');
+      openPaywall('plus');
+      return;
+    }
+    const nameEl = document.getElementById('new-tree-name');
+    const name = (nameEl ? nameEl.value : '').trim();
+    if (!name) { showToast('Please enter a tree name.', 'error'); return; }
+
+    const tree = {
+      id: 'tree_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      name,
+      icon: (typeof selectedEmoji !== 'undefined' ? selectedEmoji : '🌳'),
+      color: '#6c8eff',
+      nodes: []
+    };
+    trees.unshift(tree);
     closeModal('new-tree-modal');
-    showToast('Free plan limit reached: 5 trees. Upgrade for unlimited.', 'error');
-    openPaywall('plus');
-    return;
+    if (nameEl) nameEl.value = '';
+
+    // Render immediately so the tree shows even before the DB round-trip
+    renderTreeList();
+    selectTree(tree.id);
+    showToast('Tree created!', 'success');
+
+    // Save to DB (don't let a save error remove the tree from the UI)
+    try {
+      await saveTreeToDb(tree.id);
+    } catch (saveErr) {
+      console.error('Tree save error:', saveErr);
+      showToast('Tree created locally but cloud save failed. It may not persist.', 'error');
+    }
+  } catch (err) {
+    console.error('createTree error:', err);
+    showToast('Could not create tree: ' + (err && err.message ? err.message : 'unknown error'), 'error');
   }
-  const name = document.getElementById('new-tree-name').value.trim();
-  if (!name) { showToast('Please enter a tree name.', 'error'); return; }
-  const tree = {
-    id: 'tree_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-    name, icon: selectedEmoji, color: '#6c8eff', nodes: []
-  };
-  trees.unshift(tree);
-  closeModal('new-tree-modal');
-  document.getElementById('new-tree-name').value = '';
-  await saveTreeToDb(tree.id);
-  renderTreeList();
-  selectTree(tree.id);
-  showToast('Tree created!', 'success');
 }
 
 async function deleteTree(treeId) {
@@ -2692,14 +2725,14 @@ function renderCanvas() {
   const tree = getActiveTree();
 
   if (!tree) {
-    canvas.innerHTML = ''; canvas.appendChild(empty);
+    canvas.innerHTML = '';
     empty.style.display = 'flex';
     empty.querySelector('p').textContent = 'No tree selected';
     empty.querySelector('small').textContent = 'Create a new tree or select one from the sidebar';
     return;
   }
   if (!tree.nodes || tree.nodes.length === 0) {
-    canvas.innerHTML = ''; canvas.appendChild(empty);
+    canvas.innerHTML = '';
     empty.style.display = 'flex';
     empty.querySelector('p').textContent = 'This tree is empty';
     empty.querySelector('small').textContent = 'Click "Add Node" to get started';
@@ -2734,7 +2767,6 @@ function renderCanvas() {
   }
 
   canvas.innerHTML = '';
-  canvas.appendChild(empty);
   canvas.appendChild(container);
   updateStatsBar();
   // Redraw vlines after layout
@@ -3879,10 +3911,18 @@ function startRootDragProgrammatic(startX, startY, wrap, rootId) {
   function onMove(ev) {
     const dx = (ev.clientX - startX)/cvScale;
     const dy = (ev.clientY - startY)/cvScale;
-    node._pos.x = origX + dx;
-    node._pos.y = origY + dy;
-    wrap.style.left = node._pos.x + 'px';
-    wrap.style.top = node._pos.y + 'px';
+    let nx = origX + dx;
+    let ny = origY + dy;
+    // Snap to 40px grid if enabled
+    if (prefs.snapGrid === true) {
+      const GRID = 40;
+      nx = Math.round(nx / GRID) * GRID;
+      ny = Math.round(ny / GRID) * GRID;
+    }
+    node._pos.x = nx;
+    node._pos.y = ny;
+    wrap.style.left = nx + 'px';
+    wrap.style.top = ny + 'px';
     wrap.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
   }
   function onUp() {
