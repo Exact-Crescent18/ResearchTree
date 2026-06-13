@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ResearchTree</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;600&family=DM+Sans:wght@400;500;600&family=Poppins:wght@300;400;600&family=Nunito:wght@400;600&family=Roboto:wght@400;500&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@300;400;600&family=Oswald:wght@300;400;600&family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ─── CSS Variables ─── */
 :root {
@@ -47,7 +47,7 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
 input, textarea, select { font-family: inherit; font-size: 14px; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-h1,h2,h3,h4 { font-family: 'Raleway', sans-serif; font-weight: 300; letter-spacing: 0.01em; }
+h1,h2,h3,h4 { font-family: var(--title-font, 'Raleway', sans-serif); font-weight: 300; letter-spacing: 0.01em; }
 
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -529,7 +529,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .btn-danger:hover { background: rgba(248,113,113,0.1); }
 
 /* ─── Tree Settings Modal ─── */
-.emoji-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.emoji-picker { display: flex; flex-wrap: wrap; gap: 6px; max-height: 180px; overflow-y: auto; padding: 4px; }
 .emoji-opt {
   width: 36px; height: 36px; border-radius: var(--radius-sm); font-size: 20px;
   display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -1110,7 +1110,10 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .node-desc { font-size: calc(12px * var(--font-scale)); }
 .tree-item-name { font-size: calc(13px * var(--font-scale)); }
 .detail-input, .detail-label { font-size: calc(13px * var(--font-scale)); }
-.node-notes-preview { font-size: calc(11px * var(--font-scale)); }
+.node-note-pill { display:inline-flex; align-items:center; gap:4px; margin-top:6px; font-size:11px; color:var(--text3); cursor:pointer; padding:3px 8px; background:var(--bg3); border:1px solid var(--border); border-radius:20px; transition:var(--transition); width:fit-content; }
+.node-note-pill:hover { border-color:var(--accent); color:var(--accent); }
+.ne-editor.drag-over, #ne-editor.drag-over { outline: 2px dashed var(--accent); outline-offset: -8px; }
+#dp-media.drag-over, .detail-body.drag-over { outline: 2px dashed var(--accent); outline-offset: -4px; border-radius: var(--radius); }
 </style>
 </head>
 <body>
@@ -1205,11 +1208,27 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   <div id="main-area">
     <div id="topbar">
       <button class="icon-btn" id="sidebar-toggle" onclick="toggleSidebar()" style="display:none;"><i class="ti ti-menu-2"></i></button>
-      <div style="display:flex;align-items:center;gap:8px;flex:1;overflow:hidden;"><div id="tree-title-display" class="placeholder">Select or create a tree</div><svg width="20" height="20" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect x="19.5" y="28" width="5" height="12" rx="2.5" fill="#8B6343"/><path d="M22 28 Q14 24 10 18" stroke="#7B5533" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M22 28 Q30 24 34 18" stroke="#7B5533" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M22 28 Q22 20 22 14" stroke="#7B5533" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="22" cy="10" r="6.5" fill="#22c55e"/><circle cx="7" cy="10" r="5.5" fill="#16a34a"/><circle cx="37" cy="10" r="5.5" fill="#16a34a"/><circle cx="16" cy="8" r="5" fill="#22c55e"/><circle cx="28" cy="8" r="5" fill="#22c55e"/><circle cx="22" cy="5" r="3.5" fill="#4ade80"/></svg></div>
+      <!-- Title with icon directly beside it -->
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;max-width:280px;overflow:hidden;">
+        <span id="tree-title-icon" style="font-size:20px;flex-shrink:0;display:none;"></span>
+        <div id="tree-title-display" class="placeholder">Select or create a tree</div>
+      </div>
+      <!-- Useful middle area: live search within the current tree -->
+      <div id="topbar-search-wrap" style="flex:1;display:none;max-width:380px;position:relative;">
+        <input id="topbar-search" type="text" placeholder="Search nodes in this tree..." oninput="topbarSearch(this.value)"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:7px 14px 7px 34px;color:var(--text);outline:none;font-size:13px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        <div id="topbar-search-results" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);max-height:300px;overflow-y:auto;z-index:60;"></div>
+      </div>
+      <!-- Tree quick-stats -->
+      <div id="topbar-stats" style="display:none;align-items:center;gap:14px;font-size:12px;color:var(--text3);flex-shrink:0;">
+        <span title="Nodes"><strong id="tb-stat-nodes" style="color:var(--text2);">0</strong> nodes</span>
+        <span title="Root trees"><strong id="tb-stat-roots" style="color:var(--text2);">0</strong> roots</span>
+      </div>
       <div class="topbar-btns">
         <div class="sync-dot" id="sync-dot" title="Saved"></div>
-        <button class="btn-sm btn-outline" onclick="openTreeSettings()" id="tree-settings-btn" style="display:none"><i class="ti ti-settings"></i> Settings</button>
-        <button class="btn-sm btn-outline" onclick="openExportModal()" id="export-btn" style="display:none"><i class="ti ti-download"></i> Export</button>
+        <button class="btn-sm btn-outline" onclick="openTreeSettings()" id="tree-settings-btn" style="display:none"><i class="ti ti-settings"></i></button>
+        <button class="btn-sm btn-outline" onclick="openExportModal()" id="export-btn" style="display:none"><i class="ti ti-download"></i></button>
         <button class="btn-sm btn-accent" onclick="openNewNodeModal(null)" id="add-root-btn" style="display:none"><i class="ti ti-plus"></i> Add Node</button>
       </div>
     </div>
@@ -1478,6 +1497,15 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
           <div class="theme-swatch" style="background:#f472b6;" onclick="savePref('accentColor','#f472b6')" data-color="#f472b6" title="Pink"></div>
           <div class="theme-swatch" style="background:#fbbf24;" onclick="savePref('accentColor','#fbbf24')" data-color="#fbbf24" title="Gold"></div>
           <div class="theme-swatch" style="background:#f87171;" onclick="savePref('accentColor','#f87171')" data-color="#f87171" title="Red"></div>
+          <div class="theme-swatch" style="background:#2dd4bf;" onclick="savePref('accentColor','#2dd4bf')" data-color="#2dd4bf" title="Teal"></div>
+          <div class="theme-swatch" style="background:#facc15;" onclick="savePref('accentColor','#facc15')" data-color="#facc15" title="Yellow"></div>
+          <div class="theme-swatch" style="background:#c084fc;" onclick="savePref('accentColor','#c084fc')" data-color="#c084fc" title="Lavender"></div>
+          <div class="theme-swatch" style="background:#fb7185;" onclick="savePref('accentColor','#fb7185')" data-color="#fb7185" title="Rose"></div>
+          <div class="theme-swatch" style="background:#38bdf8;" onclick="savePref('accentColor','#38bdf8')" data-color="#38bdf8" title="Sky"></div>
+          <div class="theme-swatch" style="background:#a3e635;" onclick="savePref('accentColor','#a3e635')" data-color="#a3e635" title="Lime"></div>
+          <div class="theme-swatch" style="position:relative;background:conic-gradient(red,orange,yellow,lime,cyan,blue,magenta,red);" title="Custom color">
+            <input type="color" onchange="savePref('accentColor',this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;">
+          </div>
         </div>
         <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;font-weight:600;margin-top:4px;">Background Tone</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;" id="bg-swatches">
@@ -1486,15 +1514,36 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
           <div class="theme-swatch" style="background:#0d1b0d;" onclick="savePref('bgTone','forest')" data-bg="forest" title="Forest"></div>
           <div class="theme-swatch" style="background:#1a0f0a;" onclick="savePref('bgTone','ember')" data-bg="ember" title="Ember"></div>
           <div class="theme-swatch" style="background:#1a1a1a;" onclick="savePref('bgTone','carbon')" data-bg="carbon" title="Carbon"></div>
+          <div class="theme-swatch" style="background:#1e1b2e;" onclick="savePref('bgTone','plum')" data-bg="plum" title="Plum"></div>
+          <div class="theme-swatch" style="background:#0d1f1c;" onclick="savePref('bgTone','teal')" data-bg="teal" title="Deep Teal"></div>
+          <div class="theme-swatch" style="background:#1c1410;" onclick="savePref('bgTone','coffee')" data-bg="coffee" title="Coffee"></div>
+          <div class="theme-swatch" style="background:#f5f5f7;border:2px solid var(--border2);" onclick="savePref('bgTone','light')" data-bg="light" title="Light"></div>
         </div>
         <div class="settings-row">
           <div class="settings-row-label">UI Font</div>
           <select class="tb-select" style="flex:1;" onchange="savePref('uiFont',this.value)" id="pref-ui-font">
             <option value="DM Sans">DM Sans (Default)</option>
             <option value="Inter">Inter</option>
+            <option value="Poppins">Poppins</option>
+            <option value="Nunito">Nunito</option>
+            <option value="Roboto">Roboto</option>
+            <option value="Lato">Lato</option>
             <option value="system-ui">System UI</option>
             <option value="Georgia">Georgia (Serif)</option>
+            <option value="Merriweather">Merriweather (Serif)</option>
             <option value="Courier New">Mono</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Title Font</div>
+          <select class="tb-select" style="flex:1;" onchange="savePref('titleFont',this.value)" id="pref-title-font">
+            <option value="Raleway">Raleway (Default)</option>
+            <option value="Poppins">Poppins</option>
+            <option value="Playfair Display">Playfair Display</option>
+            <option value="Montserrat">Montserrat</option>
+            <option value="Oswald">Oswald</option>
+            <option value="Bebas Neue">Bebas Neue</option>
+            <option value="DM Sans">DM Sans</option>
           </select>
         </div>
         <div class="settings-row">
@@ -1889,7 +1938,7 @@ let saveDebounceTimer = null;
 let selectedEmoji = '🌳';
 let tsSelectedEmoji = '🌳';
 
-const EMOJIS = ['🌳','🔬','📚','💡','🧠','🔭','🎯','🗺️','⚡','🌐','🏗️','🎨','💎','🚀','📊','🔑','🔩','🌿','🧩','📝'];
+const EMOJIS = ['🌳','🌲','🌴','🌿','🍃','🌱','🌎','🌐','🔬','🧬','🔭','⚗️','🧪','📚','📖','📝','📓','✏️','🧠','💡','💭','🎯','🗺️','🧭','⚡','🔥','✨','⭐','🏗️','🏛️','🎨','🖌️','💎','💰','📈','📊','📉','💼','🚀','🛸','🔑','🔒','🔩','⚙️','🧩','🎲','🎮','🎵','🎬','📷','🍔','☕','🏆','🥇','❤️','🧡','💙','💜','🟢','🔵','🔴','🟡','🟣','⚫','⬛','🔲'];
 const COLORS = ['#6c8eff','#4ade80','#fbbf24','#f87171','#a78bfa','#fb923c'];
 const NODE_COLORS = ['blue','green','yellow','red','purple','orange'];
 
@@ -2278,7 +2327,14 @@ const BG_TONES = {
   forest:   ['#0d1b0d','#121f12','#1a2a1a','#233023','#2e4030','#3d5240'],
   ember:    ['#1a0f0a','#211510','#2a1c16','#33221d','#3d2a24','#50382f'],
   carbon:   ['#111111','#1a1a1a','#222222','#2a2a2a','#333333','#444444'],
+  plum:     ['#1e1b2e','#272338','#322c47','#3d3556','#4a4068','#5a4e80'],
+  teal:     ['#0d1f1c','#122926','#193430','#20403b','#2a524b','#37665d'],
+  coffee:   ['#1c1410','#251b15','#30241c','#3b2d22','#4a392c','#5c4838'],
+  light:    ['#f5f5f7','#ffffff','#ececed','#e2e2e5','#d4d4d8','#c0c0c6'],
 };
+
+// Light theme needs dark text — handled in applyPrefs
+const LIGHT_TONES = ['light'];
 
 function applyPrefs() {
   const r = document.documentElement.style;
@@ -2296,6 +2352,9 @@ function applyPrefs() {
   document.body.style.fontSize = fsize + 'px';
   if (prefs.uiFont) document.body.style.fontFamily = "'" + prefs.uiFont + "', sans-serif";
   else document.body.style.fontFamily = "'DM Sans', sans-serif";
+  // Title font
+  if (prefs.titleFont) r.setProperty('--title-font', "'" + prefs.titleFont + "', sans-serif");
+  else r.setProperty('--title-font', "'Raleway', sans-serif");
   // Transitions
   r.setProperty('--transition', prefs.animate === false ? '0s' : '0.18s ease');
   // Accent color
@@ -2309,6 +2368,16 @@ function applyPrefs() {
     const t = BG_TONES[prefs.bgTone];
     const keys = ['--bg','--bg2','--bg3','--bg4','--border','--border2'];
     t.forEach((v,i) => r.setProperty(keys[i], v));
+    // Light theme → dark text
+    if (LIGHT_TONES.includes(prefs.bgTone)) {
+      r.setProperty('--text', '#1a1a2e');
+      r.setProperty('--text2', '#44445a');
+      r.setProperty('--text3', '#888');
+    } else {
+      r.setProperty('--text', '#e8eaf0');
+      r.setProperty('--text2', '#a8aec0');
+      r.setProperty('--text3', '#6b7186');
+    }
   }
   // Canvas background pattern
   const cw = document.getElementById('canvas-wrap');
@@ -2340,6 +2409,7 @@ function applyPrefs() {
   set('pref-wheel-mode',   prefs.wheelMode || 'zoom');
   chk('pref-snap-grid', prefs.snapGrid === true);
   const fs = document.getElementById('pref-ui-font');    if (fs && prefs.uiFont)   fs.value = prefs.uiFont;
+  const tf = document.getElementById('pref-title-font'); if (tf && prefs.titleFont) tf.value = prefs.titleFont;
   const bs = document.getElementById('pref-canvas-bg');  if (bs && prefs.canvasBg) bs.value = prefs.canvasBg;
   // Highlight swatches
   document.querySelectorAll('.theme-swatch[data-color]').forEach(s =>
@@ -2556,6 +2626,9 @@ async function deleteTree(treeId) {
     renderCanvas(); closeDetailPanel();
     document.getElementById('tree-title-display').textContent = 'Select or create a tree';
     document.getElementById('tree-title-display').className = 'placeholder';
+    const ic = document.getElementById('tree-title-icon'); if (ic) ic.style.display = 'none';
+    const sw = document.getElementById('topbar-search-wrap'); if (sw) sw.style.display = 'none';
+    const ts = document.getElementById('topbar-stats'); if (ts) ts.style.display = 'none';
     ['tree-settings-btn','export-btn','add-root-btn'].forEach(id => document.getElementById(id).style.display = 'none');
   }
   showToast('Tree deleted.', 'info');
@@ -2569,10 +2642,16 @@ function selectTree(treeId) {
   const tree = getActiveTree();
   if (!tree) return;
   const title = document.getElementById('tree-title-display');
-  title.textContent = (tree.icon || '🌳') + '  ' + tree.name;
+  title.textContent = tree.name;
   title.className = '';
+  const iconEl = document.getElementById('tree-title-icon');
+  if (iconEl) { iconEl.textContent = tree.icon || '🌳'; iconEl.style.display = ''; }
   ['tree-settings-btn','add-root-btn'].forEach(id => document.getElementById(id).style.display = '');
   document.getElementById('export-btn').style.display = canExport() ? '' : 'none';
+  // Show search + stats
+  const sw = document.getElementById('topbar-search-wrap'); if (sw) sw.style.display = '';
+  const ts = document.getElementById('topbar-stats'); if (ts) ts.style.display = 'flex';
+  updateTopbarStats();
   renderTreeList();
   renderCanvas();
   updateStatsBar();
@@ -2934,19 +3013,18 @@ function buildNodeCard(node, isLeft) {
     card.appendChild(desc);
   }
 
-  // Extended notes preview (Pro)
+  // Notes indicator (small icon only — never the full notes)
   if (node.extNotes && node.extNotes.trim()) {
-    // Strip HTML to get plain text preview
     const tmp = document.createElement('div');
     tmp.innerHTML = node.extNotes;
     const plainText = (tmp.innerText || tmp.textContent || '').trim();
     if (plainText) {
-      const preview = document.createElement('div');
-      preview.className = 'node-notes-preview';
-      preview.textContent = plainText;
-      preview.title = 'Open notes editor';
-      preview.onclick = (e) => { e.stopPropagation(); openNoteEditor(node.id); };
-      card.appendChild(preview);
+      const notePill = document.createElement('div');
+      notePill.className = 'node-note-pill';
+      notePill.innerHTML = '<i class="ti ti-notes"></i> Notes';
+      notePill.title = 'Open notes editor';
+      notePill.onclick = (e) => { e.stopPropagation(); openNoteEditor(node.id); };
+      card.appendChild(notePill);
     }
   }
 
@@ -3004,18 +3082,19 @@ function buildNodeCard(node, isLeft) {
   sideToggle.className = 'side-toggle';
   sideToggle.title = 'Branch direction';
 
-  const btnR = document.createElement('button');
-  btnR.className = 'side-toggle-btn' + (addRow.dataset.childSide !== 'left' ? ' active' : '');
-  btnR.textContent = 'R';
   const btnL = document.createElement('button');
   btnL.className = 'side-toggle-btn' + (addRow.dataset.childSide === 'left' ? ' active' : '');
   btnL.textContent = 'L';
+  const btnR = document.createElement('button');
+  btnR.className = 'side-toggle-btn' + (addRow.dataset.childSide !== 'left' ? ' active' : '');
+  btnR.textContent = 'R';
 
-  btnR.onclick = (e) => { e.stopPropagation(); addRow.dataset.childSide='right'; btnR.classList.add('active'); btnL.classList.remove('active'); };
   btnL.onclick = (e) => { e.stopPropagation(); addRow.dataset.childSide='left';  btnL.classList.add('active'); btnR.classList.remove('active'); };
+  btnR.onclick = (e) => { e.stopPropagation(); addRow.dataset.childSide='right'; btnR.classList.add('active'); btnL.classList.remove('active'); };
 
-  sideToggle.appendChild(btnR);
+  // L first, then R
   sideToggle.appendChild(btnL);
+  sideToggle.appendChild(btnR);
   addRow.appendChild(addChildBtn);
   addRow.appendChild(sideToggle);
   card.appendChild(addRow);
@@ -3074,6 +3153,9 @@ function renderDetailPanel(nodeId) {
   const panel = document.getElementById('detail-panel');
   const body = document.getElementById('detail-body');
   panel.classList.remove('hidden');
+
+  // Enable image drag-drop onto the whole detail body
+  setTimeout(() => setupDetailDrop(nodeId), 0);
 
   let html = '';
 
@@ -3259,6 +3341,37 @@ function removeLink(nodeId, idx) {
   debouncedSave(activeTreeId);
   renderDetailPanel(nodeId);
   renderCanvas();
+}
+
+function setupDetailDrop(nodeId) {
+  const body = document.getElementById('detail-body');
+  if (!body || body._dropWired === nodeId) return;
+  body._dropWired = nodeId;
+  body.ondragover = (e) => { e.preventDefault(); body.classList.add('drag-over'); };
+  body.ondragleave = () => body.classList.remove('drag-over');
+  body.ondrop = (e) => {
+    e.preventDefault();
+    body.classList.remove('drag-over');
+    if (!canUseMedia()) { showToast('Media requires Plus.', 'error'); return; }
+    const files = [...(e.dataTransfer.files || [])].filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => addImageDataToNode(nodeId, ev.target.result, file.name);
+      reader.readAsDataURL(file);
+    });
+  };
+}
+
+function addImageDataToNode(nodeId, dataUrl, label) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  if (!node.media) node.media = [];
+  node.media.push({ type: 'image', url: dataUrl, label: label || 'Image' });
+  debouncedSave(activeTreeId);
+  renderDetailPanel(nodeId);
+  renderCanvas();
+  showToast('Image added.', 'success');
 }
 
 function addMedia(nodeId) {
@@ -3623,6 +3736,25 @@ function openNoteEditor(nodeId) {
   // Focus
   setTimeout(() => { editor.focus(); neUpdateCounts(); }, 80);
 
+  // Drag & drop images into the editor
+  editor.ondragover = (e) => { e.preventDefault(); editor.classList.add('drag-over'); };
+  editor.ondragleave = () => editor.classList.remove('drag-over');
+  editor.ondrop = (e) => {
+    e.preventDefault();
+    editor.classList.remove('drag-over');
+    const files = [...(e.dataTransfer.files || [])].filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        document.execCommand('insertHTML', false,
+          '<img src="' + ev.target.result + '" style="max-width:100%;border-radius:8px;margin:8px 0;">');
+        neSave();
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Wire up events
   editor.oninput = () => {
     neUpdateCounts();
@@ -3637,7 +3769,58 @@ function openNoteEditor(nodeId) {
     // Escape
     if (e.key === 'Escape') { closeNoteEditor(); return; }
     // Tab → indent
-    if (e.key === 'Tab') { e.preventDefault(); document.execCommand(e.shiftKey ? 'outdent' : 'indent'); }
+    if (e.key === 'Tab') { e.preventDefault(); document.execCommand(e.shiftKey ? 'outdent' : 'indent'); return; }
+    // Space after "-" or "1." or "*" → start a list automatically
+    if (e.key === ' ') {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        const node = sel.anchorNode;
+        const text = (node && node.textContent ? node.textContent.slice(0, sel.anchorOffset) : '');
+        // Only at line start (trim leading)
+        const trimmed = text.replace(/^\s+/, '');
+        if (trimmed === '-' || trimmed === '*') {
+          e.preventDefault();
+          // remove the marker char
+          for (let i=0;i<trimmed.length;i++) document.execCommand('delete', false);
+          document.execCommand('insertUnorderedList');
+          setTimeout(neUpdateToolbarState,0);
+          return;
+        }
+        if (/^\d+\.$/.test(trimmed)) {
+          e.preventDefault();
+          for (let i=0;i<trimmed.length;i++) document.execCommand('delete', false);
+          document.execCommand('insertOrderedList');
+          setTimeout(neUpdateToolbarState,0);
+          return;
+        }
+      }
+    }
+    // Enter inside an empty list item → exit the list (native behavior in most browsers,
+    // but we ensure double-enter breaks out)
+    if (e.key === 'Enter') {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        let li = sel.anchorNode;
+        while (li && li.nodeType === 3) li = li.parentNode;
+        const listItem = li && li.closest ? li.closest('li') : null;
+        if (listItem && listItem.textContent.trim() === '') {
+          e.preventDefault();
+          document.execCommand('insertParagraph');
+          document.execCommand('outdent');
+          // If still in list, break out fully
+          setTimeout(() => {
+            const s2 = window.getSelection();
+            let n2 = s2.anchorNode;
+            while (n2 && n2.nodeType === 3) n2 = n2.parentNode;
+            if (n2 && n2.closest && n2.closest('li')) {
+              document.execCommand('insertUnorderedList'); // toggles off
+            }
+            neUpdateToolbarState();
+          }, 0);
+          return;
+        }
+      }
+    }
   };
 
   editor.onselectionchange = () => neUpdateToolbarState();
@@ -3702,9 +3885,12 @@ function neUpdateCounts() {
 }
 
 function neExec(cmd, value) {
-  document.getElementById('ne-editor').focus();
+  const ed = document.getElementById('ne-editor');
+  ed.focus();
+  document.execCommand('styleWithCSS', false, true);
   document.execCommand(cmd, false, value || null);
-  neUpdateToolbarState();
+  // Update state on the next tick so queryCommandState reflects the change
+  setTimeout(neUpdateToolbarState, 0);
 }
 
 function neBlockFormat(tag) {
@@ -3720,9 +3906,23 @@ function neBlockFormat(tag) {
 }
 
 function neHighlight() {
-  document.getElementById('ne-editor').focus();
-  document.execCommand('hiliteColor', false, 'rgba(251,191,36,0.35)');
-  neUpdateToolbarState();
+  const ed = document.getElementById('ne-editor');
+  ed.focus();
+  document.execCommand('styleWithCSS', false, true);
+  // Detect if current selection is already highlighted → toggle off
+  let cur = '';
+  try { cur = document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor') || ''; } catch(e){}
+  const isOn = cur && cur.replace(/\s/g,'').match(/251,191,36|rgba?\(255,235/);
+  if (isOn) {
+    document.execCommand('hiliteColor', false, 'transparent');
+    const btn = document.getElementById('tb-highlight');
+    if (btn) btn.classList.remove('active');
+  } else {
+    document.execCommand('hiliteColor', false, 'rgba(251,191,36,0.4)');
+    const btn = document.getElementById('tb-highlight');
+    if (btn) btn.classList.add('active');
+  }
+  setTimeout(neUpdateToolbarState, 0);
 }
 
 function neInsertHR() {
@@ -3751,18 +3951,35 @@ function neInsertTaskList() {
 }
 
 function neUpdateToolbarState() {
+  // Only reflect state when the selection is inside the editor
+  const ed = document.getElementById('ne-editor');
+  if (!ed) return;
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || !ed.contains(sel.anchorNode)) return;
+
   const cmds = ['bold','italic','underline','strikeThrough','insertUnorderedList','insertOrderedList'];
   cmds.forEach(cmd => {
     const btn = document.getElementById('tb-' + cmd);
-    if (btn) btn.classList.toggle('active', document.queryCommandState(cmd));
+    if (!btn) return;
+    let on = false;
+    try { on = document.queryCommandState(cmd); } catch(e) {}
+    btn.classList.toggle('active', on);
   });
-  // Update block select
-  const sel = document.getElementById('ne-block-select');
-  if (sel) {
+  // Highlight state
+  const hbtn = document.getElementById('tb-highlight');
+  if (hbtn) {
+    let cur = '';
+    try { cur = document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor') || ''; } catch(e){}
+    const on = cur && cur.replace(/\s/g,'').match(/251,191,36|255,235/);
+    hbtn.classList.toggle('active', !!on);
+  }
+  // Block select
+  const bsel = document.getElementById('ne-block-select');
+  if (bsel) {
     try {
-      const block = document.queryCommandValue('formatBlock').toLowerCase().replace(/^<|>$/g,'') || 'p';
+      const block = (document.queryCommandValue('formatBlock')||'').toLowerCase().replace(/^<|>$/g,'') || 'p';
       const map = { 'h1':'h1','h2':'h2','h3':'h3','blockquote':'blockquote','pre':'pre' };
-      sel.value = map[block] || 'p';
+      bsel.value = map[block] || 'p';
     } catch(e) {}
   }
 }
@@ -4173,7 +4390,8 @@ function nvNavigate(dir) {
 function nvEdit() {
   const id = nvNodeId;
   closeNodeView();
-  openEditNodeModal(id);
+  // Open the full-screen note editor (not the small modal)
+  openNoteEditor(id);
 }
 
 function closeNodeView() {
@@ -4190,6 +4408,62 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft')  nvNavigate('prev');
     if (e.key === 'ArrowRight') nvNavigate('next');
     if (e.key === 'ArrowUp')    nvNavigate('up');
+  }
+});
+
+// ─── Topbar search + stats ───
+function updateTopbarStats() {
+  const tree = getActiveTree(); if (!tree) return;
+  let n = 0;
+  (function count(nodes){ for (const nd of nodes){ n++; count(nd.children||[]); } })(tree.nodes||[]);
+  const nodesEl = document.getElementById('tb-stat-nodes');
+  const rootsEl = document.getElementById('tb-stat-roots');
+  if (nodesEl) nodesEl.textContent = n;
+  if (rootsEl) rootsEl.textContent = (tree.nodes||[]).length;
+}
+
+function topbarSearch(q) {
+  const box = document.getElementById('topbar-search-results');
+  if (!box) return;
+  q = (q || '').trim().toLowerCase();
+  if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const tree = getActiveTree(); if (!tree) return;
+  const matches = [];
+  (function walk(nodes, path){
+    for (const nd of nodes) {
+      const p = path.concat([nd.title]);
+      const hay = (nd.title + ' ' + (nd.desc||'') + ' ' + (nd.tags||[]).join(' ')).toLowerCase();
+      if (hay.includes(q)) matches.push({ node: nd, path: p });
+      walk(nd.children || [], p);
+    }
+  })(tree.nodes||[], []);
+  if (!matches.length) {
+    box.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">No matches</div>';
+  } else {
+    box.innerHTML = matches.slice(0,30).map(m =>
+      `<div onclick="topbarGoto('${m.node.id}')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:var(--transition);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+        <div style="font-size:13px;font-weight:600;color:var(--text);">${esc(m.node.title)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${esc(m.path.slice(0,-1).join(' › ') || 'root')}</div>
+      </div>`).join('');
+  }
+  box.style.display = 'block';
+}
+
+function topbarGoto(nodeId) {
+  const box = document.getElementById('topbar-search-results');
+  if (box) { box.style.display = 'none'; }
+  const si = document.getElementById('topbar-search'); if (si) si.value = '';
+  selectNode(nodeId);
+  // Open full view for quick access
+  openNodeView(nodeId);
+}
+
+// Close search results on outside click
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('topbar-search-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const box = document.getElementById('topbar-search-results');
+    if (box) box.style.display = 'none';
   }
 });
 
