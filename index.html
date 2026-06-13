@@ -9,6 +9,7 @@
 <style>
 /* ─── CSS Variables ─── */
 :root {
+  --title-font: 'Raleway', sans-serif;
   --bg: #0f1117;
   --bg2: #161b27;
   --bg3: #1e2535;
@@ -138,10 +139,10 @@ h1,h2,h3,h4 { font-family: var(--title-font, 'Raleway', sans-serif); font-weight
   transition: transform var(--transition);
 }
 .sidebar-header {
-  padding: 16px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
+  height: var(--topbar-h); padding: 0 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; box-sizing: border-box;
 }
-.sidebar-logo { font-family: 'Raleway', sans-serif; font-size: 18px; font-weight: 300; letter-spacing: 0.04em; }
+.sidebar-logo { font-family: var(--title-font, 'Raleway', sans-serif); font-size: 18px; font-weight: 300; letter-spacing: 0.04em; }
 .sidebar-logo span { color: var(--accent); }
 .sidebar-actions { display: flex; gap: 6px; }
 .icon-btn {
@@ -207,7 +208,7 @@ h1,h2,h3,h4 { font-family: var(--title-font, 'Raleway', sans-serif); font-weight
   background: var(--bg2); flex-shrink: 0;
 }
 #tree-title-display {
-  font-family: 'Raleway', sans-serif; font-size: 20px; font-weight: 300; letter-spacing: 0.02em;
+  font-family: var(--title-font, 'Raleway', sans-serif); font-size: 20px; font-weight: 300; letter-spacing: 0.02em;
   flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 #tree-title-display.placeholder { color: var(--text3); font-family: 'DM Sans', sans-serif; font-style: italic; font-size: 14px; }
@@ -361,8 +362,8 @@ h1,h2,h3,h4 { font-family: var(--title-font, 'Raleway', sans-serif); font-weight
 }
 #detail-panel.hidden { display: none; }
 .detail-header {
-  padding: 14px 16px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
+  height: var(--topbar-h); padding: 0 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; box-sizing: border-box;
 }
 .detail-title { font-size: 14px; font-weight: 600; }
 .detail-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
@@ -750,7 +751,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   width: 30px; height: 30px; border-radius: 5px; cursor: pointer;
   border: 1px solid var(--border); display: flex; align-items: center;
   justify-content: center; flex-direction: column; gap: 1px;
-  transition: var(--transition);
+  transition: var(--transition); position: relative; color: var(--text2);
 }
 .tb-color-btn:hover { border-color: var(--border2); }
 .tb-color-bar { width: 16px; height: 3px; border-radius: 2px; }
@@ -759,15 +760,16 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .ne-doc-wrap {
   flex: 1; overflow-y: auto; overflow-x: hidden;
   background: var(--bg);
-  display: flex; justify-content: center;
-  padding: 48px 24px;
+  display: flex; justify-content: center; align-items: flex-start;
+  padding: 48px 24px 120px 24px;
 }
 .ne-doc-page {
   width: 100%; max-width: 720px;
   background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 12px; min-height: 600px;
+  border-radius: 12px; min-height: 500px; height: auto;
   padding: 48px 56px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+  box-sizing: border-box; flex-shrink: 0;
 }
 @media (max-width: 768px) {
   .ne-doc-page { padding: 24px 20px; }
@@ -777,27 +779,34 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
 /* The editable content */
 #ne-editor {
-  outline: none; min-height: 500px;
+  outline: none; min-height: 400px; height: auto;
   font-size: 15px; line-height: 1.8; color: var(--text);
   font-family: 'DM Sans', sans-serif;
   caret-color: var(--accent);
+  word-wrap: break-word; overflow-wrap: break-word;
+  white-space: pre-wrap;
 }
 #ne-editor:empty::before {
   content: 'Start writing your notes here...\A\AUse the toolbar above for formatting — headings, bold, italic, bullet lists, numbered lists, and more.';
   white-space: pre-wrap;
   color: var(--text3); pointer-events: none;
 }
-#ne-editor h1 { font-family: 'Raleway', sans-serif; font-size: 26px; font-weight: 700; margin: 24px 0 12px; color: var(--text); line-height: 1.3; }
-#ne-editor h2 { font-family: 'Raleway', sans-serif; font-size: 20px; font-weight: 600; margin: 20px 0 10px; color: var(--text); }
+#ne-editor h1 { font-family: var(--title-font, 'Raleway', sans-serif); font-size: 26px; font-weight: 700; margin: 24px 0 12px; color: var(--text); line-height: 1.3; }
+#ne-editor h2 { font-family: var(--title-font, 'Raleway', sans-serif); font-size: 20px; font-weight: 600; margin: 20px 0 10px; color: var(--text); }
 #ne-editor h3 { font-size: 16px; font-weight: 600; margin: 16px 0 8px; color: var(--text); }
 #ne-editor p { margin: 0 0 10px; }
 #ne-editor ul { padding-left: 24px; margin: 8px 0 10px; list-style: disc; }
 #ne-editor ol { padding-left: 24px; margin: 8px 0 10px; list-style: decimal; }
 #ne-editor li { margin: 4px 0; }
-#ne-editor blockquote {
+/* Real quotes (from Quote button) get the styled look */
+#ne-editor blockquote.ne-quote {
   border-left: 3px solid var(--accent); margin: 16px 0;
   padding: 8px 16px; color: var(--text2);
   background: var(--bg3); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+/* Plain indent blockquotes (from Tab/indent) — no background, no border */
+#ne-editor blockquote {
+  margin: 0 0 0 24px; padding: 0; border: none; background: none; color: inherit;
 }
 #ne-editor code {
   background: var(--bg3); border: 1px solid var(--border);
@@ -1060,7 +1069,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .nv-page { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 26px; }
 .nv-header { display: flex; flex-direction: column; gap: 10px; }
 .nv-color-bar { height: 4px; border-radius: 2px; width: 64px; }
-.nv-title { font-family: 'Raleway', sans-serif; font-size: 34px; font-weight: 200; letter-spacing: 0.01em; line-height: 1.2; }
+.nv-title { font-family: var(--title-font, 'Raleway', sans-serif); font-size: 34px; font-weight: 200; letter-spacing: 0.01em; line-height: 1.2; }
 .nv-desc { font-size: 16px; color: var(--text2); line-height: 1.7; }
 .nv-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .nv-tag { font-size: 13px; padding: 4px 12px; border-radius: 20px; background: var(--accent-dim); color: var(--accent2); border: 1px solid rgba(108,142,255,0.2); cursor: pointer; }
@@ -1209,27 +1218,31 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     <div id="topbar">
       <button class="icon-btn" id="sidebar-toggle" onclick="toggleSidebar()" style="display:none;"><i class="ti ti-menu-2"></i></button>
       <!-- Title with icon directly beside it -->
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;max-width:280px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;max-width:240px;overflow:hidden;">
         <span id="tree-title-icon" style="font-size:20px;flex-shrink:0;display:none;"></span>
         <div id="tree-title-display" class="placeholder">Select or create a tree</div>
       </div>
-      <!-- Useful middle area: live search within the current tree -->
-      <div id="topbar-search-wrap" style="flex:1;display:none;max-width:380px;position:relative;">
-        <input id="topbar-search" type="text" placeholder="Search nodes in this tree..." oninput="topbarSearch(this.value)"
+      <!-- Add Node sits right next to the title -->
+      <button class="btn-sm btn-accent" onclick="openNewNodeModal(null)" id="add-root-btn" style="display:none;flex-shrink:0;"><i class="ti ti-plus"></i> Add Node</button>
+
+      <!-- Spacer pushes everything else to the far right -->
+      <div style="flex:1;"></div>
+
+      <!-- Right cluster: search, stats, actions -->
+      <div id="topbar-search-wrap" style="display:none;width:280px;position:relative;flex-shrink:0;">
+        <input id="topbar-search" type="text" placeholder="Search nodes..." oninput="topbarSearch(this.value)"
           style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:7px 14px 7px 34px;color:var(--text);outline:none;font-size:13px;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
         <div id="topbar-search-results" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);max-height:300px;overflow-y:auto;z-index:60;"></div>
       </div>
-      <!-- Tree quick-stats -->
       <div id="topbar-stats" style="display:none;align-items:center;gap:14px;font-size:12px;color:var(--text3);flex-shrink:0;">
         <span title="Nodes"><strong id="tb-stat-nodes" style="color:var(--text2);">0</strong> nodes</span>
         <span title="Root trees"><strong id="tb-stat-roots" style="color:var(--text2);">0</strong> roots</span>
       </div>
       <div class="topbar-btns">
         <div class="sync-dot" id="sync-dot" title="Saved"></div>
-        <button class="btn-sm btn-outline" onclick="openTreeSettings()" id="tree-settings-btn" style="display:none"><i class="ti ti-settings"></i></button>
-        <button class="btn-sm btn-outline" onclick="openExportModal()" id="export-btn" style="display:none"><i class="ti ti-download"></i></button>
-        <button class="btn-sm btn-accent" onclick="openNewNodeModal(null)" id="add-root-btn" style="display:none"><i class="ti ti-plus"></i> Add Node</button>
+        <button class="btn-sm btn-outline" onclick="openTreeSettings()" id="tree-settings-btn" style="display:none" title="Tree settings"><i class="ti ti-settings"></i></button>
+        <button class="btn-sm btn-outline" onclick="openExportModal()" id="export-btn" style="display:none" title="Export"><i class="ti ti-download"></i></button>
       </div>
     </div>
     <div id="canvas-wrap">
@@ -1514,10 +1527,21 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
           <div class="theme-swatch" style="background:#0d1b0d;" onclick="savePref('bgTone','forest')" data-bg="forest" title="Forest"></div>
           <div class="theme-swatch" style="background:#1a0f0a;" onclick="savePref('bgTone','ember')" data-bg="ember" title="Ember"></div>
           <div class="theme-swatch" style="background:#1a1a1a;" onclick="savePref('bgTone','carbon')" data-bg="carbon" title="Carbon"></div>
+          <div class="theme-swatch" style="background:#000000;border:2px solid var(--border2);" onclick="savePref('bgTone','truedark')" data-bg="truedark" title="True Dark"></div>
           <div class="theme-swatch" style="background:#1e1b2e;" onclick="savePref('bgTone','plum')" data-bg="plum" title="Plum"></div>
           <div class="theme-swatch" style="background:#0d1f1c;" onclick="savePref('bgTone','teal')" data-bg="teal" title="Deep Teal"></div>
           <div class="theme-swatch" style="background:#1c1410;" onclick="savePref('bgTone','coffee')" data-bg="coffee" title="Coffee"></div>
+          <div class="theme-swatch" style="background:#0a1929;" onclick="savePref('bgTone','ocean')" data-bg="ocean" title="Ocean"></div>
+          <div class="theme-swatch" style="background:#14171c;" onclick="savePref('bgTone','slate')" data-bg="slate" title="Slate"></div>
           <div class="theme-swatch" style="background:#f5f5f7;border:2px solid var(--border2);" onclick="savePref('bgTone','light')" data-bg="light" title="Light"></div>
+          <div class="theme-swatch" style="background:#faf6ef;border:2px solid var(--border2);" onclick="savePref('bgTone','paper')" data-bg="paper" title="Paper (Light)"></div>
+          <div class="theme-swatch" style="background:#eef2f7;border:2px solid var(--border2);" onclick="savePref('bgTone','mist')" data-bg="mist" title="Mist (Light)"></div>
+          <div class="theme-swatch" style="background:#fdf2f4;border:2px solid var(--border2);" onclick="savePref('bgTone','rose')" data-bg="rose" title="Rose (Light)"></div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">Custom Background</div>
+          <input type="color" id="pref-custom-bg" value="#0f1117" onchange="savePref('customBg',this.value)" style="width:48px;height:32px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);cursor:pointer;">
+          <button class="btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="savePref('customBg',null);applyPrefs()">Clear</button>
         </div>
         <div class="settings-row">
           <div class="settings-row-label">UI Font</div>
@@ -1738,6 +1762,15 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
   <!-- Formatting Toolbar -->
   <div class="ne-toolbar" id="ne-toolbar">
+    <!-- Undo / Redo -->
+    <div class="ne-toolbar-group">
+      <div class="tb-btn" onclick="neUndo()" title="Undo (Ctrl+Z)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14l-4 -4l4 -4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>
+      </div>
+      <div class="tb-btn" onclick="neRedo()" title="Redo (Ctrl+Y)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14l4 -4l-4 -4"/><path d="M19 10h-11a4 4 0 1 0 0 8h1"/></svg>
+      </div>
+    </div>
     <!-- Text style -->
     <div class="ne-toolbar-group">
       <select class="tb-select" id="ne-block-select" onchange="neBlockFormat(this.value)">
@@ -1755,9 +1788,22 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       <div class="tb-btn" id="tb-italic" onclick="neExec('italic')" title="Italic (Ctrl+I)"><em>I</em></div>
       <div class="tb-btn" id="tb-underline" onclick="neExec('underline')" title="Underline (Ctrl+U)"><u>U</u></div>
       <div class="tb-btn" id="tb-strikeThrough" onclick="neExec('strikeThrough')" title="Strikethrough"><s>S</s></div>
-      <div class="tb-btn" id="tb-highlight" onclick="neHighlight()" title="Highlight">
+      <div class="tb-btn" id="tb-highlight" onclick="neHighlight()" title="Highlight (yellow)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 19h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M12.5 6.5l4 4"/><path d="M3 19h-1" opacity="0.5"/></svg>
       </div>
+    </div>
+    <!-- Colors -->
+    <div class="ne-toolbar-group">
+      <label class="tb-color-btn" title="Text color">
+        <span style="font-size:13px;font-weight:700;line-height:1;">A</span>
+        <span class="tb-color-bar" id="tb-textcolor-bar" style="background:var(--accent);"></span>
+        <input type="color" value="#6c8eff" oninput="document.getElementById('tb-textcolor-bar').style.background=this.value;neTextColor(this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
+      </label>
+      <label class="tb-color-btn" title="Highlight color">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 19h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/></svg>
+        <span class="tb-color-bar" id="tb-hlcolor-bar" style="background:#fbbf24;"></span>
+        <input type="color" value="#fbbf24" oninput="document.getElementById('tb-hlcolor-bar').style.background=this.value;neHighlight(this.value+'73')" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
+      </label>
     </div>
     <!-- Lists -->
     <div class="ne-toolbar-group">
@@ -2322,19 +2368,45 @@ function savePref(key, val) {
 }
 
 const BG_TONES = {
-  dark:     ['#0f1117','#161b27','#1e2535','#252d3d','#2e3650','#3a4560'],
-  midnight: ['#0a0f1e','#111827','#1a2234','#222d42','#2a3654','#364673'],
-  forest:   ['#0d1b0d','#121f12','#1a2a1a','#233023','#2e4030','#3d5240'],
-  ember:    ['#1a0f0a','#211510','#2a1c16','#33221d','#3d2a24','#50382f'],
-  carbon:   ['#111111','#1a1a1a','#222222','#2a2a2a','#333333','#444444'],
-  plum:     ['#1e1b2e','#272338','#322c47','#3d3556','#4a4068','#5a4e80'],
-  teal:     ['#0d1f1c','#122926','#193430','#20403b','#2a524b','#37665d'],
-  coffee:   ['#1c1410','#251b15','#30241c','#3b2d22','#4a392c','#5c4838'],
-  light:    ['#f5f5f7','#ffffff','#ececed','#e2e2e5','#d4d4d8','#c0c0c6'],
+  // Dark themes
+  dark:      ['#0f1117','#161b27','#1e2535','#252d3d','#2e3650','#3a4560'],
+  truedark:  ['#000000','#0a0a0a','#141414','#1c1c1c','#262626','#333333'],
+  midnight:  ['#0a0f1e','#111827','#1a2234','#222d42','#2a3654','#364673'],
+  forest:    ['#0d1b0d','#121f12','#1a2a1a','#233023','#2e4030','#3d5240'],
+  ember:     ['#1a0f0a','#211510','#2a1c16','#33221d','#3d2a24','#50382f'],
+  carbon:    ['#111111','#1a1a1a','#222222','#2a2a2a','#333333','#444444'],
+  plum:      ['#1e1b2e','#272338','#322c47','#3d3556','#4a4068','#5a4e80'],
+  teal:      ['#0d1f1c','#122926','#193430','#20403b','#2a524b','#37665d'],
+  coffee:    ['#1c1410','#251b15','#30241c','#3b2d22','#4a392c','#5c4838'],
+  ocean:     ['#0a1929','#0f2236','#152d44','#1d3a54','#264a68','#33608a'],
+  slate:     ['#14171c','#1c2027','#252b34','#2e3540','#3a424f','#4a5462'],
+  // Light themes
+  light:     ['#f5f5f7','#ffffff','#ececed','#e2e2e5','#d4d4d8','#c0c0c6'],
+  paper:     ['#faf6ef','#fffdf8','#f0ebe0','#e6dfd0','#d8cfba','#c4b9a0'],
+  mist:      ['#eef2f7','#ffffff','#e3e9f0','#d6dee8','#c4cfdc','#aab8ca'],
+  rose:      ['#fdf2f4','#fffafb','#f8e6ea','#f0d6dc','#e4c0c9','#d4a5b1'],
 };
 
-// Light theme needs dark text — handled in applyPrefs
-const LIGHT_TONES = ['light'];
+// Light themes need dark text — handled in applyPrefs
+const LIGHT_TONES = ['light','paper','mist','rose'];
+
+function hexLuminance(hex) {
+  hex = hex.replace('#','');
+  if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  const r = parseInt(hex.substr(0,2),16)/255;
+  const g = parseInt(hex.substr(2,2),16)/255;
+  const b = parseInt(hex.substr(4,2),16)/255;
+  return 0.2126*r + 0.7152*g + 0.0722*b;
+}
+function shadeHex(hex, amt) {
+  hex = hex.replace('#','');
+  if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  let r = parseInt(hex.substr(0,2),16) + amt;
+  let g = parseInt(hex.substr(2,2),16) + amt;
+  let b = parseInt(hex.substr(4,2),16) + amt;
+  r = Math.max(0,Math.min(255,r)); g = Math.max(0,Math.min(255,g)); b = Math.max(0,Math.min(255,b));
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
 
 function applyPrefs() {
   const r = document.documentElement.style;
@@ -2368,7 +2440,6 @@ function applyPrefs() {
     const t = BG_TONES[prefs.bgTone];
     const keys = ['--bg','--bg2','--bg3','--bg4','--border','--border2'];
     t.forEach((v,i) => r.setProperty(keys[i], v));
-    // Light theme → dark text
     if (LIGHT_TONES.includes(prefs.bgTone)) {
       r.setProperty('--text', '#1a1a2e');
       r.setProperty('--text2', '#44445a');
@@ -2378,6 +2449,25 @@ function applyPrefs() {
       r.setProperty('--text2', '#a8aec0');
       r.setProperty('--text3', '#6b7186');
     }
+  }
+  // Custom background color — derives a full palette from one color
+  if (prefs.customBg) {
+    const base = prefs.customBg;
+    const lum = hexLuminance(base);
+    const lighten = (hex, amt) => shadeHex(hex, amt);
+    r.setProperty('--bg',  base);
+    r.setProperty('--bg2', lighten(base, lum > 0.5 ? -8 : 10));
+    r.setProperty('--bg3', lighten(base, lum > 0.5 ? -16 : 20));
+    r.setProperty('--bg4', lighten(base, lum > 0.5 ? -24 : 30));
+    r.setProperty('--border',  lighten(base, lum > 0.5 ? -30 : 40));
+    r.setProperty('--border2', lighten(base, lum > 0.5 ? -40 : 55));
+    if (lum > 0.5) {
+      r.setProperty('--text', '#1a1a2e'); r.setProperty('--text2', '#44445a'); r.setProperty('--text3', '#888');
+    } else {
+      r.setProperty('--text', '#e8eaf0'); r.setProperty('--text2', '#a8aec0'); r.setProperty('--text3', '#6b7186');
+    }
+    const cbInput = document.getElementById('pref-custom-bg');
+    if (cbInput) cbInput.value = base;
   }
   // Canvas background pattern
   const cw = document.getElementById('canvas-wrap');
@@ -3763,9 +3853,39 @@ function openNoteEditor(nodeId) {
     neSaveTimer = setTimeout(() => neSave(), 800);
   };
 
+  // Paste: strip background/color/font styles that break the page layout
+  editor.onpaste = (e) => {
+    e.preventDefault();
+    const cb = e.clipboardData || window.clipboardData;
+    let htmlData = cb.getData('text/html');
+    const textData = cb.getData('text/plain');
+    if (htmlData) {
+      // Sanitize: remove style attributes, scripts, and background colors
+      const tmp = document.createElement('div');
+      tmp.innerHTML = htmlData;
+      tmp.querySelectorAll('*').forEach(el => {
+        el.removeAttribute('style');
+        el.removeAttribute('class');
+        el.removeAttribute('bgcolor');
+        el.removeAttribute('width');
+        el.removeAttribute('height');
+        if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'META') el.remove();
+      });
+      document.execCommand('insertHTML', false, tmp.innerHTML);
+    } else {
+      // Plain text — preserve line breaks
+      const escaped = textData.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+      document.execCommand('insertHTML', false, escaped);
+    }
+    neQueueSave();
+  };
+
   editor.onkeydown = (e) => {
     // Ctrl+S
     if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); neSave(); return; }
+    // Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); neUndo(); return; }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); neRedo(); return; }
     // Escape
     if (e.key === 'Escape') { closeNoteEditor(); return; }
     // Tab → indent
@@ -3887,42 +4007,77 @@ function neUpdateCounts() {
 function neExec(cmd, value) {
   const ed = document.getElementById('ne-editor');
   ed.focus();
-  document.execCommand('styleWithCSS', false, true);
+  // styleWithCSS=false → uses semantic tags (<b>,<i>,<u>,<strike>) which
+  // toggle reliably both on AND off via execCommand.
+  document.execCommand('styleWithCSS', false, false);
   document.execCommand(cmd, false, value || null);
-  // Update state on the next tick so queryCommandState reflects the change
   setTimeout(neUpdateToolbarState, 0);
+  neQueueSave();
 }
 
 function neBlockFormat(tag) {
   const editor = document.getElementById('ne-editor');
   editor.focus();
-  if (tag === 'p') { document.execCommand('formatBlock', false, 'p'); }
-  else if (tag === 'pre') {
-    document.execCommand('formatBlock', false, 'pre');
-  } else {
-    document.execCommand('formatBlock', false, tag);
+  document.execCommand('formatBlock', false, tag === 'p' ? 'p' : tag);
+  // Tag real quotes so they get the styled look (vs plain indent blockquotes)
+  if (tag === 'blockquote') {
+    setTimeout(() => {
+      const sel = window.getSelection();
+      if (sel && sel.anchorNode) {
+        let bq = sel.anchorNode;
+        while (bq && bq.nodeName !== 'BLOCKQUOTE') bq = bq.parentNode;
+        if (bq && editor.contains(bq)) bq.classList.add('ne-quote');
+      }
+    }, 0);
   }
   neUpdateToolbarState();
 }
 
-function neHighlight() {
+function neHighlight(color) {
   const ed = document.getElementById('ne-editor');
   ed.focus();
   document.execCommand('styleWithCSS', false, true);
-  // Detect if current selection is already highlighted → toggle off
-  let cur = '';
-  try { cur = document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor') || ''; } catch(e){}
-  const isOn = cur && cur.replace(/\s/g,'').match(/251,191,36|rgba?\(255,235/);
-  if (isOn) {
+  const btn = document.getElementById('tb-highlight');
+  const highlightOn = btn && btn.classList.contains('active');
+  if (!color) {
+    // Toggle default yellow
+    if (highlightOn) {
+      document.execCommand('hiliteColor', false, 'transparent');
+      if (btn) btn.classList.remove('active');
+    } else {
+      document.execCommand('hiliteColor', false, 'rgba(251,191,36,0.45)');
+      if (btn) btn.classList.add('active');
+    }
+  } else if (color === 'none') {
     document.execCommand('hiliteColor', false, 'transparent');
-    const btn = document.getElementById('tb-highlight');
     if (btn) btn.classList.remove('active');
   } else {
-    document.execCommand('hiliteColor', false, 'rgba(251,191,36,0.4)');
-    const btn = document.getElementById('tb-highlight');
+    document.execCommand('hiliteColor', false, color);
     if (btn) btn.classList.add('active');
   }
   setTimeout(neUpdateToolbarState, 0);
+  neQueueSave();
+}
+
+// ─── Text color ───
+function neTextColor(color) {
+  const ed = document.getElementById('ne-editor');
+  ed.focus();
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('foreColor', false, color);
+  neQueueSave();
+}
+
+// ─── Undo / Redo ───
+function neUndo() { const ed=document.getElementById('ne-editor'); ed.focus(); document.execCommand('undo'); setTimeout(neUpdateToolbarState,0); neQueueSave(); }
+function neRedo() { const ed=document.getElementById('ne-editor'); ed.focus(); document.execCommand('redo'); setTimeout(neUpdateToolbarState,0); neQueueSave(); }
+
+// Debounced save helper
+function neQueueSave() {
+  neSetStatus('saving');
+  clearTimeout(neSaveTimer);
+  neSaveTimer = setTimeout(() => neSave(), 600);
+  neUpdateCounts();
 }
 
 function neInsertHR() {
