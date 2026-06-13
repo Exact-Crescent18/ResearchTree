@@ -1213,6 +1213,30 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .ne-size-btn:hover { background: var(--bg4); color: var(--accent); }
 #ne-size-input { width: 36px; height: 28px; border: none; background: transparent; color: var(--text); text-align: center; font-size: 12px; outline: none; -moz-appearance: textfield; }
 #ne-size-input::-webkit-outer-spin-button, #ne-size-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.ne-float-url {
+  position: absolute; left: -8px; bottom: -8px; width: 20px; height: 20px;
+  background: var(--bg2); border: 2px solid var(--border); border-radius: 50%;
+  cursor: pointer; z-index: 6; display: none; align-items: center; justify-content: center;
+  font-size: 9px; line-height: 1;
+}
+.ne-float-img:hover .ne-float-url, .ne-float-img.selected .ne-float-url { display: flex; }
+.ne-float-img.has-href { outline: 2px solid var(--green); outline-offset: 1px; }
+.ne-float-img.has-href::after {
+  content: '🔗'; position: absolute; right: 4px; bottom: 4px; font-size: 11px;
+  background: rgba(0,0,0,0.5); border-radius: 4px; padding: 1px 3px;
+}
+
+/* Text color must win even inside list items */
+#ne-editor li .ne-textcolor, #ne-editor .ne-textcolor { /* color set inline !important */ }
+#ne-editor li font[color] { color: inherit; }
+#ne-editor li { color: inherit; }
+
+/* Colored list markers */
+#ne-editor ul.ne-colored-list, #ne-editor ol.ne-colored-list { }
+#ne-editor ul.ne-colored-list li::marker, #ne-editor ol.ne-colored-list li::marker {
+  color: var(--bullet-color, var(--accent));
+}
 </style>
 </head>
 <body>
@@ -1468,15 +1492,15 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     <div class="modal-body">
       <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin-bottom:8px;">Share</div>
       <div class="export-options">
-        <div class="export-opt" onclick="shareTreeLink()"><i class="ti ti-link"></i><span>Share Link</span></div>
+        <div class="export-opt" onclick="shareTreeLink()"><i class="ti ti-share"></i><span>Share Link</span></div>
         <div class="export-opt" onclick="copyTreeText()"><i class="ti ti-clipboard"></i><span>Copy Text</span></div>
       </div>
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin:14px 0 8px;">Export File</div>
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin:14px 0 8px;">Export &amp; Print</div>
       <div class="export-options">
+        <div class="export-opt" onclick="exportTree('print')"><i class="ti ti-printer"></i><span>Print / PDF</span></div>
         <div class="export-opt" onclick="exportTree('json')"><i class="ti ti-file-code"></i><span>JSON</span></div>
         <div class="export-opt" onclick="exportTree('markdown')"><i class="ti ti-markdown"></i><span>Markdown</span></div>
         <div class="export-opt" onclick="exportTree('csv')"><i class="ti ti-table"></i><span>CSV</span></div>
-        <div class="export-opt" onclick="exportTree('print')"><i class="ti ti-printer"></i><span>Print / PDF</span></div>
       </div>
       <div id="share-link-result" style="display:none;margin-top:14px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);">
         <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Anyone with this link can view a read-only copy:</div>
@@ -1814,7 +1838,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
           <div class="plan-name">Plus</div>
           <div class="plan-price">$2.99<span>/mo</span></div>
           <div class="plan-features">
-            <div class="plan-feature"><i class="ti ti-check"></i>Unlimited trees</div>
+            <div class="plan-feature"><i class="ti ti-check"></i>50 trees</div>
             <div class="plan-feature"><i class="ti ti-check"></i>Unlimited nodes</div>
             <div class="plan-feature"><i class="ti ti-check"></i>Image attachments</div>
             <div class="plan-feature"><i class="ti ti-check"></i>Video embeds</div>
@@ -1928,15 +1952,35 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     </div>
     <!-- Lists -->
     <div class="ne-toolbar-group">
-      <div class="tb-btn" id="tb-insertUnorderedList" onclick="neExec('insertUnorderedList')" title="Bullet list">
+      <div class="tb-btn" id="tb-insertUnorderedList" onmousedown="event.preventDefault();neExec('insertUnorderedList')" title="Bullet list">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l11 0"/><path d="M9 12l11 0"/><path d="M9 18l11 0"/><path d="M5 6l0 .01"/><path d="M5 12l0 .01"/><path d="M5 18l0 .01"/></svg>
       </div>
-      <div class="tb-btn" id="tb-insertOrderedList" onclick="neExec('insertOrderedList')" title="Numbered list">
+      <div class="tb-btn" id="tb-insertOrderedList" onmousedown="event.preventDefault();neExec('insertOrderedList')" title="Numbered list">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 6h9"/><path d="M11 12h9"/><path d="M11 18h9"/><path d="M4 10h2v-6l-2 2"/><path d="M4 16a2 2 0 1 1 4 0c0 .667 -.333 1.333 -1 2l-3 2h4"/></svg>
       </div>
-      <div class="tb-btn" onclick="neInsertTaskList()" title="Task / checklist">
+      <div class="tb-btn" onmousedown="event.preventDefault();neInsertTaskList()" title="Task / checklist">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3l8 -8"/><path d="M20 12v6a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h9"/></svg>
       </div>
+      <select class="tb-select" id="ne-list-style" onmousedown="neSaveSelection()" onchange="neSetListStyle(this.value)" title="Bullet / number style" style="max-width:96px;">
+        <option value="">Style…</option>
+        <optgroup label="Bullets">
+          <option value="disc">● Disc</option>
+          <option value="circle">○ Circle</option>
+          <option value="square">▪ Square</option>
+          <option value="none">None</option>
+        </optgroup>
+        <optgroup label="Numbers">
+          <option value="decimal">1. Decimal</option>
+          <option value="lower-alpha">a. Letters</option>
+          <option value="upper-alpha">A. Caps</option>
+          <option value="lower-roman">i. Roman</option>
+        </optgroup>
+      </select>
+      <label class="tb-color-btn" title="Bullet color">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>
+        <span class="tb-color-bar" id="tb-bulletcolor-bar" style="background:var(--accent);"></span>
+        <input type="color" value="#6c8eff" onmousedown="neSaveSelection()" oninput="document.getElementById('tb-bulletcolor-bar').style.background=this.value;neSetBulletColor(this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
+      </label>
     </div>
     <!-- Indent -->
     <div class="ne-toolbar-group">
@@ -2016,6 +2060,12 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     </button>
     <button class="nv-nav-btn" id="nv-next" onclick="nvNavigate('next')" title="Next sibling">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6l-6 6"/></svg>
+    </button>
+    <button class="nv-nav-btn" onclick="nvShareNode()" title="Share this node" style="margin-left:8px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M18 6m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M8.7 10.7l6.6 -3.4"/><path d="M8.7 13.3l6.6 3.4"/></svg>
+    </button>
+    <button class="nv-nav-btn" onclick="nvPrintNode()" title="Print / PDF this node">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2"/><path d="M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4"/><path d="M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z"/></svg>
     </button>
     <button class="btn-sm btn-accent" onclick="nvEdit()" style="margin-left:8px;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h-1a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0-2.97-2.97l-8.415 8.385v3h3l8.385-8.415z"/></svg>
@@ -2744,14 +2794,15 @@ function countNodes(nodes) {
 }
 
 function canCreateTree() {
-  if (currentPlan !== 'free') return true;
+  if (currentPlan === 'pro') return true;
+  if (currentPlan === 'plus') return trees.length < 50;  // Plus: up to 50 trees
   return trees.length < 5;  // Free: up to 5 trees
 }
 function countAllNodes() {
   return trees.reduce((sum, t) => sum + countNodes(t.nodes || []), 0);
 }
 function canAddNode() {
-  if (currentPlan !== 'free') return true;
+  if (currentPlan !== 'free') return true;  // Plus & Pro: unlimited nodes
   return countAllNodes() < 20;  // Free: up to 20 nodes
 }
 // Free tier now includes ALL features — only tree/node COUNT is limited.
@@ -2801,7 +2852,7 @@ async function createTree() {
   try {
     if (!canCreateTree()) {
       closeModal('new-tree-modal');
-      showToast('Free plan limit reached: 5 trees. Upgrade for unlimited.', 'error');
+      showToast(currentPlan === 'plus' ? 'Plus plan limit reached: 50 trees. Upgrade to Pro for unlimited.' : 'Free plan limit reached: 5 trees. Upgrade for more.', 'error');
       openPaywall('plus');
       return;
     }
@@ -4095,7 +4146,7 @@ function openNoteEditor(nodeId) {
     tmp.innerHTML = node.extNotesFloats;
     tmp.querySelectorAll('.ne-float-img').forEach(d => {
       const img = d.querySelector('img');
-      if (img) neCreateFloatingImage(img.src, parseFloat(d.dataset.left)||40, parseFloat(d.dataset.top)||40, parseFloat(d.dataset.width)||240, d.dataset.imgId);
+      if (img) neCreateFloatingImage(img.src, parseFloat(d.dataset.left)||40, parseFloat(d.dataset.top)||40, parseFloat(d.dataset.width)||240, d.dataset.imgId, d.dataset.href);
     });
   }
   setTimeout(() => { neWireImages(); neRedrawLinks(); neWireTaskboxes(); }, 80);
@@ -4301,8 +4352,9 @@ function neSave() {
       floatHtml += '<div class="ne-float-img" data-img-id="' + (w.dataset.imgId||'') +
         '" data-left="' + (parseFloat(w.style.left)||0) +
         '" data-top="' + (parseFloat(w.style.top)||0) +
-        '" data-width="' + (w.offsetWidth||240) + '">' +
-        '<img src="' + img.src + '"></div>';
+        '" data-width="' + (w.offsetWidth||240) +
+        (w.dataset.href ? '" data-href="' + w.dataset.href.replace(/"/g,'&quot;') : '') +
+        '"><img src="' + img.src + '"></div>';
     });
   }
   // Body HTML — preserves .ne-link-anchor markers inline
@@ -4402,32 +4454,35 @@ function neHighlight() {
   if (document.activeElement !== ed) ed.focus();
   neRestoreSelection();
   const sel = window.getSelection();
+  const btn = document.getElementById('tb-highlight');
   document.execCommand('styleWithCSS', false, true);
   const wasOn = neIsHighlighted();
+
   if (wasOn) {
     document.execCommand('hiliteColor', false, 'transparent');
     neStripHighlight();
+    if (btn) btn.classList.remove('active');
   } else {
-    // If text is selected, wrap it directly so the color shows IMMEDIATELY
     if (sel && sel.rangeCount && !sel.isCollapsed) {
       const range = sel.getRangeAt(0);
       const span = document.createElement('span');
       span.style.backgroundColor = neHighlightColor;
       try {
         range.surroundContents(span);
+        // restore selection over the highlighted span
+        const r2 = document.createRange();
+        r2.selectNodeContents(span);
+        sel.removeAllRanges(); sel.addRange(r2);
       } catch (err) {
-        // Fallback for partial-node selections
         document.execCommand('hiliteColor', false, neHighlightColor);
       }
     } else {
       document.execCommand('hiliteColor', false, neHighlightColor);
     }
+    // Light the button up immediately — don't depend on a post-check
+    if (btn) btn.classList.add('active');
   }
-  setTimeout(() => {
-    const btn = document.getElementById('tb-highlight');
-    if (btn) btn.classList.toggle('active', neIsHighlighted());
-    neSaveSelection();
-  }, 0);
+  setTimeout(neSaveSelection, 0);
   neQueueSave();
 }
 
@@ -4515,8 +4570,26 @@ function neTextColor(color) {
   const ed = document.getElementById('ne-editor');
   ed.focus();
   neRestoreSelection();
-  document.execCommand('styleWithCSS', false, true);
-  document.execCommand('foreColor', false, color);
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount && !sel.isCollapsed) {
+    const range = sel.getRangeAt(0);
+    const span = document.createElement('span');
+    span.className = 'ne-textcolor';
+    span.style.setProperty('color', color, 'important');
+    try {
+      range.surroundContents(span);
+      const r2 = document.createRange();
+      r2.selectNodeContents(span);
+      sel.removeAllRanges(); sel.addRange(r2);
+    } catch (err) {
+      // Partial selection across nodes — fall back to execCommand
+      document.execCommand('styleWithCSS', false, true);
+      document.execCommand('foreColor', false, color);
+    }
+  } else {
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('foreColor', false, color);
+  }
   neQueueSave();
   setTimeout(neSaveSelection, 0);
 }
@@ -4541,19 +4614,28 @@ function neQueueSave() {
 // containing the <img>, a resize handle, and a delete button.
 // It's stored OUTSIDE the contenteditable flow, as a child of .ne-doc-page.
 
-let neImgIdCounter = 0;
-function neCreateFloatingImage(src, x, y, width, id) {
+function neGenImgId() {
+  return 'img_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+}
+function neCreateFloatingImage(src, x, y, width, id, href) {
   const canvas = document.getElementById('ne-canvas');
   if (!canvas) return;
+  // Guarantee a unique id; if a passed-in id already exists on the canvas, regenerate
+  let imgId = id;
+  if (!imgId || canvas.querySelector('.ne-float-img[data-img-id="'+imgId+'"]')) {
+    imgId = neGenImgId();
+  }
   const wrap = document.createElement('div');
   wrap.className = 'ne-float-img';
   wrap.contentEditable = 'false';
-  wrap.dataset.imgId = id || ('img' + (++neImgIdCounter));
+  wrap.dataset.imgId = imgId;
+  if (href) wrap.dataset.href = href;
   wrap.style.left = x + 'px';
   wrap.style.top = Math.max(0, y) + 'px';
   wrap.style.width = (width || 240) + 'px';
   wrap.innerHTML = '<img class="ne-float-inner" src="' + src + '" draggable="false">' +
-    '<div class="ne-float-link" title="Draw a link to text">🔗</div>' +
+    '<div class="ne-float-link" title="Link this image to text">🔗</div>' +
+    '<div class="ne-float-url" title="Set image web link">🌐</div>' +
     '<div class="ne-float-del" title="Delete">✕</div>' +
     '<div class="ne-float-resize" title="Resize"></div>';
   canvas.appendChild(wrap);
@@ -4567,6 +4649,35 @@ function neWireFloatingImage(wrap) {
   const del = wrap.querySelector('.ne-float-del');
   const resize = wrap.querySelector('.ne-float-resize');
   const linkBtn = wrap.querySelector('.ne-float-link');
+  const urlBtn = wrap.querySelector('.ne-float-url');
+  // Reflect existing web link state
+  if (wrap.dataset.href) wrap.classList.add('has-href');
+  // 🌐 Set/clear a web link for this image
+  if (urlBtn) {
+    urlBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const current = wrap.dataset.href || '';
+      const url = prompt('Link this image to a website (leave blank to remove):', current);
+      if (url === null) return;
+      const trimmed = url.trim();
+      if (!trimmed) { delete wrap.dataset.href; wrap.classList.remove('has-href'); }
+      else {
+        let u = trimmed;
+        if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+        wrap.dataset.href = u; wrap.classList.add('has-href');
+      }
+      neSave();
+    });
+  }
+  // Ctrl/Cmd-click (or click when not selected) opens the web link
+  const imgEl = wrap.querySelector('img');
+  if (imgEl) {
+    imgEl.addEventListener('click', (e) => {
+      if (wrap.dataset.href && (e.ctrlKey || e.metaKey)) {
+        window.open(wrap.dataset.href, '_blank');
+      }
+    });
+  }
 
   // Drag to move (anywhere on the canvas, including off the page)
   wrap.addEventListener('mousedown', (e) => {
@@ -4800,6 +4911,57 @@ function neQuickLink() {
   }
   if (input) input.value = '';
   neQueueSave();
+}
+
+// ─── List bullet style + color ───
+function neCurrentList() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  let node = sel.anchorNode;
+  const ed = document.getElementById('ne-editor');
+  while (node && node !== ed) {
+    if (node.nodeType === 1 && (node.tagName === 'UL' || node.tagName === 'OL')) return node;
+    node = node.parentNode;
+  }
+  return null;
+}
+
+function neSetListStyle(style) {
+  if (!style) return;
+  const ed = document.getElementById('ne-editor');
+  ed.focus();
+  neRestoreSelection();
+  const list = neCurrentList();
+  if (!list) { showToast('Place the cursor inside a list first.', 'info'); return; }
+  list.style.listStyleType = style;
+  // numbers vs bullets: switch tag if needed
+  const isNumberStyle = ['decimal','lower-alpha','upper-alpha','lower-roman','upper-roman'].includes(style);
+  if (isNumberStyle && list.tagName === 'UL') neSwapListTag(list, 'OL', style);
+  else if (!isNumberStyle && style !== 'none' && list.tagName === 'OL') neSwapListTag(list, 'UL', style);
+  neQueueSave();
+  setTimeout(neSaveSelection, 0);
+}
+
+function neSwapListTag(list, newTag, style) {
+  const nl = document.createElement(newTag);
+  nl.style.listStyleType = style;
+  if (list.dataset.bulletColor) nl.dataset.bulletColor = list.dataset.bulletColor;
+  nl.className = list.className;
+  while (list.firstChild) nl.appendChild(list.firstChild);
+  list.replaceWith(nl);
+}
+
+function neSetBulletColor(color) {
+  const ed = document.getElementById('ne-editor');
+  ed.focus();
+  neRestoreSelection();
+  const list = neCurrentList();
+  if (!list) { showToast('Place the cursor inside a list first.', 'info'); return; }
+  list.dataset.bulletColor = color;
+  list.style.setProperty('--bullet-color', color);
+  list.classList.add('ne-colored-list');
+  neQueueSave();
+  setTimeout(neSaveSelection, 0);
 }
 
 function neInsertTaskList() {
@@ -5283,6 +5445,54 @@ function nvNavigate(dir) {
   const idx = siblings.findIndex(n => n.id === nvNodeId);
   if (dir === 'prev' && idx > 0) openNodeView(siblings[idx-1].id);
   if (dir === 'next' && idx < siblings.length-1) openNodeView(siblings[idx+1].id);
+}
+
+function nvShareNode() {
+  const tree = getActiveTree();
+  if (!tree || !nvNodeId) return;
+  const node = findNode(tree.nodes, nvNodeId);
+  if (!node) return;
+  // Build a single-node snapshot and share it
+  const shareId = 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  const snapshot = { id: shareId, name: node.title, icon: tree.icon, nodes: [node], sharedAt: new Date().toISOString() };
+  (async () => {
+    let link;
+    let usedDb = false;
+    try {
+      const { error } = await sbClient.from('shares').insert({ id: shareId, data: snapshot, created_by: currentUser ? currentUser.id : null });
+      if (!error) usedDb = true;
+    } catch(e) {}
+    if (usedDb) link = window.location.origin + window.location.pathname + '?share=' + shareId;
+    else {
+      try { link = window.location.origin + window.location.pathname + '#shared=' + btoa(unescape(encodeURIComponent(JSON.stringify(snapshot)))); }
+      catch(e) { showToast('Could not create link.', 'error'); return; }
+    }
+    navigator.clipboard.writeText(link).then(
+      () => showToast('Node share link copied!', 'success'),
+      () => showToast('Link: ' + link, 'info')
+    );
+  })();
+}
+
+function nvPrintNode() {
+  const tree = getActiveTree();
+  if (!tree || !nvNodeId) return;
+  const node = findNode(tree.nodes, nvNodeId);
+  if (!node) return;
+  const win = window.open('', '_blank');
+  let h = '<html><head><title>' + esc(node.title) + '</title><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;padding:0 20px;line-height:1.7;color:#222;}h1{font-size:28px;}h2{font-size:20px;margin-top:24px;}.desc{color:#555;font-style:italic;}.notes{margin-top:16px;}img{max-width:100%;}</style></head><body>';
+  h += '<h1>' + esc(node.title) + '</h1>';
+  if (node.desc) h += '<p class="desc">' + esc(node.desc) + '</p>';
+  if (node.extNotes) h += '<div class="notes">' + node.extNotes + '</div>';
+  if (node.children && node.children.length) {
+    h += '<h2>Sub-topics</h2><ul>';
+    node.children.forEach(c => { h += '<li>' + esc(c.title) + (c.desc ? ' — ' + esc(c.desc) : '') + '</li>'; });
+    h += '</ul>';
+  }
+  h += '</body></html>';
+  win.document.write(h);
+  win.document.close();
+  setTimeout(() => win.print(), 300);
 }
 
 function nvEdit() {
