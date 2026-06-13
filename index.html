@@ -775,6 +775,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   padding: 48px 56px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.35);
   box-sizing: border-box; flex-shrink: 0;
+  position: relative;
 }
 @media (max-width: 768px) {
   .ne-doc-page { padding: 24px 20px; }
@@ -1132,9 +1133,28 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 /* ─── Editor images ─── */
 #ne-editor img.ne-img {
   border-radius: 8px; margin: 8px 0;
-  resize: horizontal; overflow: hidden;
+  max-width: 100%; display: block;
   transition: outline 0.12s;
-  max-width: 100%;
+}
+/* Free-floating images live on the page layer, draggable anywhere */
+.ne-float-img {
+  position: absolute; z-index: 5; border-radius: 8px;
+  cursor: move; user-select: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  transition: outline 0.12s;
+}
+.ne-float-img.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ne-float-img .ne-float-inner { width: 100%; height: 100%; border-radius: 8px; display: block; pointer-events: none; }
+.ne-float-resize {
+  position: absolute; right: -6px; bottom: -6px; width: 16px; height: 16px;
+  background: var(--accent); border: 2px solid var(--bg2); border-radius: 50%;
+  cursor: nwse-resize; z-index: 6;
+}
+.ne-float-del {
+  position: absolute; right: -8px; top: -8px; width: 20px; height: 20px;
+  background: var(--red); border: 2px solid var(--bg2); border-radius: 50%;
+  cursor: pointer; z-index: 6; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 11px; line-height: 1;
 }
 #ne-editor img.ne-img.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ne-img-toolbar {
@@ -1816,17 +1836,12 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 19h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M12.5 6.5l4 4"/><path d="M3 19h-1" opacity="0.5"/></svg>
       </div>
     </div>
-    <!-- Colors -->
+    <!-- Text color -->
     <div class="ne-toolbar-group">
       <label class="tb-color-btn" title="Text color">
         <span style="font-size:13px;font-weight:700;line-height:1;">A</span>
         <span class="tb-color-bar" id="tb-textcolor-bar" style="background:var(--accent);"></span>
         <input type="color" value="#6c8eff" onmousedown="neSaveSelection()" oninput="document.getElementById('tb-textcolor-bar').style.background=this.value;neTextColor(this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
-      </label>
-      <label class="tb-color-btn" title="Highlight color">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 19h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/></svg>
-        <span class="tb-color-bar" id="tb-hlcolor-bar" style="background:#fbbf24;"></span>
-        <input type="color" value="#fbbf24" onmousedown="neSaveSelection()" oninput="document.getElementById('tb-hlcolor-bar').style.background=this.value;neHighlightRestore(this.value+'73')" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
       </label>
     </div>
     <!-- Lists -->
@@ -3828,6 +3843,18 @@ function openNoteEditor(nodeId) {
   // Load content — stored as HTML
   const editor = document.getElementById('ne-editor');
   editor.innerHTML = node.extNotes || '';
+  // Remove any stale floating images from a previous note
+  const page0 = document.querySelector('.ne-doc-page');
+  if (page0) page0.querySelectorAll('.ne-float-img').forEach(w => w.remove());
+  // Re-hydrate saved floating images
+  if (node.extNotesFloats) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = node.extNotesFloats;
+    tmp.querySelectorAll('.ne-float-img').forEach(d => {
+      const img = d.querySelector('img');
+      if (img) neCreateFloatingImage(img.src, parseFloat(d.dataset.left)||40, parseFloat(d.dataset.top)||40, parseFloat(d.dataset.width)||240);
+    });
+  }
   setTimeout(neWireImages, 50);
 
   // Show overlay
@@ -3846,12 +3873,16 @@ function openNoteEditor(nodeId) {
     editor.classList.remove('drag-over');
     const files = [...(e.dataTransfer.files || [])].filter(f => f.type.startsWith('image/'));
     if (!files.length) return;
-    files.forEach(file => {
+    // Drop position relative to the page layer
+    const page = document.querySelector('.ne-doc-page');
+    const pageRect = page.getBoundingClientRect();
+    let dropX = e.clientX - pageRect.left;
+    let dropY = e.clientY - pageRect.top + page.scrollTop;
+    files.forEach((file, idx) => {
       const reader = new FileReader();
       reader.onload = (ev) => {
-        document.execCommand('insertHTML', false,
-          '<img class="ne-img" src="' + ev.target.result + '" style="width:50%;border-radius:8px;margin:8px 0;display:block;" data-align="left">');
-        setTimeout(() => { neWireImages(); neSave(); }, 0);
+        neCreateFloatingImage(ev.target.result, dropX + idx*20, dropY + idx*20, 240);
+        neSave();
       };
       reader.readAsDataURL(file);
     });
@@ -3980,10 +4011,25 @@ function closeNoteEditor() {
 function neSave() {
   if (!neNodeId) return;
   const editor = document.getElementById('ne-editor');
+  const page = document.querySelector('.ne-doc-page');
   const tree = getActiveTree(); if (!tree) return;
   const node = findNode(tree.nodes, neNodeId); if (!node) return;
-  // Store innerHTML (rich HTML)
-  node.extNotes = editor.innerHTML === '<br>' ? '' : editor.innerHTML;
+  // Collect floating images (clone, strip control handles)
+  let floatHtml = '';
+  if (page) {
+    page.querySelectorAll('.ne-float-img').forEach(w => {
+      const img = w.querySelector('img');
+      if (!img) return;
+      floatHtml += '<div class="ne-float-img" data-left="' + (parseFloat(w.style.left)||0) +
+        '" data-top="' + (parseFloat(w.style.top)||0) +
+        '" data-width="' + (w.offsetWidth||240) + '">' +
+        '<img src="' + img.src + '"></div>';
+    });
+  }
+  const body = editor.innerHTML === '<br>' ? '' : editor.innerHTML;
+  // Store text + a separate floats block we can re-hydrate
+  node.extNotes = body;
+  node.extNotesFloats = floatHtml;
   debouncedSave(activeTreeId);
   neSetStatus('saved');
 }
@@ -4020,10 +4066,10 @@ function neExec(cmd, value) {
   const ed = document.getElementById('ne-editor');
   ed.focus();
   neRestoreSelection();
-  // styleWithCSS=false → semantic tags toggle reliably on/off
+  // styleWithCSS=false → semantic tags (<b>,<i>,<u>,<strike>) toggle on/off reliably
   document.execCommand('styleWithCSS', false, false);
   document.execCommand(cmd, false, value || null);
-  // Immediately reflect the new state on the button
+  // Reflect the resulting state on the button
   const btn = document.getElementById('tb-' + cmd);
   if (btn) {
     let on = false;
@@ -4052,29 +4098,31 @@ function neBlockFormat(tag) {
   neUpdateToolbarState();
 }
 
-function neHighlight(color) {
+function neIsHighlighted() {
+  // True if the current selection's background is the highlight color
+  let cur = '';
+  try { cur = document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor') || ''; } catch(e){}
+  cur = cur.replace(/\s/g,'');
+  // Anything that's not transparent / default counts as highlighted
+  return !!(cur && !/transparent|rgba?\(0,0,0,0\)|^$/.test(cur));
+}
+
+function neHighlight() {
   const ed = document.getElementById('ne-editor');
   ed.focus();
+  neRestoreSelection();
   document.execCommand('styleWithCSS', false, true);
   const btn = document.getElementById('tb-highlight');
-  const highlightOn = btn && btn.classList.contains('active');
-  if (!color) {
-    // Toggle default yellow
-    if (highlightOn) {
-      document.execCommand('hiliteColor', false, 'transparent');
-      if (btn) btn.classList.remove('active');
-    } else {
-      document.execCommand('hiliteColor', false, 'rgba(251,191,36,0.45)');
-      if (btn) btn.classList.add('active');
-    }
-  } else if (color === 'none') {
+  // Toggle based on the ACTUAL selection state, not the button class
+  if (neIsHighlighted()) {
     document.execCommand('hiliteColor', false, 'transparent');
-    if (btn) btn.classList.remove('active');
   } else {
-    document.execCommand('hiliteColor', false, color);
-    if (btn) btn.classList.add('active');
+    document.execCommand('hiliteColor', false, 'rgba(251,191,36,0.45)');
   }
-  setTimeout(neUpdateToolbarState, 0);
+  setTimeout(() => {
+    if (btn) btn.classList.toggle('active', neIsHighlighted());
+    neSaveSelection();
+  }, 0);
   neQueueSave();
 }
 
@@ -4094,8 +4142,6 @@ function neRestoreSelection() {
   sel.addRange(neSavedRange);
   return true;
 }
-
-function neHighlightRestore(color) { neRestoreSelection(); neHighlight(color); setTimeout(neSaveSelection,0); }
 
 // ─── Text color ───
 function neTextColor(color) {
@@ -4121,69 +4167,111 @@ function neQueueSave() {
 }
 
 // ─── Editor image resize + snap ───
-let neSelectedImg = null;
+// (legacy neSelectedImg removed - using floating images)
 
-function neWireImages() {
-  const ed = document.getElementById('ne-editor');
-  if (!ed) return;
-  ed.querySelectorAll('img.ne-img, img:not(.ne-img)').forEach(img => {
-    if (img._wired) return;
-    img._wired = true;
-    img.classList.add('ne-img');
-    if (!img.dataset.align) img.dataset.align = 'left';
-    applyImgAlign(img);
-    img.style.cursor = 'pointer';
-    img.onclick = (e) => { e.stopPropagation(); neSelectImage(img); };
+// ─── Free-floating images ───
+// A floating image is a .ne-float-img wrapper (position:absolute on the page)
+// containing the <img>, a resize handle, and a delete button.
+// It's stored OUTSIDE the contenteditable flow, as a child of .ne-doc-page.
+
+function neCreateFloatingImage(src, x, y, width) {
+  const page = document.querySelector('.ne-doc-page');
+  if (!page) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'ne-float-img';
+  wrap.contentEditable = 'false';
+  wrap.style.left = Math.max(0, x) + 'px';
+  wrap.style.top = Math.max(0, y) + 'px';
+  wrap.style.width = (width || 240) + 'px';
+  wrap.innerHTML = '<img class="ne-float-inner" src="' + src + '" draggable="false">' +
+    '<div class="ne-float-del" title="Delete">✕</div>' +
+    '<div class="ne-float-resize" title="Resize"></div>';
+  page.appendChild(wrap);
+  neWireFloatingImage(wrap);
+  return wrap;
+}
+
+function neWireFloatingImage(wrap) {
+  if (wrap._wired) return;
+  wrap._wired = true;
+  const del = wrap.querySelector('.ne-float-del');
+  const resize = wrap.querySelector('.ne-float-resize');
+  const page = document.querySelector('.ne-doc-page');
+
+  // Select on click
+  wrap.addEventListener('mousedown', (e) => {
+    if (e.target === del || e.target === resize) return;
+    e.preventDefault();
+    neSelectFloating(wrap);
+    // Drag to move
+    const startX = e.clientX, startY = e.clientY;
+    const origL = parseFloat(wrap.style.left) || 0;
+    const origT = parseFloat(wrap.style.top) || 0;
+    function mv(ev) {
+      wrap.style.left = (origL + (ev.clientX - startX)) + 'px';
+      wrap.style.top  = (origT + (ev.clientY - startY)) + 'px';
+    }
+    function up() {
+      document.removeEventListener('mousemove', mv);
+      document.removeEventListener('mouseup', up);
+      neSave();
+    }
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mouseup', up);
+  });
+
+  // Resize from corner
+  resize.addEventListener('mousedown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    neSelectFloating(wrap);
+    const startX = e.clientX;
+    const origW = wrap.offsetWidth;
+    function mv(ev) {
+      const w = Math.max(60, origW + (ev.clientX - startX));
+      wrap.style.width = w + 'px';
+    }
+    function up() {
+      document.removeEventListener('mousemove', mv);
+      document.removeEventListener('mouseup', up);
+      neSave();
+    }
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mouseup', up);
+  });
+
+  // Delete
+  del.addEventListener('click', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    wrap.remove(); neSave();
   });
 }
 
-function applyImgAlign(img) {
-  const a = img.dataset.align || 'left';
-  img.style.display = 'block';
-  if (a === 'center') { img.style.marginLeft = 'auto'; img.style.marginRight = 'auto'; img.style.float = 'none'; }
-  else if (a === 'right') { img.style.marginLeft = 'auto'; img.style.marginRight = '0'; img.style.float = 'none'; }
-  else { img.style.marginLeft = '0'; img.style.marginRight = 'auto'; img.style.float = 'none'; }
+function neSelectFloating(wrap) {
+  document.querySelectorAll('.ne-float-img.selected').forEach(w => w.classList.remove('selected'));
+  wrap.classList.add('selected');
 }
 
-function neSelectImage(img) {
-  neSelectedImg = img;
-  // Remove existing toolbar
-  document.querySelectorAll('.ne-img-toolbar').forEach(t => t.remove());
-  document.querySelectorAll('.ne-img.selected').forEach(i => i.classList.remove('selected'));
-  img.classList.add('selected');
-
-  const bar = document.createElement('div');
-  bar.className = 'ne-img-toolbar';
-  bar.contentEditable = 'false';
-  bar.innerHTML = `
-    <button onclick="neImgAlign('left')" title="Align left"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h13"/></svg></button>
-    <button onclick="neImgAlign('center')" title="Center"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M5 18h14"/></svg></button>
-    <button onclick="neImgAlign('right')" title="Align right"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M10 12h10M7 18h13"/></svg></button>
-    <span style="width:1px;background:var(--border);margin:0 2px;"></span>
-    <button onclick="neImgSize(25)" title="25%">S</button>
-    <button onclick="neImgSize(50)" title="50%">M</button>
-    <button onclick="neImgSize(75)" title="75%">L</button>
-    <button onclick="neImgSize(100)" title="100%">XL</button>
-    <span style="width:1px;background:var(--border);margin:0 2px;"></span>
-    <button onclick="neImgDelete()" title="Delete" style="color:var(--red);"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
-  `;
-  img.parentNode.insertBefore(bar, img.nextSibling);
+// Wire any floating images already in saved content
+function neWireImages() {
+  const page = document.querySelector('.ne-doc-page');
+  if (!page) return;
+  page.querySelectorAll('.ne-float-img').forEach(neWireFloatingImage);
+  // Migrate any legacy inline images to floating
+  const ed = document.getElementById('ne-editor');
+  if (ed) {
+    ed.querySelectorAll('img.ne-img').forEach(img => {
+      const src = img.src;
+      const w = img.offsetWidth || 240;
+      img.remove();
+      neCreateFloatingImage(src, 60, 60, w);
+    });
+  }
 }
 
-function neImgAlign(a) { if (!neSelectedImg) return; neSelectedImg.dataset.align = a; applyImgAlign(neSelectedImg); neSave(); }
-function neImgSize(pct) { if (!neSelectedImg) return; neSelectedImg.style.width = pct + '%'; neSave(); }
-function neImgDelete() {
-  if (!neSelectedImg) return;
-  document.querySelectorAll('.ne-img-toolbar').forEach(t => t.remove());
-  neSelectedImg.remove(); neSelectedImg = null; neSave();
-}
-
-// Deselect image when clicking elsewhere in the editor
+// Deselect when clicking elsewhere
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.ne-img') && !e.target.closest('.ne-img-toolbar')) {
-    document.querySelectorAll('.ne-img-toolbar').forEach(t => t.remove());
-    document.querySelectorAll('.ne-img.selected').forEach(i => i.classList.remove('selected'));
-    neSelectedImg = null;
+  if (!e.target.closest('.ne-float-img')) {
+    document.querySelectorAll('.ne-float-img.selected').forEach(w => w.classList.remove('selected'));
   }
 });
 
@@ -4249,12 +4337,7 @@ function neUpdateToolbarState() {
   });
   // Highlight state
   const hbtn = document.getElementById('tb-highlight');
-  if (hbtn) {
-    let cur = '';
-    try { cur = document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor') || ''; } catch(e){}
-    const on = cur && cur.replace(/\s/g,'').match(/251,191,36|255,235/);
-    hbtn.classList.toggle('active', !!on);
-  }
+  if (hbtn) hbtn.classList.toggle('active', neIsHighlighted());
   // Block select
   const bsel = document.getElementById('ne-block-select');
   if (bsel) {
