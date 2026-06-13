@@ -1021,6 +1021,85 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   -webkit-font-smoothing: antialiased;
   transform: translateZ(0);
 }
+
+/* ─── Root tree dragging ─── */
+.tree-root-container.has-positioned { position: relative; min-height: 100%; min-width: 100%; }
+.root-tree-wrap { display: inline-block; }
+.tree-root-container:not(.has-positioned) .root-tree-wrap { display: block; }
+.root-drag-handle {
+  position: absolute; top: -22px; left: 0;
+  font-size: 10px; color: var(--text3); cursor: grab;
+  padding: 2px 8px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; opacity: 0; transition: opacity 0.15s;
+  display: flex; align-items: center; gap: 4px; white-space: nowrap; z-index: 5;
+}
+.root-tree-wrap:hover .root-drag-handle { opacity: 1; }
+.root-drag-handle:active { cursor: grabbing; }
+.root-tree-wrap.dragging { opacity: 0.85; z-index: 100; }
+
+/* ─── Full-Screen Node View ─── */
+#node-view-overlay {
+  position: fixed; inset: 0; z-index: 700; background: var(--bg);
+  display: flex; flex-direction: column;
+  animation: editorSlideIn 0.2s cubic-bezier(0.22,1,0.36,1);
+}
+@keyframes editorSlideIn { from { opacity:0; transform:translateY(12px);} to {opacity:1;transform:translateY(0);} }
+#node-view-overlay.hidden { display: none; }
+.nv-topbar {
+  height: 56px; flex-shrink: 0; background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; padding: 0 20px;
+}
+.nv-back {
+  display: flex; align-items: center; gap: 7px; color: var(--text2);
+  font-size: 13px; font-weight: 500; padding: 6px 12px;
+  border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition);
+}
+.nv-back:hover { background: var(--bg3); color: var(--text); }
+.nv-breadcrumb { font-size: 13px; color: var(--text3); display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw; }
+.nv-nav-btn {
+  width: 34px; height: 34px; border-radius: var(--radius-sm);
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: var(--transition);
+}
+.nv-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.nv-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.nv-body { flex: 1; overflow-y: auto; display: flex; justify-content: center; padding: 40px 24px; }
+.nv-page { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 26px; }
+.nv-header { display: flex; flex-direction: column; gap: 10px; }
+.nv-color-bar { height: 4px; border-radius: 2px; width: 64px; }
+.nv-title { font-family: 'Raleway', sans-serif; font-size: 34px; font-weight: 200; letter-spacing: 0.01em; line-height: 1.2; }
+.nv-desc { font-size: 16px; color: var(--text2); line-height: 1.7; }
+.nv-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.nv-tag { font-size: 13px; padding: 4px 12px; border-radius: 20px; background: var(--accent-dim); color: var(--accent2); border: 1px solid rgba(108,142,255,0.2); cursor: pointer; }
+.nv-tag:hover { background: var(--accent); color: #fff; }
+.nv-section { display: flex; flex-direction: column; gap: 10px; }
+.nv-section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); display: flex; align-items: center; gap: 8px; }
+.nv-section-label::after { content:''; flex:1; height:1px; background: var(--border); }
+.nv-link-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: var(--transition); }
+.nv-link-item:hover { border-color: var(--accent); }
+.nv-link-item a { flex:1; font-size: 14px; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nv-media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 12px; }
+.nv-media-item { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.nv-media-item img { width: 100%; height: 160px; object-fit: cover; display: block; }
+.nv-media-label { padding: 8px 12px; font-size: 12px; color: var(--text2); background: var(--bg2); }
+.nv-notes-body { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 28px; font-size: 15px; line-height: 1.8; color: var(--text); }
+.nv-notes-body h1 { font-family:'Raleway',sans-serif; font-size:24px; font-weight:300; margin: 18px 0 10px; }
+.nv-notes-body h2 { font-size:19px; font-weight:600; margin:16px 0 8px; }
+.nv-notes-body h3 { font-size:16px; font-weight:600; margin:14px 0 6px; }
+.nv-notes-body ul,.nv-notes-body ol { padding-left:22px; margin:8px 0; }
+.nv-notes-body li { margin:4px 0; }
+.nv-notes-body p { margin:0 0 10px; }
+.nv-notes-body blockquote { border-left:3px solid var(--accent); padding:8px 16px; color:var(--text2); background:var(--bg3); border-radius:0 var(--radius-sm) var(--radius-sm) 0; margin:12px 0; }
+.nv-children { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 10px; }
+.nv-child-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: var(--transition); }
+.nv-child-card:hover { border-color: var(--accent); background: var(--accent-dim); transform: translateY(-2px); }
+.nv-child-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.nv-child-info { flex: 1; min-width: 0; }
+.nv-child-title { font-size: 14px; font-weight: 600; }
+.nv-child-desc { font-size: 12px; color: var(--text3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+@media (max-width: 768px) { .nv-title { font-size: 26px; } .nv-body { padding: 24px 16px; } .nv-breadcrumb { max-width: 30vw; } }
 </style>
 </head>
 <body>
@@ -1115,7 +1194,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   <div id="main-area">
     <div id="topbar">
       <button class="icon-btn" id="sidebar-toggle" onclick="toggleSidebar()" style="display:none;"><i class="ti ti-menu-2"></i></button>
-      <div style="display:flex;align-items:center;gap:8px;flex:1;overflow:hidden;"><svg width="20" height="20" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect x="19.5" y="28" width="5" height="12" rx="2.5" fill="#8B6343"/><path d="M22 28 Q14 24 10 18" stroke="#7B5533" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M22 28 Q30 24 34 18" stroke="#7B5533" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M22 28 Q22 20 22 14" stroke="#7B5533" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="22" cy="10" r="6.5" fill="#22c55e"/><circle cx="7" cy="10" r="5.5" fill="#16a34a"/><circle cx="37" cy="10" r="5.5" fill="#16a34a"/><circle cx="16" cy="8" r="5" fill="#22c55e"/><circle cx="28" cy="8" r="5" fill="#22c55e"/><circle cx="22" cy="5" r="3.5" fill="#4ade80"/></svg><div id="tree-title-display" class="placeholder">Select or create a tree</div></div>
+      <div style="display:flex;align-items:center;gap:8px;flex:1;overflow:hidden;"><div id="tree-title-display" class="placeholder">Select or create a tree</div><svg width="20" height="20" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect x="19.5" y="28" width="5" height="12" rx="2.5" fill="#8B6343"/><path d="M22 28 Q14 24 10 18" stroke="#7B5533" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M22 28 Q30 24 34 18" stroke="#7B5533" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M22 28 Q22 20 22 14" stroke="#7B5533" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="22" cy="10" r="6.5" fill="#22c55e"/><circle cx="7" cy="10" r="5.5" fill="#16a34a"/><circle cx="37" cy="10" r="5.5" fill="#16a34a"/><circle cx="16" cy="8" r="5" fill="#22c55e"/><circle cx="28" cy="8" r="5" fill="#22c55e"/><circle cx="22" cy="5" r="3.5" fill="#4ade80"/></svg></div>
       <div class="topbar-btns">
         <div class="sync-dot" id="sync-dot" title="Saved"></div>
         <button class="btn-sm btn-outline" onclick="openTreeSettings()" id="tree-settings-btn" style="display:none"><i class="ti ti-settings"></i> Settings</button>
@@ -1133,7 +1212,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
         </div>
       </div>
       </div>
-      <div id="zoom-controls"><button class="zoom-btn" onclick="zoomIn()">+</button><div id="zoom-level">100%</div><button class="zoom-btn" onclick="zoomOut()">−</button><button class="zoom-btn" onclick="resetZoom()" style="font-size:9px;">FIT</button></div>
+      <div id="zoom-controls"><button class="zoom-btn" onclick="zoomIn()" title="Zoom in">+</button><div id="zoom-level">100%</div><button class="zoom-btn" onclick="zoomOut()" title="Zoom out">−</button><button class="zoom-btn" onclick="centerTrees()" title="Center & reset positions" style="font-size:13px;">⊕</button></div>
     </div>
 
   <!-- Stats Bar (Pro) -->
@@ -1634,6 +1713,32 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
+<!-- Full-Screen Node View -->
+<div id="node-view-overlay" class="hidden">
+  <div class="nv-topbar">
+    <button class="nv-back" onclick="closeNodeView()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>
+      Close
+    </button>
+    <div class="nv-breadcrumb" id="nv-breadcrumb"></div>
+    <div style="flex:1;"></div>
+    <button class="nv-nav-btn" id="nv-prev" onclick="nvNavigate('prev')" title="Previous sibling">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6l6 6"/></svg>
+    </button>
+    <button class="nv-nav-btn" id="nv-up" onclick="nvNavigate('up')" title="Go to parent">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6l6 6"/></svg>
+    </button>
+    <button class="nv-nav-btn" id="nv-next" onclick="nvNavigate('next')" title="Next sibling">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6l-6 6"/></svg>
+    </button>
+    <button class="btn-sm btn-accent" onclick="nvEdit()" style="margin-left:8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h-1a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0-2.97-2.97l-8.415 8.385v3h3l8.385-8.415z"/></svg>
+      Edit
+    </button>
+  </div>
+  <div class="nv-body"><div class="nv-page" id="nv-page"></div></div>
+</div>
+
 <!-- Context Menu -->
 <div id="context-menu">
   <div class="ctx-item" id="ctx-add-child" onclick="ctxAddChild()"><i class="ti ti-plus"></i> Add Child Node</div>
@@ -1842,15 +1947,66 @@ async function signOut() {
 }
 
 // ─── Profile / Plan ───
+let currentDisplayName = '';
+
 async function loadUserProfile() {
-  const { data, error } = await sbClient.from('profiles').select('plan').eq('id', currentUser.id).single();
+  const { data, error } = await sbClient
+    .from('profiles')
+    .select('plan, display_name, avatar_key, avatar_custom')
+    .eq('id', currentUser.id)
+    .single();
+
   if (data) {
     currentPlan = data.plan || 'free';
+    currentAvatarKey = data.avatar_key || null;
+    currentAvatarCustom = data.avatar_custom || null;
+    currentDisplayName = data.display_name
+      || currentUser.user_metadata?.full_name
+      || currentUser.user_metadata?.name || '';
+    // Assign a default avatar if user has none
+    if (!currentAvatarKey && !currentAvatarCustom) {
+      const aKeys = Object.keys(PRESET_AVATARS);
+      currentAvatarKey = aKeys[Math.floor(Math.random() * aKeys.length)];
+      sbClient.from('profiles').update({ avatar_key: currentAvatarKey }).eq('id', currentUser.id);
+    }
   } else if (error && error.code === 'PGRST116') {
-    // Profile doesn't exist yet, create it
-    await sbClient.from('profiles').insert({ id: currentUser.id, plan: 'free' });
+    // No row — create with random default avatar
+    const nameFromMeta = currentUser.user_metadata?.full_name
+      || currentUser.user_metadata?.name || '';
+    const aKeys = Object.keys(PRESET_AVATARS);
+    const randomAvatar = aKeys[Math.floor(Math.random() * aKeys.length)];
+    await sbClient.from('profiles').insert({
+      id: currentUser.id, plan: 'free', display_name: nameFromMeta, avatar_key: randomAvatar
+    });
+    currentPlan = 'free';
+    currentDisplayName = nameFromMeta;
+    currentAvatarKey = randomAvatar;
+    currentAvatarCustom = null;
+  } else if (error) {
     currentPlan = 'free';
   }
+}
+
+
+async function cancelPlan() {
+  if (!confirm('Cancel your plan and move to Free? You will lose access to paid features immediately.')) return;
+  const { error } = await sbClient.from('profiles').update({ plan: 'free' }).eq('id', currentUser.id);
+  if (error) { showToast('Failed to cancel: ' + error.message, 'error'); return; }
+  currentPlan = 'free';
+  updateUserUI(); renderCanvas();
+  showToast('Plan cancelled. You are now on Free.', 'info');
+  if (typeof switchAcctTab === 'function') switchAcctTab('plan');
+}
+
+async function downgradeTo(plan) {
+  const labels = { free:'Free', plus:'Plus ($9/mo)' };
+  if (!confirm('Downgrade to ' + (labels[plan]||plan) + '? Some features may be locked.')) return;
+  const { error } = await sbClient.from('profiles').update({ plan: plan }).eq('id', currentUser.id);
+  if (error) { showToast('Failed: ' + error.message, 'error'); return; }
+  currentPlan = plan;
+  updateUserUI(); renderCanvas();
+  showToast('Plan changed to ' + (labels[plan]||plan) + '.', 'success');
+  if (typeof switchAcctTab === 'function') switchAcctTab('plan');
 }
 
 async function updatePlanFromStripe(plan) {
@@ -1868,9 +2024,14 @@ async function updatePlanFromStripe(plan) {
 function updateUserUI() {
   if (!currentUser) return;
   const email = currentUser.email || 'User';
-  const initial = email[0].toUpperCase();
-  document.getElementById('user-avatar').textContent = initial;
-  document.getElementById('user-email-display').textContent = email;
+  const displayName = currentDisplayName || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || email.split('@')[0];
+  // Render avatar (image or initial) via avatar system
+  renderAvatarUI();
+  // Sidebar name + email
+  const nameEl = document.getElementById('user-name-display');
+  if (nameEl) nameEl.textContent = displayName;
+  const emailDisp = document.getElementById('user-email-display');
+  if (emailDisp) emailDisp.textContent = email;
   const badge = document.getElementById('plan-badge');
   badge.textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
   badge.className = 'plan-badge ' + currentPlan;
@@ -1878,6 +2039,8 @@ function updateUserUI() {
   // Profile tab
   const emailEl = document.getElementById('acct-email');
   if (emailEl) emailEl.textContent = email;
+  const nameDisp = document.getElementById('acct-name-display');
+  if (nameDisp) nameDisp.textContent = displayName;
   const planLabel = document.getElementById('acct-plan-label');
   if (planLabel) {
     const planNames = { free: 'Free Plan', plus: 'Plus Plan — $9/mo', pro: 'Pro Plan — $19/mo' };
@@ -1914,11 +2077,11 @@ function updateUserUI() {
     } else if (currentPlan === 'plus') {
       actionRow.innerHTML = `
         <button class="btn-sm btn-accent" onclick="openPaywall('pro')"><i class="ti ti-crown"></i> Upgrade to Pro — $19/mo</button>
-        <button class="btn-sm btn-outline" onclick="showToast('To cancel, visit your Stripe billing portal.','info')"><i class="ti ti-x"></i> Cancel Plan</button>`;
+        <button class="btn-danger" onclick="cancelPlan()"><i class="ti ti-x"></i> Cancel to Free</button>`;
     } else if (currentPlan === 'pro') {
       actionRow.innerHTML = `
-        <div style="font-size:13px;color:var(--green);display:flex;align-items:center;gap:6px;"><i class="ti ti-circle-check"></i> You're on the highest plan!</div>
-        <button class="btn-sm btn-outline" onclick="showToast('To cancel, visit your Stripe billing portal.','info')"><i class="ti ti-x"></i> Cancel Plan</button>`;
+        <button class="btn-sm btn-outline" onclick="downgradeTo('plus')"><i class="ti ti-star"></i> Downgrade to Plus</button>
+        <button class="btn-danger" onclick="cancelPlan()"><i class="ti ti-x"></i> Cancel to Free</button>`;
     }
   }
 }
@@ -2467,16 +2630,42 @@ function renderCanvas() {
   }
   empty.style.display = 'none';
 
-  // Render horizontally: root nodes in a column, children branch right
+  // Render each root node. Root nodes can be freely dragged.
   const container = document.createElement('div');
   container.className = 'tree-root-container';
+
+  // Check if any root has a custom position
+  const anyPositioned = (tree.nodes || []).some(n => n._pos);
+
   for (const node of tree.nodes) {
-    container.appendChild(renderNodeAndChildren(node, false));
+    const rootWrap = document.createElement('div');
+    rootWrap.className = 'root-tree-wrap';
+    rootWrap.dataset.rootId = node.id;
+    rootWrap.appendChild(renderNodeAndChildren(node, false, 'root'));
+
+    if (node._pos) {
+      // Absolutely positioned (was dragged)
+      rootWrap.style.position = 'absolute';
+      rootWrap.style.left = node._pos.x + 'px';
+      rootWrap.style.top  = node._pos.y + 'px';
+    }
+    container.appendChild(rootWrap);
   }
+
+  if (anyPositioned) {
+    container.classList.add('has-positioned');
+  }
+
   canvas.innerHTML = '';
   canvas.appendChild(empty);
   canvas.appendChild(container);
   updateStatsBar();
+  // Redraw vlines after layout
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
+  }));
+  // Wire up root dragging
+  enableRootDragging();
 }
 
 function drawVLine(childCol) {
@@ -2591,6 +2780,7 @@ function buildNodeCard(node, isLeft) {
   card.className = 'node-card' + (node.id === selectedNodeId ? ' selected' : '') + (node.color ? ' has-color-' + node.color : '');
   card.id = 'node_' + node.id;
   card.onclick = (e) => { e.stopPropagation(); selectNode(node.id); };
+  card.ondblclick = (e) => { e.stopPropagation(); openNodeView(node.id); };
   card.oncontextmenu = (e) => { e.preventDefault(); showContextMenu(e, node.id); };
 
   // Header
@@ -3505,6 +3695,86 @@ function setZoom(s, ox, oy) {
 }
 function resetZoom() { cvScale=1; cvX=40; cvY=40; applyCV(); }
 
+// Center: reset zoom AND clear all custom root positions (back to vertical stack)
+function centerTrees() {
+  const tree = getActiveTree();
+  if (tree && tree.nodes) {
+    let had = false;
+    tree.nodes.forEach(n => { if (n._pos) { delete n._pos; had = true; } });
+    if (had) { debouncedSave(activeTreeId); renderCanvas(); }
+  }
+  cvScale = 1; cvX = 40; cvY = 40; applyCV();
+  showToast('View centered.', 'info');
+}
+
+// Make each root tree draggable via a handle
+let rootDrag = null;
+function enableRootDragging() {
+  document.querySelectorAll('.root-tree-wrap').forEach(wrap => {
+    // Add a drag handle if not present
+    if (wrap.querySelector('.root-drag-handle')) return;
+    const handle = document.createElement('div');
+    handle.className = 'root-drag-handle';
+    handle.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg> drag';
+    handle.onmousedown = (e) => startRootDrag(e, wrap);
+    wrap.style.position = wrap.style.position || 'relative';
+    wrap.appendChild(handle);
+  });
+}
+
+function startRootDrag(e, wrap) {
+  e.stopPropagation();
+  e.preventDefault();
+  const tree = getActiveTree(); if (!tree) return;
+  const rootId = wrap.dataset.rootId;
+  const node = (tree.nodes || []).find(n => n.id === rootId);
+  if (!node) return;
+
+  const container = wrap.parentElement;
+  container.classList.add('has-positioned');
+
+  // If this is the first drag, convert ALL roots to absolute using current offsets
+  const containerRect = container.getBoundingClientRect();
+  tree.nodes.forEach(n => {
+    if (!n._pos) {
+      const w = container.querySelector(`.root-tree-wrap[data-root-id="${n.id}"]`);
+      if (w) {
+        const r = w.getBoundingClientRect();
+        n._pos = {
+          x: (r.left - containerRect.left) / cvScale,
+          y: (r.top  - containerRect.top)  / cvScale
+        };
+        w.style.position = 'absolute';
+        w.style.left = n._pos.x + 'px';
+        w.style.top  = n._pos.y + 'px';
+      }
+    }
+  });
+
+  wrap.classList.add('dragging');
+  const startX = e.clientX, startY = e.clientY;
+  const origX = node._pos.x, origY = node._pos.y;
+
+  function onMove(ev) {
+    const dx = (ev.clientX - startX) / cvScale;
+    const dy = (ev.clientY - startY) / cvScale;
+    node._pos.x = origX + dx;
+    node._pos.y = origY + dy;
+    wrap.style.left = node._pos.x + 'px';
+    wrap.style.top  = node._pos.y + 'px';
+    // redraw connector lines live
+    wrap.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
+  }
+  function onUp() {
+    wrap.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    debouncedSave(activeTreeId);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
 function initCanvasPanZoom() {
   const wrap = document.getElementById('canvas-wrap'); if (!wrap) return;
   wrap.addEventListener('wheel', e => {
@@ -3623,6 +3893,128 @@ async function uploadCustomAvatar(input) {
   };
   reader.readAsDataURL(file);
 }
+
+
+// ─── Full-Screen Node View ───
+let nvNodeId = null;
+
+function findNodePath(nodes, id, path) {
+  for (const n of nodes) {
+    const newPath = path.concat([n]);
+    if (n.id === id) return newPath;
+    const found = findNodePath(n.children || [], id, newPath);
+    if (found) return found;
+  }
+  return null;
+}
+
+function openNodeView(nodeId) {
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  nvNodeId = nodeId;
+  const colorMap = { blue:'#6c8eff', green:'#4ade80', yellow:'#fbbf24', red:'#f87171', purple:'#a78bfa', orange:'#fb923c' };
+
+  // Breadcrumb (full path)
+  const path = findNodePath(tree.nodes, nodeId, []) || [node];
+  const bc = document.getElementById('nv-breadcrumb');
+  bc.innerHTML = `<span>${tree.icon||'🌳'}</span>` + path.map((n,i) =>
+    (i < path.length-1
+      ? `<span style="cursor:pointer;" onclick="openNodeView('${n.id}')">${esc(n.title)}</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6l-6 6"/></svg>`
+      : `<span style="color:var(--text);font-weight:600;">${esc(n.title)}</span>`)
+  ).join('');
+
+  // Build page
+  let h = '';
+  h += `<div class="nv-header">`;
+  if (node.color && colorMap[node.color]) h += `<div class="nv-color-bar" style="background:${colorMap[node.color]}"></div>`;
+  h += `<div class="nv-title">${esc(node.title)}</div>`;
+  if (node.desc) h += `<div class="nv-desc">${esc(node.desc)}</div>`;
+  h += `</div>`;
+
+  if (node.tags && node.tags.length) {
+    h += `<div class="nv-tags">` + node.tags.map(t => `<div class="nv-tag" onclick="closeNodeView();filterByTag&&filterByTag('${esc(t)}')">#${esc(t)}</div>`).join('') + `</div>`;
+  }
+
+  if (node.links && node.links.length) {
+    h += `<div class="nv-section"><div class="nv-section-label">Links</div>` +
+      node.links.map(l => `<div class="nv-link-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 6h-6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/><path d="M11 13l9-9"/><path d="M15 4h5v5"/></svg><a href="${esc(l.url)}" target="_blank">${esc(l.label||l.url)}</a></div>`).join('') + `</div>`;
+  }
+
+  if (node.media && node.media.length && canUseMedia()) {
+    h += `<div class="nv-section"><div class="nv-section-label">Media</div><div class="nv-media-grid">`;
+    node.media.forEach(m => {
+      if (m.type === 'image') h += `<div class="nv-media-item"><img src="${esc(m.url)}" loading="lazy"><div class="nv-media-label">${esc(m.label||'')}</div></div>`;
+      else if (m.type === 'video') { const v = extractVideoId(m.url); if (v) h += `<div class="nv-media-item"><iframe width="100%" height="160" src="https://www.youtube.com/embed/${v}" frameborder="0" allowfullscreen></iframe><div class="nv-media-label">${esc(m.label||'')}</div></div>`; }
+    });
+    h += `</div></div>`;
+  }
+
+  if (node.extNotes && node.extNotes.trim()) {
+    h += `<div class="nv-section"><div class="nv-section-label">Notes</div><div class="nv-notes-body">${node.extNotes}</div></div>`;
+  }
+
+  // Children — shown full and clickable
+  if (node.children && node.children.length) {
+    h += `<div class="nv-section"><div class="nv-section-label">${node.children.length} Child Node${node.children.length!==1?'s':''}</div><div class="nv-children">`;
+    node.children.forEach(c => {
+      h += `<div class="nv-child-card" onclick="openNodeView('${c.id}')">
+        <div class="nv-child-dot" ${c.color?`style="background:${colorMap[c.color]||'var(--accent)'}"`:''}></div>
+        <div class="nv-child-info"><div class="nv-child-title">${esc(c.title)}</div>${c.desc?`<div class="nv-child-desc">${esc(c.desc)}</div>`:''}</div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><path d="M9 6l6 6l-6 6"/></svg>
+      </div>`;
+    });
+    h += `</div></div>`;
+  }
+
+  document.getElementById('nv-page').innerHTML = h;
+
+  // Nav button states
+  const parent = path.length > 1 ? path[path.length-2] : null;
+  const siblings = parent ? parent.children : tree.nodes;
+  const idx = siblings.findIndex(n => n.id === nodeId);
+  document.getElementById('nv-prev').disabled = idx <= 0;
+  document.getElementById('nv-next').disabled = idx >= siblings.length - 1;
+  document.getElementById('nv-up').disabled = !parent;
+
+  document.getElementById('node-view-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('nv-page').scrollTop = 0;
+}
+
+function nvNavigate(dir) {
+  const tree = getActiveTree(); if (!tree || !nvNodeId) return;
+  const path = findNodePath(tree.nodes, nvNodeId, []);
+  if (!path) return;
+  const parent = path.length > 1 ? path[path.length-2] : null;
+  if (dir === 'up') { if (parent) openNodeView(parent.id); return; }
+  const siblings = parent ? parent.children : tree.nodes;
+  const idx = siblings.findIndex(n => n.id === nvNodeId);
+  if (dir === 'prev' && idx > 0) openNodeView(siblings[idx-1].id);
+  if (dir === 'next' && idx < siblings.length-1) openNodeView(siblings[idx+1].id);
+}
+
+function nvEdit() {
+  const id = nvNodeId;
+  closeNodeView();
+  openEditNodeModal(id);
+}
+
+function closeNodeView() {
+  document.getElementById('node-view-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  nvNodeId = null;
+}
+
+// ESC closes node view
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && nvNodeId) closeNodeView();
+  // Arrow keys navigate in node view
+  if (nvNodeId) {
+    if (e.key === 'ArrowLeft')  nvNavigate('prev');
+    if (e.key === 'ArrowRight') nvNavigate('next');
+    if (e.key === 'ArrowUp')    nvNavigate('up');
+  }
+});
 
 // Start
 loadPrefs();
