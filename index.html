@@ -176,10 +176,12 @@ h1,h2,h3,h4 { font-family: var(--title-font, 'Raleway', sans-serif); font-weight
 .tree-item-menu { opacity: 0; transition: var(--transition); }
 .tree-item:hover .tree-item-menu { opacity: 1; }
 .sidebar-footer {
-  padding: 12px; border-top: 1px solid var(--border);
+  padding: 0 12px; border-top: 1px solid var(--border);
+  height: 53px; flex-shrink: 0; display: flex; align-items: center;
+  box-sizing: border-box;
 }
 .user-row {
-  display: flex; align-items: center; gap: 10px; padding: 8px;
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px; width: 100%;
   border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition);
 }
 .user-row:hover { background: var(--bg3); }
@@ -189,6 +191,7 @@ h1,h2,h3,h4 { font-family: var(--title-font, 'Raleway', sans-serif); font-weight
   font-size: 13px; font-weight: 600; color: #fff; flex-shrink: 0;
 }
 .user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-email { font-size: 12px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-badge {
   font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px;
@@ -678,6 +681,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   position: fixed; inset: 0; z-index: 800;
   background: var(--bg);
   display: flex; flex-direction: column;
+  overflow: hidden;
   animation: editorSlideIn 0.22s cubic-bezier(0.22,1,0.36,1);
 }
 #note-editor-overlay.hidden { display: none; }
@@ -758,10 +762,11 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
 /* Document area */
 .ne-doc-wrap {
-  flex: 1; overflow-y: auto; overflow-x: hidden;
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
   background: var(--bg);
   display: flex; justify-content: center; align-items: flex-start;
-  padding: 48px 24px 120px 24px;
+  padding: 40px 24px 80px 24px;
 }
 .ne-doc-page {
   width: 100%; max-width: 720px;
@@ -831,7 +836,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
 /* Bottom status bar */
 .ne-statusbar {
-  height: 32px; flex-shrink: 0; background: var(--bg2);
+  height: 32px; flex-shrink: 0; flex-grow: 0; background: var(--bg2);
   border-top: 1px solid var(--border);
   display: flex; align-items: center; gap: 20px;
   padding: 0 20px; font-size: 11px; color: var(--text3);
@@ -1123,6 +1128,29 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .node-note-pill:hover { border-color:var(--accent); color:var(--accent); }
 .ne-editor.drag-over, #ne-editor.drag-over { outline: 2px dashed var(--accent); outline-offset: -8px; }
 #dp-media.drag-over, .detail-body.drag-over { outline: 2px dashed var(--accent); outline-offset: -4px; border-radius: var(--radius); }
+
+/* ─── Editor images ─── */
+#ne-editor img.ne-img {
+  border-radius: 8px; margin: 8px 0;
+  resize: horizontal; overflow: hidden;
+  transition: outline 0.12s;
+  max-width: 100%;
+}
+#ne-editor img.ne-img.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ne-img-toolbar {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px; margin: 4px 0; box-shadow: var(--shadow);
+  position: relative; z-index: 10;
+}
+.ne-img-toolbar button {
+  min-width: 26px; height: 26px; padding: 0 6px; border-radius: 5px;
+  background: transparent; border: none; color: var(--text2);
+  cursor: pointer; font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  transition: var(--transition);
+}
+.ne-img-toolbar button:hover { background: var(--bg3); color: var(--accent); }
 </style>
 </head>
 <body>
@@ -1204,8 +1232,8 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     <div class="sidebar-footer">
       <div class="user-row" onclick="openAccountModal()">
         <div class="user-avatar" id="user-avatar" onclick="openAccountModal()" title="Profile"><img id="user-avatar-img" src="" alt="" style="display:none;"><span id="user-avatar-initial">?</span></div>
-        <div class="user-info">
-          <div id="user-email-display" class="user-email">Loading...</div>
+        <div class="user-info" style="display:flex;align-items:center;gap:8px;">
+          <div id="user-name-display" class="user-name">Loading...</div>
           <div id="plan-badge" class="plan-badge free">Free</div>
         </div>
         <i class="ti ti-chevron-right" style="color:var(--text3);font-size:14px;"></i>
@@ -1538,11 +1566,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
           <div class="theme-swatch" style="background:#eef2f7;border:2px solid var(--border2);" onclick="savePref('bgTone','mist')" data-bg="mist" title="Mist (Light)"></div>
           <div class="theme-swatch" style="background:#fdf2f4;border:2px solid var(--border2);" onclick="savePref('bgTone','rose')" data-bg="rose" title="Rose (Light)"></div>
         </div>
-        <div class="settings-row">
-          <div class="settings-row-label">Custom Background</div>
-          <input type="color" id="pref-custom-bg" value="#0f1117" onchange="savePref('customBg',this.value)" style="width:48px;height:32px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);cursor:pointer;">
-          <button class="btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="savePref('customBg',null);applyPrefs()">Clear</button>
-        </div>
+
         <div class="settings-row">
           <div class="settings-row-label">UI Font</div>
           <select class="tb-select" style="flex:1;" onchange="savePref('uiFont',this.value)" id="pref-ui-font">
@@ -1797,12 +1821,12 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       <label class="tb-color-btn" title="Text color">
         <span style="font-size:13px;font-weight:700;line-height:1;">A</span>
         <span class="tb-color-bar" id="tb-textcolor-bar" style="background:var(--accent);"></span>
-        <input type="color" value="#6c8eff" oninput="document.getElementById('tb-textcolor-bar').style.background=this.value;neTextColor(this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
+        <input type="color" value="#6c8eff" onmousedown="neSaveSelection()" oninput="document.getElementById('tb-textcolor-bar').style.background=this.value;neTextColor(this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
       </label>
       <label class="tb-color-btn" title="Highlight color">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 19h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/></svg>
         <span class="tb-color-bar" id="tb-hlcolor-bar" style="background:#fbbf24;"></span>
-        <input type="color" value="#fbbf24" oninput="document.getElementById('tb-hlcolor-bar').style.background=this.value;neHighlight(this.value+'73')" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
+        <input type="color" value="#fbbf24" onmousedown="neSaveSelection()" oninput="document.getElementById('tb-hlcolor-bar').style.background=this.value;neHighlightRestore(this.value+'73')" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
       </label>
     </div>
     <!-- Lists -->
@@ -1840,8 +1864,12 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       <div class="tb-btn" onclick="neInsertHR()" title="Divider">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/><path d="M4 6h2"/><path d="M4 18h2"/></svg>
       </div>
-      <div class="tb-btn" onclick="neInsertLink()" title="Insert link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54 .54l3 -3a5 5 0 0 0 -7.07 -7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0 -7.54 -.54l-3 3a5 5 0 0 0 7.07 7.07l1.71 -1.71"/></svg>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <input id="ne-link-input" type="text" placeholder="Paste link & click →" onmousedown="neSaveSelection()" onkeydown="if(event.key==='Enter'){event.preventDefault();neQuickLink();}"
+          style="width:150px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);outline:none;font-size:12px;">
+        <div class="tb-btn" onclick="neQuickLink()" title="Insert link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54 .54l3 -3a5 5 0 0 0 -7.07 -7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0 -7.54 -.54l-3 3a5 5 0 0 0 7.07 7.07l1.71 -1.71"/></svg>
+        </div>
       </div>
     </div>
     <!-- Clear -->
@@ -2199,6 +2227,8 @@ function updateUserUI() {
   if (nameEl) nameEl.textContent = displayName;
   const emailDisp = document.getElementById('user-email-display');
   if (emailDisp) emailDisp.textContent = email;
+  const nameDisp2 = document.getElementById('user-name-display');
+  if (nameDisp2) nameDisp2.textContent = currentDisplayName || (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'User');
   const badge = document.getElementById('plan-badge');
   badge.textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
   badge.className = 'plan-badge ' + currentPlan;
@@ -2449,25 +2479,6 @@ function applyPrefs() {
       r.setProperty('--text2', '#a8aec0');
       r.setProperty('--text3', '#6b7186');
     }
-  }
-  // Custom background color — derives a full palette from one color
-  if (prefs.customBg) {
-    const base = prefs.customBg;
-    const lum = hexLuminance(base);
-    const lighten = (hex, amt) => shadeHex(hex, amt);
-    r.setProperty('--bg',  base);
-    r.setProperty('--bg2', lighten(base, lum > 0.5 ? -8 : 10));
-    r.setProperty('--bg3', lighten(base, lum > 0.5 ? -16 : 20));
-    r.setProperty('--bg4', lighten(base, lum > 0.5 ? -24 : 30));
-    r.setProperty('--border',  lighten(base, lum > 0.5 ? -30 : 40));
-    r.setProperty('--border2', lighten(base, lum > 0.5 ? -40 : 55));
-    if (lum > 0.5) {
-      r.setProperty('--text', '#1a1a2e'); r.setProperty('--text2', '#44445a'); r.setProperty('--text3', '#888');
-    } else {
-      r.setProperty('--text', '#e8eaf0'); r.setProperty('--text2', '#a8aec0'); r.setProperty('--text3', '#6b7186');
-    }
-    const cbInput = document.getElementById('pref-custom-bg');
-    if (cbInput) cbInput.value = base;
   }
   // Canvas background pattern
   const cw = document.getElementById('canvas-wrap');
@@ -3817,6 +3828,7 @@ function openNoteEditor(nodeId) {
   // Load content — stored as HTML
   const editor = document.getElementById('ne-editor');
   editor.innerHTML = node.extNotes || '';
+  setTimeout(neWireImages, 50);
 
   // Show overlay
   const overlay = document.getElementById('note-editor-overlay');
@@ -3838,8 +3850,8 @@ function openNoteEditor(nodeId) {
       const reader = new FileReader();
       reader.onload = (ev) => {
         document.execCommand('insertHTML', false,
-          '<img src="' + ev.target.result + '" style="max-width:100%;border-radius:8px;margin:8px 0;">');
-        neSave();
+          '<img class="ne-img" src="' + ev.target.result + '" style="width:50%;border-radius:8px;margin:8px 0;display:block;" data-align="left">');
+        setTimeout(() => { neWireImages(); neSave(); }, 0);
       };
       reader.readAsDataURL(file);
     });
@@ -4007,11 +4019,18 @@ function neUpdateCounts() {
 function neExec(cmd, value) {
   const ed = document.getElementById('ne-editor');
   ed.focus();
-  // styleWithCSS=false → uses semantic tags (<b>,<i>,<u>,<strike>) which
-  // toggle reliably both on AND off via execCommand.
+  neRestoreSelection();
+  // styleWithCSS=false → semantic tags toggle reliably on/off
   document.execCommand('styleWithCSS', false, false);
   document.execCommand(cmd, false, value || null);
-  setTimeout(neUpdateToolbarState, 0);
+  // Immediately reflect the new state on the button
+  const btn = document.getElementById('tb-' + cmd);
+  if (btn) {
+    let on = false;
+    try { on = document.queryCommandState(cmd); } catch(e) {}
+    btn.classList.toggle('active', on);
+  }
+  setTimeout(() => { neUpdateToolbarState(); neSaveSelection(); }, 0);
   neQueueSave();
 }
 
@@ -4059,13 +4078,34 @@ function neHighlight(color) {
   neQueueSave();
 }
 
+// ─── Selection save/restore (color pickers steal focus) ───
+let neSavedRange = null;
+function neSaveSelection() {
+  const sel = window.getSelection();
+  const ed = document.getElementById('ne-editor');
+  if (sel && sel.rangeCount && ed && ed.contains(sel.anchorNode)) {
+    neSavedRange = sel.getRangeAt(0).cloneRange();
+  }
+}
+function neRestoreSelection() {
+  if (!neSavedRange) return false;
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(neSavedRange);
+  return true;
+}
+
+function neHighlightRestore(color) { neRestoreSelection(); neHighlight(color); setTimeout(neSaveSelection,0); }
+
 // ─── Text color ───
 function neTextColor(color) {
   const ed = document.getElementById('ne-editor');
   ed.focus();
+  neRestoreSelection();
   document.execCommand('styleWithCSS', false, true);
   document.execCommand('foreColor', false, color);
   neQueueSave();
+  setTimeout(neSaveSelection, 0);
 }
 
 // ─── Undo / Redo ───
@@ -4080,18 +4120,104 @@ function neQueueSave() {
   neUpdateCounts();
 }
 
+// ─── Editor image resize + snap ───
+let neSelectedImg = null;
+
+function neWireImages() {
+  const ed = document.getElementById('ne-editor');
+  if (!ed) return;
+  ed.querySelectorAll('img.ne-img, img:not(.ne-img)').forEach(img => {
+    if (img._wired) return;
+    img._wired = true;
+    img.classList.add('ne-img');
+    if (!img.dataset.align) img.dataset.align = 'left';
+    applyImgAlign(img);
+    img.style.cursor = 'pointer';
+    img.onclick = (e) => { e.stopPropagation(); neSelectImage(img); };
+  });
+}
+
+function applyImgAlign(img) {
+  const a = img.dataset.align || 'left';
+  img.style.display = 'block';
+  if (a === 'center') { img.style.marginLeft = 'auto'; img.style.marginRight = 'auto'; img.style.float = 'none'; }
+  else if (a === 'right') { img.style.marginLeft = 'auto'; img.style.marginRight = '0'; img.style.float = 'none'; }
+  else { img.style.marginLeft = '0'; img.style.marginRight = 'auto'; img.style.float = 'none'; }
+}
+
+function neSelectImage(img) {
+  neSelectedImg = img;
+  // Remove existing toolbar
+  document.querySelectorAll('.ne-img-toolbar').forEach(t => t.remove());
+  document.querySelectorAll('.ne-img.selected').forEach(i => i.classList.remove('selected'));
+  img.classList.add('selected');
+
+  const bar = document.createElement('div');
+  bar.className = 'ne-img-toolbar';
+  bar.contentEditable = 'false';
+  bar.innerHTML = `
+    <button onclick="neImgAlign('left')" title="Align left"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h13"/></svg></button>
+    <button onclick="neImgAlign('center')" title="Center"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M5 18h14"/></svg></button>
+    <button onclick="neImgAlign('right')" title="Align right"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M10 12h10M7 18h13"/></svg></button>
+    <span style="width:1px;background:var(--border);margin:0 2px;"></span>
+    <button onclick="neImgSize(25)" title="25%">S</button>
+    <button onclick="neImgSize(50)" title="50%">M</button>
+    <button onclick="neImgSize(75)" title="75%">L</button>
+    <button onclick="neImgSize(100)" title="100%">XL</button>
+    <span style="width:1px;background:var(--border);margin:0 2px;"></span>
+    <button onclick="neImgDelete()" title="Delete" style="color:var(--red);"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
+  `;
+  img.parentNode.insertBefore(bar, img.nextSibling);
+}
+
+function neImgAlign(a) { if (!neSelectedImg) return; neSelectedImg.dataset.align = a; applyImgAlign(neSelectedImg); neSave(); }
+function neImgSize(pct) { if (!neSelectedImg) return; neSelectedImg.style.width = pct + '%'; neSave(); }
+function neImgDelete() {
+  if (!neSelectedImg) return;
+  document.querySelectorAll('.ne-img-toolbar').forEach(t => t.remove());
+  neSelectedImg.remove(); neSelectedImg = null; neSave();
+}
+
+// Deselect image when clicking elsewhere in the editor
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.ne-img') && !e.target.closest('.ne-img-toolbar')) {
+    document.querySelectorAll('.ne-img-toolbar').forEach(t => t.remove());
+    document.querySelectorAll('.ne-img.selected').forEach(i => i.classList.remove('selected'));
+    neSelectedImg = null;
+  }
+});
+
 function neInsertHR() {
   const editor = document.getElementById('ne-editor');
   editor.focus();
   document.execCommand('insertHTML', false, '<hr><p>​</p>');
 }
 
-function neInsertLink() {
-  const url = prompt('Enter URL:');
-  if (!url) return;
-  const text = window.getSelection().toString() || url;
-  document.getElementById('ne-editor').focus();
-  document.execCommand('insertHTML', false, '<a href="' + url + '" target="_blank">' + text + '</a>');
+function neInsertLink() { neQuickLink(); }
+
+function neQuickLink() {
+  const input = document.getElementById('ne-link-input');
+  let url = (input ? input.value : '').trim();
+  if (!url) { if (input) input.focus(); return; }
+  // Auto-prepend https:// if missing
+  if (!/^https?:\/\//i.test(url) && !url.startsWith('mailto:')) url = 'https://' + url;
+  const ed = document.getElementById('ne-editor');
+  ed.focus();
+  const restored = neRestoreSelection();
+  const selText = window.getSelection().toString();
+  if (restored && selText) {
+    // Wrap the selected text in a link
+    document.execCommand('createLink', false, url);
+    // ensure target blank
+    setTimeout(() => {
+      ed.querySelectorAll('a[href="'+url+'"]').forEach(a => a.target = '_blank');
+    }, 0);
+  } else {
+    // Insert a new link using the URL as label
+    document.execCommand('insertHTML', false, '<a href="' + url + '" target="_blank">' + url + '</a>&nbsp;');
+  }
+  if (input) input.value = '';
+  neQueueSave();
 }
 
 function neInsertTaskList() {
@@ -4112,6 +4238,7 @@ function neUpdateToolbarState() {
   const sel = window.getSelection();
   if (!sel || !sel.rangeCount || !ed.contains(sel.anchorNode)) return;
 
+  neSaveSelection();
   const cmds = ['bold','italic','underline','strikeThrough','insertUnorderedList','insertOrderedList'];
   cmds.forEach(cmd => {
     const btn = document.getElementById('tb-' + cmd);
