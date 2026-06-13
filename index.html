@@ -763,19 +763,31 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 /* Document area */
 .ne-doc-wrap {
   flex: 1 1 auto; min-height: 0;
-  overflow-y: auto; overflow-x: hidden;
+  overflow: auto;
   background: var(--bg);
   display: flex; justify-content: center; align-items: flex-start;
   padding: 40px 24px 80px 24px;
 }
+/* Canvas spans wider than the page so images can sit in the side margins */
+.ne-canvas {
+  position: relative;
+  width: 100%; max-width: 1100px;
+  min-height: 500px;
+  display: flex; justify-content: center;
+  flex-shrink: 0;
+}
+.ne-links-svg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 4; overflow: visible;
+}
 .ne-doc-page {
-  width: 100%; max-width: 720px;
+  width: 720px; max-width: 720px;
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: 12px; min-height: 500px; height: auto;
   padding: 48px 56px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.35);
   box-sizing: border-box; flex-shrink: 0;
-  position: relative;
+  position: relative; z-index: 2;
 }
 @media (max-width: 768px) {
   .ne-doc-page { padding: 24px 20px; }
@@ -1171,6 +1183,20 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   transition: var(--transition);
 }
 .ne-img-toolbar button:hover { background: var(--bg3); color: var(--accent); }
+
+/* Image → text link feature */
+.ne-float-link {
+  position: absolute; left: -8px; top: -8px; width: 20px; height: 20px;
+  background: var(--accent); border: 2px solid var(--bg2); border-radius: 50%;
+  cursor: pointer; z-index: 6; display: none; align-items: center; justify-content: center;
+  font-size: 10px; line-height: 1;
+}
+.ne-float-img:hover .ne-float-link, .ne-float-img.selected .ne-float-link { display: flex; }
+.ne-float-img:hover .ne-float-del, .ne-float-img.selected .ne-float-del { display: flex; }
+.ne-float-img:hover .ne-float-resize, .ne-float-img.selected .ne-float-resize { display: block; }
+.ne-float-del, .ne-float-resize { display: none; }
+.ne-link-anchor { display: inline; }
+.ne-link-line { transition: opacity 0.15s; }
 </style>
 </head>
 <body>
@@ -1828,11 +1854,11 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     </div>
     <!-- Inline formatting -->
     <div class="ne-toolbar-group">
-      <div class="tb-btn" id="tb-bold" onclick="neExec('bold')" title="Bold (Ctrl+B)"><strong>B</strong></div>
-      <div class="tb-btn" id="tb-italic" onclick="neExec('italic')" title="Italic (Ctrl+I)"><em>I</em></div>
-      <div class="tb-btn" id="tb-underline" onclick="neExec('underline')" title="Underline (Ctrl+U)"><u>U</u></div>
-      <div class="tb-btn" id="tb-strikeThrough" onclick="neExec('strikeThrough')" title="Strikethrough"><s>S</s></div>
-      <div class="tb-btn" id="tb-highlight" onclick="neHighlight()" title="Highlight (yellow)">
+      <div class="tb-btn" id="tb-bold" onmousedown="event.preventDefault();neExec('bold')" title="Bold (Ctrl+B)"><strong>B</strong></div>
+      <div class="tb-btn" id="tb-italic" onmousedown="event.preventDefault();neExec('italic')" title="Italic (Ctrl+I)"><em>I</em></div>
+      <div class="tb-btn" id="tb-underline" onmousedown="event.preventDefault();neExec('underline')" title="Underline (Ctrl+U)"><u>U</u></div>
+      <div class="tb-btn" id="tb-strikeThrough" onmousedown="event.preventDefault();neExec('strikeThrough')" title="Strikethrough"><s>S</s></div>
+      <div class="tb-btn" id="tb-highlight" onmousedown="event.preventDefault();neHighlight()" title="Highlight (yellow)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 19h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M12.5 6.5l4 4"/><path d="M3 19h-1" opacity="0.5"/></svg>
       </div>
     </div>
@@ -1897,8 +1923,13 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
   <!-- Document Page -->
   <div class="ne-doc-wrap">
-    <div class="ne-doc-page">
-      <div id="ne-editor" contenteditable="true" spellcheck="true"></div>
+    <div class="ne-canvas" id="ne-canvas">
+      <!-- SVG layer for connector lines/arrows (behind images) -->
+      <svg id="ne-links-svg" class="ne-links-svg"><defs><marker id="ne-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs></svg>
+      <div class="ne-doc-page" id="ne-doc-page">
+        <div id="ne-editor" contenteditable="true" spellcheck="true"></div>
+      </div>
+      <!-- Floating images get appended here (can sit beside/off the page) -->
     </div>
   </div>
 
@@ -3840,22 +3871,28 @@ function openNoteEditor(nodeId) {
   document.getElementById('ne-node-title').textContent = node.title;
   document.getElementById('ne-breadcrumb').textContent = tree.icon + ' ' + tree.name;
 
-  // Load content — stored as HTML
+  // Load content — stored as HTML (includes inline .ne-link-anchor markers)
   const editor = document.getElementById('ne-editor');
   editor.innerHTML = node.extNotes || '';
   // Remove any stale floating images from a previous note
-  const page0 = document.querySelector('.ne-doc-page');
-  if (page0) page0.querySelectorAll('.ne-float-img').forEach(w => w.remove());
-  // Re-hydrate saved floating images
+  const canvas0 = document.getElementById('ne-canvas');
+  if (canvas0) canvas0.querySelectorAll('.ne-float-img').forEach(w => w.remove());
+  // Restore links array
+  neLinks = [];
+  try { neLinks = JSON.parse(node.extNotesLinks || '[]'); } catch(e) { neLinks = []; }
+  // Re-hydrate saved floating images (preserve their ids)
   if (node.extNotesFloats) {
     const tmp = document.createElement('div');
     tmp.innerHTML = node.extNotesFloats;
     tmp.querySelectorAll('.ne-float-img').forEach(d => {
       const img = d.querySelector('img');
-      if (img) neCreateFloatingImage(img.src, parseFloat(d.dataset.left)||40, parseFloat(d.dataset.top)||40, parseFloat(d.dataset.width)||240);
+      if (img) neCreateFloatingImage(img.src, parseFloat(d.dataset.left)||40, parseFloat(d.dataset.top)||40, parseFloat(d.dataset.width)||240, d.dataset.imgId);
     });
   }
-  setTimeout(neWireImages, 50);
+  setTimeout(() => { neWireImages(); neRedrawLinks(); }, 80);
+  // Redraw links when the doc area scrolls
+  const dw = document.querySelector('.ne-doc-wrap');
+  if (dw && !dw._linkScroll) { dw._linkScroll = true; dw.addEventListener('scroll', () => neRedrawLinks()); }
 
   // Show overlay
   const overlay = document.getElementById('note-editor-overlay');
@@ -3865,19 +3902,22 @@ function openNoteEditor(nodeId) {
   // Focus
   setTimeout(() => { editor.focus(); neUpdateCounts(); }, 80);
 
-  // Drag & drop images into the editor
-  editor.ondragover = (e) => { e.preventDefault(); editor.classList.add('drag-over'); };
-  editor.ondragleave = () => editor.classList.remove('drag-over');
-  editor.ondrop = (e) => {
+  // Drag & drop images anywhere on the canvas (page OR side margins)
+  const docWrap = document.querySelector('.ne-doc-wrap');
+  const canvasEl = document.getElementById('ne-canvas');
+  const dropTarget = docWrap || editor;
+  dropTarget.ondragover = (e) => { e.preventDefault(); editor.classList.add('drag-over'); };
+  dropTarget.ondragleave = () => editor.classList.remove('drag-over');
+  dropTarget.ondrop = (e) => {
     e.preventDefault();
     editor.classList.remove('drag-over');
     const files = [...(e.dataTransfer.files || [])].filter(f => f.type.startsWith('image/'));
     if (!files.length) return;
-    // Drop position relative to the page layer
-    const page = document.querySelector('.ne-doc-page');
-    const pageRect = page.getBoundingClientRect();
-    let dropX = e.clientX - pageRect.left;
-    let dropY = e.clientY - pageRect.top + page.scrollTop;
+    // Drop position relative to the canvas layer (lets images sit off the page)
+    const canvas = document.getElementById('ne-canvas');
+    const cRect = canvas.getBoundingClientRect();
+    let dropX = e.clientX - cRect.left;
+    let dropY = e.clientY - cRect.top;
     files.forEach((file, idx) => {
       const reader = new FileReader();
       reader.onload = (ev) => {
@@ -3891,6 +3931,7 @@ function openNoteEditor(nodeId) {
   // Wire up events
   editor.oninput = () => {
     neUpdateCounts();
+    neRedrawLinks();
     neSetStatus('saving');
     clearTimeout(neSaveTimer);
     neSaveTimer = setTimeout(() => neSave(), 800);
@@ -4011,25 +4052,27 @@ function closeNoteEditor() {
 function neSave() {
   if (!neNodeId) return;
   const editor = document.getElementById('ne-editor');
-  const page = document.querySelector('.ne-doc-page');
+  const canvas = document.getElementById('ne-canvas');
   const tree = getActiveTree(); if (!tree) return;
   const node = findNode(tree.nodes, neNodeId); if (!node) return;
-  // Collect floating images (clone, strip control handles)
+  // Collect floating images with their ids (so links can reference them)
   let floatHtml = '';
-  if (page) {
-    page.querySelectorAll('.ne-float-img').forEach(w => {
+  if (canvas) {
+    canvas.querySelectorAll('.ne-float-img').forEach(w => {
       const img = w.querySelector('img');
       if (!img) return;
-      floatHtml += '<div class="ne-float-img" data-left="' + (parseFloat(w.style.left)||0) +
+      floatHtml += '<div class="ne-float-img" data-img-id="' + (w.dataset.imgId||'') +
+        '" data-left="' + (parseFloat(w.style.left)||0) +
         '" data-top="' + (parseFloat(w.style.top)||0) +
         '" data-width="' + (w.offsetWidth||240) + '">' +
         '<img src="' + img.src + '"></div>';
     });
   }
+  // Body HTML — preserves .ne-link-anchor markers inline
   const body = editor.innerHTML === '<br>' ? '' : editor.innerHTML;
-  // Store text + a separate floats block we can re-hydrate
   node.extNotes = body;
   node.extNotesFloats = floatHtml;
+  node.extNotesLinks = JSON.stringify(neLinks || []);
   debouncedSave(activeTreeId);
   neSetStatus('saved');
 }
@@ -4064,19 +4107,20 @@ function neUpdateCounts() {
 
 function neExec(cmd, value) {
   const ed = document.getElementById('ne-editor');
-  ed.focus();
-  neRestoreSelection();
-  // styleWithCSS=false → semantic tags (<b>,<i>,<u>,<strike>) toggle on/off reliably
+  if (document.activeElement !== ed) ed.focus();
+  // styleWithCSS=false → semantic tags (<b>,<i>,<u>,<strike>) which the browser
+  // adds/removes symmetrically. execCommand itself toggles; we just sync the button.
   document.execCommand('styleWithCSS', false, false);
   document.execCommand(cmd, false, value || null);
-  // Reflect the resulting state on the button
-  const btn = document.getElementById('tb-' + cmd);
-  if (btn) {
-    let on = false;
-    try { on = document.queryCommandState(cmd); } catch(e) {}
-    btn.classList.toggle('active', on);
-  }
-  setTimeout(() => { neUpdateToolbarState(); neSaveSelection(); }, 0);
+  // Sync button highlight to the real state after the command applies
+  setTimeout(() => {
+    const btn = document.getElementById('tb-' + cmd);
+    if (btn) {
+      let on = false;
+      try { on = document.queryCommandState(cmd); } catch(e) {}
+      btn.classList.toggle('active', on);
+    }
+  }, 0);
   neQueueSave();
 }
 
@@ -4099,29 +4143,35 @@ function neBlockFormat(tag) {
 }
 
 function neIsHighlighted() {
-  // True if the current selection's background is the highlight color
-  let cur = '';
-  try { cur = document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor') || ''; } catch(e){}
-  cur = cur.replace(/\s/g,'');
-  // Anything that's not transparent / default counts as highlighted
-  return !!(cur && !/transparent|rgba?\(0,0,0,0\)|^$/.test(cur));
+  // Walk up from the caret/selection to see if we're inside a highlighted span
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return false;
+  let node = sel.anchorNode;
+  const ed = document.getElementById('ne-editor');
+  while (node && node !== ed) {
+    if (node.nodeType === 1) {
+      const bg = (node.style && node.style.backgroundColor) || '';
+      if (bg && !/transparent|rgba?\(0,\s*0,\s*0,\s*0\)/.test(bg.replace(/\s/g,''))) return true;
+    }
+    node = node.parentNode;
+  }
+  return false;
 }
 
 function neHighlight() {
   const ed = document.getElementById('ne-editor');
-  ed.focus();
-  neRestoreSelection();
+  if (document.activeElement !== ed) ed.focus();
   document.execCommand('styleWithCSS', false, true);
-  const btn = document.getElementById('tb-highlight');
-  // Toggle based on the ACTUAL selection state, not the button class
-  if (neIsHighlighted()) {
+  const wasOn = neIsHighlighted();
+  if (wasOn) {
+    // Remove highlight: set to transparent
     document.execCommand('hiliteColor', false, 'transparent');
   } else {
     document.execCommand('hiliteColor', false, 'rgba(251,191,36,0.45)');
   }
   setTimeout(() => {
+    const btn = document.getElementById('tb-highlight');
     if (btn) btn.classList.toggle('active', neIsHighlighted());
-    neSaveSelection();
   }, 0);
   neQueueSave();
 }
@@ -4174,19 +4224,22 @@ function neQueueSave() {
 // containing the <img>, a resize handle, and a delete button.
 // It's stored OUTSIDE the contenteditable flow, as a child of .ne-doc-page.
 
-function neCreateFloatingImage(src, x, y, width) {
-  const page = document.querySelector('.ne-doc-page');
-  if (!page) return;
+let neImgIdCounter = 0;
+function neCreateFloatingImage(src, x, y, width, id) {
+  const canvas = document.getElementById('ne-canvas');
+  if (!canvas) return;
   const wrap = document.createElement('div');
   wrap.className = 'ne-float-img';
   wrap.contentEditable = 'false';
-  wrap.style.left = Math.max(0, x) + 'px';
+  wrap.dataset.imgId = id || ('img' + (++neImgIdCounter));
+  wrap.style.left = x + 'px';
   wrap.style.top = Math.max(0, y) + 'px';
   wrap.style.width = (width || 240) + 'px';
   wrap.innerHTML = '<img class="ne-float-inner" src="' + src + '" draggable="false">' +
+    '<div class="ne-float-link" title="Draw a link to text">🔗</div>' +
     '<div class="ne-float-del" title="Delete">✕</div>' +
     '<div class="ne-float-resize" title="Resize"></div>';
-  page.appendChild(wrap);
+  canvas.appendChild(wrap);
   neWireFloatingImage(wrap);
   return wrap;
 }
@@ -4196,20 +4249,20 @@ function neWireFloatingImage(wrap) {
   wrap._wired = true;
   const del = wrap.querySelector('.ne-float-del');
   const resize = wrap.querySelector('.ne-float-resize');
-  const page = document.querySelector('.ne-doc-page');
+  const linkBtn = wrap.querySelector('.ne-float-link');
 
-  // Select on click
+  // Drag to move (anywhere on the canvas, including off the page)
   wrap.addEventListener('mousedown', (e) => {
-    if (e.target === del || e.target === resize) return;
+    if (e.target === del || e.target === resize || e.target === linkBtn) return;
     e.preventDefault();
     neSelectFloating(wrap);
-    // Drag to move
     const startX = e.clientX, startY = e.clientY;
     const origL = parseFloat(wrap.style.left) || 0;
     const origT = parseFloat(wrap.style.top) || 0;
     function mv(ev) {
       wrap.style.left = (origL + (ev.clientX - startX)) + 'px';
       wrap.style.top  = (origT + (ev.clientY - startY)) + 'px';
+      neRedrawLinks();
     }
     function up() {
       document.removeEventListener('mousemove', mv);
@@ -4229,6 +4282,7 @@ function neWireFloatingImage(wrap) {
     function mv(ev) {
       const w = Math.max(60, origW + (ev.clientX - startX));
       wrap.style.width = w + 'px';
+      neRedrawLinks();
     }
     function up() {
       document.removeEventListener('mousemove', mv);
@@ -4239,11 +4293,21 @@ function neWireFloatingImage(wrap) {
     document.addEventListener('mouseup', up);
   });
 
-  // Delete
+  // Delete (also removes any links attached to this image)
   del.addEventListener('click', (e) => {
     e.preventDefault(); e.stopPropagation();
-    wrap.remove(); neSave();
+    const id = wrap.dataset.imgId;
+    neLinks = neLinks.filter(l => l.imgId !== id);
+    wrap.remove(); neRedrawLinks(); neSave();
   });
+
+  // Link button — start drawing a connector to a spot in the text
+  if (linkBtn) {
+    linkBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      neStartLinking(wrap);
+    });
+  }
 }
 
 function neSelectFloating(wrap) {
@@ -4253,9 +4317,9 @@ function neSelectFloating(wrap) {
 
 // Wire any floating images already in saved content
 function neWireImages() {
-  const page = document.querySelector('.ne-doc-page');
-  if (!page) return;
-  page.querySelectorAll('.ne-float-img').forEach(neWireFloatingImage);
+  const canvas = document.getElementById('ne-canvas');
+  if (!canvas) return;
+  canvas.querySelectorAll('.ne-float-img').forEach(neWireFloatingImage);
   // Migrate any legacy inline images to floating
   const ed = document.getElementById('ne-editor');
   if (ed) {
@@ -4266,7 +4330,79 @@ function neWireImages() {
       neCreateFloatingImage(src, 60, 60, w);
     });
   }
+  neRedrawLinks();
 }
+
+// ─── Image → text link connectors ───
+let neLinks = [];            // [{imgId, anchorId}]
+let neLinkAnchorCounter = 0;
+let neLinkingFrom = null;    // image wrap currently drawing a link
+
+function neStartLinking(wrap) {
+  neLinkingFrom = wrap;
+  document.body.style.cursor = 'crosshair';
+  showToast('Click a spot in the text to link this image to.', 'info');
+  const editor = document.getElementById('ne-editor');
+  const onClick = (e) => {
+    e.preventDefault();
+    // Place an anchor marker at the clicked text position
+    const anchorId = 'anc' + (++neLinkAnchorCounter);
+    let range = null;
+    if (document.caretRangeFromPoint) range = document.caretRangeFromPoint(e.clientX, e.clientY);
+    else if (document.caretPositionFromPoint) {
+      const cp = document.caretPositionFromPoint(e.clientX, e.clientY);
+      if (cp) { range = document.createRange(); range.setStart(cp.offsetNode, cp.offset); }
+    }
+    const marker = document.createElement('span');
+    marker.className = 'ne-link-anchor';
+    marker.dataset.anchorId = anchorId;
+    marker.innerHTML = '&#8203;'; // zero-width
+    if (range) { range.insertNode(marker); }
+    else { editor.appendChild(marker); }
+    neLinks.push({ imgId: neLinkingFrom.dataset.imgId, anchorId });
+    neLinkingFrom = null;
+    document.body.style.cursor = '';
+    editor.removeEventListener('click', onClick, true);
+    neRedrawLinks();
+    neSave();
+  };
+  editor.addEventListener('click', onClick, true);
+}
+
+function neRedrawLinks() {
+  const svg = document.getElementById('ne-links-svg');
+  const canvas = document.getElementById('ne-canvas');
+  if (!svg || !canvas) return;
+  // Clear existing lines (keep defs)
+  svg.querySelectorAll('.ne-link-line').forEach(l => l.remove());
+  const cRect = canvas.getBoundingClientRect();
+  neLinks.forEach(link => {
+    const img = canvas.querySelector('.ne-float-img[data-img-id="'+link.imgId+'"]');
+    const anchor = canvas.querySelector('.ne-link-anchor[data-anchor-id="'+link.anchorId+'"]');
+    if (!img || !anchor) return;
+    const iRect = img.getBoundingClientRect();
+    const aRect = anchor.getBoundingClientRect();
+    // Connect nearest edge of image to the anchor point
+    const ix = (iRect.left + iRect.width/2) - cRect.left;
+    const iy = (iRect.top + iRect.height/2) - cRect.top;
+    const ax = (aRect.left) - cRect.left;
+    const ay = (aRect.top + aRect.height/2) - cRect.top;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','path');
+    // Curved connector
+    const midX = (ix + ax) / 2;
+    line.setAttribute('d', `M ${ix} ${iy} C ${midX} ${iy}, ${midX} ${ay}, ${ax} ${ay}`);
+    line.setAttribute('class', 'ne-link-line');
+    line.setAttribute('fill', 'none');
+    line.setAttribute('stroke', 'var(--accent)');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('marker-end', 'url(#ne-arrow)');
+    line.setAttribute('opacity', '0.75');
+    svg.appendChild(line);
+  });
+}
+
+// Redraw links on scroll/resize
+window.addEventListener('resize', () => { if (neIsOpen) neRedrawLinks(); });
 
 // Deselect when clicking elsewhere
 document.addEventListener('click', (e) => {
@@ -4278,7 +4414,31 @@ document.addEventListener('click', (e) => {
 function neInsertHR() {
   const editor = document.getElementById('ne-editor');
   editor.focus();
-  document.execCommand('insertHTML', false, '<hr><p>​</p>');
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) {
+    document.execCommand('insertHTML', false, '<hr><p><br></p>');
+    neQueueSave();
+    return;
+  }
+  // Find the top-level block element containing the caret
+  let block = sel.anchorNode;
+  while (block && block.parentNode !== editor && block !== editor) block = block.parentNode;
+  const hr = document.createElement('hr');
+  const after = document.createElement('p');
+  after.innerHTML = '<br>';
+  if (block && block !== editor && block.parentNode === editor) {
+    // Insert the divider directly AFTER the cursor's line/block
+    block.parentNode.insertBefore(hr, block.nextSibling);
+    hr.parentNode.insertBefore(after, hr.nextSibling);
+  } else {
+    editor.appendChild(hr);
+    editor.appendChild(after);
+  }
+  // Move caret into the new paragraph below the divider
+  const range = document.createRange();
+  range.setStart(after, 0); range.collapse(true);
+  sel.removeAllRanges(); sel.addRange(range);
+  neQueueSave();
 }
 
 function neInsertLink() { neQuickLink(); }
