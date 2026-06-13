@@ -177,7 +177,7 @@ h1,h2,h3,h4 { font-family: var(--title-font, 'Raleway', sans-serif); font-weight
 .tree-item:hover .tree-item-menu { opacity: 1; }
 .sidebar-footer {
   padding: 0 12px; border-top: 1px solid var(--border);
-  height: 53px; flex-shrink: 0; display: flex; align-items: center;
+  height: 60px; flex-shrink: 0; display: flex; align-items: center;
   box-sizing: border-box;
 }
 .user-row {
@@ -939,7 +939,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 /* ─── Stats panel (Pro) ─── */
 .tree-stats-bar {
   display: flex; gap: 1px; background: var(--border); border-top: 1px solid var(--border);
-  flex-shrink: 0; height: 53px; box-sizing: border-box;
+  flex-shrink: 0; height: 60px; box-sizing: border-box;
 }
 .tree-stat {
   flex: 1; padding: 0 12px; background: var(--bg2); text-align: center;
@@ -1204,7 +1204,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
 /* ─── Detail panel sticky footer ─── */
 .detail-footer {
-  flex-shrink: 0; height: 53px; padding: 0 12px; box-sizing: border-box;
+  flex-shrink: 0; height: 60px; padding: 0 12px; box-sizing: border-box;
   display: flex; align-items: center; justify-content: center;
   border-top: 1px solid var(--border); background: var(--bg2);
 }
@@ -1431,7 +1431,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     </div>
     <!-- Sticky notes button — always present at the bottom -->
     <div class="detail-footer" id="detail-footer" style="display:none;">
-      <button class="btn-add-sm primary" id="detail-notes-btn" onclick="openNotesForSelected()" style="width:100%;height:37px;justify-content:center;align-items:center;gap:7px;padding:0;font-size:13px;display:flex;">
+      <button class="btn-add-sm primary" id="detail-notes-btn" onclick="openNotesForSelected()" style="width:100%;height:38px;justify-content:center;align-items:center;gap:7px;padding:0 11px;font-size:13px;display:flex;box-sizing:border-box;">
         <i class="ti ti-notes"></i> <span id="detail-notes-btn-label">Open Note Editor</span>
       </button>
     </div>
@@ -1675,7 +1675,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     <div class="acct-pane" id="acct-pane-usage">
       <div style="font-size:13px;color:var(--text2);margin-bottom:4px;">Your usage across all trees.</div>
       <div class="usage-bar-wrap" id="usage-trees-wrap">
-        <div class="usage-bar-label"><span>Trees</span><span id="usage-trees-txt">0 / 3</span></div>
+        <div class="usage-bar-label"><span>Trees</span><span id="usage-trees-txt">0 / 5</span></div>
         <div class="usage-bar-track"><div class="usage-bar-fill" id="usage-trees-bar" style="width:0%"></div></div>
       </div>
       <div class="usage-bar-wrap" id="usage-nodes-wrap">
@@ -2120,6 +2120,9 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     <button class="nv-nav-btn" id="nv-up" onclick="nvNavigate('up')" title="Go to parent">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6l6 6"/></svg>
     </button>
+    <button class="nv-nav-btn" id="nv-down" onclick="nvNavigate('down')" title="Go to first child">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6l6 -6"/></svg>
+    </button>
     <button class="nv-nav-btn" id="nv-next" onclick="nvNavigate('next')" title="Next sibling">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6l-6 6"/></svg>
     </button>
@@ -2546,10 +2549,12 @@ function switchAcctTab(tab) {
 function renderUsageTab() {
   const treeCount = trees.length;
   const nodeCount = countAllNodes();
-  const maxTrees = currentPlan === 'free' ? 3 : '∞';
+  const maxTrees = currentPlan === 'free' ? 5 : (currentPlan === 'plus' ? 50 : '∞');
   const maxNodes = currentPlan === 'free' ? 20 : '∞';
 
-  const treePct = currentPlan === 'free' ? Math.min(100, (treeCount/3)*100) : (treeCount > 0 ? 20 : 0);
+  const treePct = currentPlan === 'free' ? Math.min(100, (treeCount/5)*100)
+                : currentPlan === 'plus' ? Math.min(100, (treeCount/50)*100)
+                : (treeCount > 0 ? 20 : 0);
   const nodePct = currentPlan === 'free' ? Math.min(100, (nodeCount/20)*100) : (nodeCount > 0 ? 10 : 0);
 
   const treesBar = document.getElementById('usage-trees-bar');
@@ -3674,6 +3679,7 @@ function renderDetailPanel(nodeId) {
 
 let detailFooterNodeId = null;
 function openNotesForSelected() {
+  neReturnToNodeView = null;
   if (detailFooterNodeId) openNoteEditor(detailFooterNodeId);
 }
 
@@ -3903,31 +3909,45 @@ function openExportModal() {
 
 // ─── Sharing ───
 let neShareCachedLink = null;
+let neShareSnapshot = null;   // what we're sharing: whole tree OR a single node
 
-function openShareModal() {
+function buildTreeSnapshot() {
   const tree = getActiveTree();
-  if (!tree) { showToast('Select a tree first.', 'error'); return; }
+  if (!tree) return null;
+  return { id: 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8),
+           name: tree.name, icon: tree.icon, nodes: tree.nodes, sharedAt: new Date().toISOString() };
+}
+
+function openShareModal(snapshot, titleText) {
+  // snapshot optional — defaults to the whole active tree
+  if (!snapshot) {
+    const tree = getActiveTree();
+    if (!tree) { showToast('Select a tree first.', 'error'); return; }
+    snapshot = buildTreeSnapshot();
+  }
+  neShareSnapshot = snapshot;
   neShareCachedLink = null;
+  // Update modal heading
+  const h = document.querySelector('#share-modal .modal-header h3');
+  if (h) h.textContent = titleText || 'Share Tree';
   const input = document.getElementById('share-modal-link');
   if (input) input.value = 'Generating link...';
   openModal('share-modal');
-  // Pre-generate the link so social buttons open instantly (no popup blocker)
   generateShareLink();
 }
 
 async function generateShareLink() {
-  const tree = getActiveTree();
-  if (!tree) return null;
+  const snapshot = neShareSnapshot || buildTreeSnapshot();
+  if (!snapshot) return null;
+  neShareSnapshot = snapshot;
   const btn = document.getElementById('share-gen-btn');
   if (btn) { btn.disabled = true; btn.textContent = '...'; }
-  const shareId = 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-  const snapshot = { id: shareId, name: tree.name, icon: tree.icon, nodes: tree.nodes, sharedAt: new Date().toISOString() };
   let link, usedDb = false;
   try {
-    const { error } = await sbClient.from('shares').insert({ id: shareId, data: snapshot, created_by: currentUser ? currentUser.id : null });
+    const { error } = await sbClient.from('shares').insert({ id: snapshot.id, data: snapshot, created_by: currentUser ? currentUser.id : null });
     if (!error) usedDb = true;
   } catch(e) {}
-  if (usedDb) link = window.location.origin + window.location.pathname + '?share=' + shareId;
+  if (usedDb) link = window.location.origin + window.location.pathname + '?share=' + snapshot.id;
   else {
     try { link = window.location.origin + window.location.pathname + '#shared=' + btoa(unescape(encodeURIComponent(JSON.stringify(snapshot)))); }
     catch(e) { showToast('Could not create link.', 'error'); }
@@ -3940,12 +3960,9 @@ async function generateShareLink() {
 }
 
 function neBuildShareLinkSync() {
-  // Synchronous encoded fallback link — always available immediately
-  const tree = getActiveTree();
-  if (!tree) return null;
+  const snapshot = neShareSnapshot || buildTreeSnapshot();
+  if (!snapshot) return null;
   try {
-    const shareId = 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-    const snapshot = { id: shareId, name: tree.name, icon: tree.icon, nodes: tree.nodes, sharedAt: new Date().toISOString() };
     return window.location.origin + window.location.pathname + '#shared=' + btoa(unescape(encodeURIComponent(JSON.stringify(snapshot))));
   } catch (e) { return null; }
 }
@@ -3955,13 +3972,22 @@ function shareToSocial(platform) {
   // popup opens inside this click handler (avoids popup blockers).
   const link = neShareCachedLink || neBuildShareLinkSync();
   if (!link) { showToast('Could not create link.', 'error'); return; }
-  const tree = getActiveTree();
-  const title = tree ? (tree.name + ' — ResearchTree') : 'ResearchTree';
+  // Social platforms reject very long URLs. The encoded fallback embeds the
+  // whole tree, so warn + copy instead of opening a broken link.
+  const isEncoded = link.indexOf('#shared=') !== -1;
+  if (isEncoded && link.length > 1800 && platform !== 'email' && platform !== 'copy') {
+    navigator.clipboard.writeText(link).then(
+      () => showToast('This tree is large, so a direct platform link won\'t work. The link was copied — paste it into your post.', 'info'),
+      () => showToast('This tree is too large for a direct platform link. Set up the shares table for short links.', 'error')
+    );
+    return;
+  }
+  const title = (neShareSnapshot ? neShareSnapshot.name : 'ResearchTree') + ' — ResearchTree';
   const enc = encodeURIComponent(link);
   const encT = encodeURIComponent(title);
   let url = null;
   switch (platform) {
-    case 'x': url = `https://twitter.com/intent/tweet?text=${encT}&url=${enc}`; break;
+    case 'x': url = `https://x.com/intent/post?text=${encT}&url=${enc}`; break;
     case 'facebook': url = `https://www.facebook.com/sharer/sharer.php?u=${enc}`; break;
     case 'linkedin': url = `https://www.linkedin.com/sharing/share-offsite/?url=${enc}`; break;
     case 'whatsapp': url = `https://wa.me/?text=${encT}%20${enc}`; break;
@@ -4274,11 +4300,17 @@ let neNodeId = null;
 let neSaveTimer = null;
 let neIsOpen = false;
 
+let neReturnToNodeView = null;
 function openNoteEditor(nodeId) {
   const tree = getActiveTree(); if (!tree) return;
   const node = findNode(tree.nodes, nodeId); if (!node) return;
   neNodeId = nodeId;
   neIsOpen = true;
+  // Reset per-session formatting state so a new note doesn't inherit a stale
+  // (e.g. white) text color from a previous editing session.
+  neCurrentTextColor = null;
+  const tcBar = document.getElementById('tb-textcolor-bar');
+  if (tcBar) tcBar.style.background = 'var(--accent)';
 
   // Set title / breadcrumb
   document.getElementById('ne-node-title').textContent = node.title;
@@ -4483,7 +4515,10 @@ function closeExtNotes() { closeNoteEditor(); }
 
 function closeNoteEditor() {
   neSave();
+  const returnTo = neReturnToNodeView;
+  neReturnToNodeView = null;
   neIsOpen = false;
+  const closedNodeId = neNodeId;
   neNodeId = null;
   document.getElementById('note-editor-overlay').classList.add('hidden');
   document.body.style.overflow = '';
@@ -4491,6 +4526,10 @@ function closeNoteEditor() {
   // Refresh detail panel + canvas to show updated preview
   if (selectedNodeId) renderDetailPanel(selectedNodeId);
   renderCanvas();
+  // If the editor was opened from the node full page, go back there
+  if (returnTo) {
+    openNodeView(returnTo);
+  }
 }
 
 function neSave() {
@@ -5678,6 +5717,13 @@ function nvNavigate(dir) {
   if (!path) return;
   const parent = path.length > 1 ? path[path.length-2] : null;
   if (dir === 'up') { if (parent) openNodeView(parent.id); return; }
+  if (dir === 'down') {
+    // Descend into the first child of the current node
+    const cur = findNode(tree.nodes, nvNodeId);
+    if (cur && cur.children && cur.children.length) openNodeView(cur.children[0].id);
+    else showToast('This node has no children.', 'info');
+    return;
+  }
   const siblings = parent ? parent.children : tree.nodes;
   const idx = siblings.findIndex(n => n.id === nvNodeId);
   if (dir === 'prev' && idx > 0) openNodeView(siblings[idx-1].id);
@@ -5689,26 +5735,12 @@ function nvShareNode() {
   if (!tree || !nvNodeId) return;
   const node = findNode(tree.nodes, nvNodeId);
   if (!node) return;
-  // Build a single-node snapshot and share it
-  const shareId = 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-  const snapshot = { id: shareId, name: node.title, icon: tree.icon, nodes: [node], sharedAt: new Date().toISOString() };
-  (async () => {
-    let link;
-    let usedDb = false;
-    try {
-      const { error } = await sbClient.from('shares').insert({ id: shareId, data: snapshot, created_by: currentUser ? currentUser.id : null });
-      if (!error) usedDb = true;
-    } catch(e) {}
-    if (usedDb) link = window.location.origin + window.location.pathname + '?share=' + shareId;
-    else {
-      try { link = window.location.origin + window.location.pathname + '#shared=' + btoa(unescape(encodeURIComponent(JSON.stringify(snapshot)))); }
-      catch(e) { showToast('Could not create link.', 'error'); return; }
-    }
-    navigator.clipboard.writeText(link).then(
-      () => showToast('Node share link copied!', 'success'),
-      () => showToast('Link: ' + link, 'info')
-    );
-  })();
+  // Open the SAME share modal as the main page, but with a single-node snapshot
+  const snapshot = {
+    id: 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8),
+    name: node.title, icon: tree.icon, nodes: [node], sharedAt: new Date().toISOString()
+  };
+  openShareModal(snapshot, 'Share Node');
 }
 
 function nvPrintNode() {
@@ -5735,7 +5767,8 @@ function nvPrintNode() {
 function nvEdit() {
   const id = nvNodeId;
   closeNodeView();
-  // Open the full-screen note editor (not the small modal)
+  // Remember we came from the node view so the editor's back button returns here
+  neReturnToNodeView = id;
   openNoteEditor(id);
 }
 
@@ -5753,6 +5786,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft')  nvNavigate('prev');
     if (e.key === 'ArrowRight') nvNavigate('next');
     if (e.key === 'ArrowUp')    nvNavigate('up');
+    if (e.key === 'ArrowDown')  nvNavigate('down');
   }
 });
 
