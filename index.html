@@ -4469,6 +4469,9 @@ function renderCollabHome() {
     '</div>';
 }
 
+let collabPending = {};  // host-side: pending join requests keyed by requester key
+let collabApproved = false; // joiner-side: whether the host approved us
+
 async function hostCollab() {
   if (!currentUser) { showToast('Please sign in to host a session.', 'error'); return; }
   const sel = document.getElementById('collab-tree-select');
@@ -4477,15 +4480,20 @@ async function hostCollab() {
   if (!tree) { showToast('Select a tree.', 'error'); return; }
   const roomId = 'room_' + Math.random().toString(36).slice(2,8);
   const code = genRoomCode();
-  // Store the room + access code (RLS should restrict writes to the owner)
+  // Store the room + access code so OTHER devices can find it. We require this
+  // to succeed (otherwise joiners on other devices get "room not found").
+  let dbOk = false;
   try {
-    await sbClient.from('collab_rooms').insert({ id: roomId, code: code, tree_id: tree.id, owner_id: currentUser.id, tree_name: tree.name });
-  } catch(e) {
-    // Table may not exist yet — keep a local record so hosting still works on this device
-    try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); r[roomId] = { code, tree_id: tree.id, owner_id: currentUser.id }; localStorage.setItem('rt_collab_rooms', JSON.stringify(r)); } catch(e2){}
+    const { error } = await sbClient.from('collab_rooms').insert({ id: roomId, code: code, tree_id: tree.id, owner_id: currentUser.id, tree_name: tree.name });
+    if (!error) dbOk = true;
+  } catch(e) {}
+  // Always keep a local copy too (same-device fallback)
+  try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); r[roomId] = { code, tree_id: tree.id, owner_id: currentUser.id }; localStorage.setItem('rt_collab_rooms', JSON.stringify(r)); } catch(e2){}
+  if (!dbOk) {
+    showToast('Heads up: the collab_rooms table isn\'t set up, so people on OTHER devices won\'t be able to join yet.', 'info');
   }
   collabRoom = { id: roomId, code: code, treeId: tree.id, isHost: true };
-  // Make this the active tree
+  collabPending = {};
   if (activeTreeId !== tree.id) selectTree(tree.id);
   connectCollabChannel();
   renderCollabRoom();
@@ -4496,42 +4504,71 @@ async function joinCollab() {
   const roomId = (document.getElementById('collab-join-room').value || '').trim();
   const code = (document.getElementById('collab-join-code').value || '').trim().toUpperCase();
   if (!roomId || !code) { showToast('Enter both the room ID and access code.', 'error'); return; }
-  // SECURITY GATE: verify the code against the stored room before joining.
+  // SECURITY GATE 1: verify the code against the stored room.
   let room = null;
   try {
     const { data } = await sbClient.from('collab_rooms').select('*').eq('id', roomId).single();
     if (data) room = data;
   } catch(e){}
   if (!room) {
-    // Local fallback (same-device testing)
     try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); if (r[roomId]) room = { ...r[roomId], id: roomId }; } catch(e){}
   }
-  if (!room) { showToast('Room not found. Check the room ID.', 'error'); return; }
+  if (!room) { showToast('Room not found. Double-check the Room ID — and the host needs the collab_rooms table set up for cross-device joining.', 'error'); return; }
   if ((room.code||'').toUpperCase() !== code) { showToast('Incorrect access code. Access denied.', 'error'); return; }
-  // Access granted
+  // Code OK — now REQUEST approval from the host (SECURITY GATE 2).
   collabRoom = { id: roomId, code: code, treeId: room.tree_id, isHost: false };
+  collabApproved = false;
   connectCollabChannel();
-  showToast('Access granted — joined the session.', 'success');
-  renderCollabRoom();
+  renderCollabWaiting();
 }
 
+let collabMyKey = null;
 function connectCollabChannel() {
   if (!collabRoom) return;
   if (collabChannel) { try { sbClient.removeChannel(collabChannel); } catch(e){} collabChannel = null; }
   const myName = currentDisplayName || (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'Guest');
   const myKey = currentUser ? currentUser.id : ('guest_' + Math.random().toString(36).slice(2,7));
+  collabMyKey = myKey;
   try {
     collabChannel = sbClient.channel('collab-' + collabRoom.id, { config: { broadcast: { self: false }, presence: { key: myKey } } });
     collabChannel
       .on('broadcast', { event: 'tree-update' }, (msg) => {
+        // Only accept tree updates once approved (or if host)
+        if (!collabRoom.isHost && !collabApproved) return;
         const tree = trees.find(t => t.id === collabRoom.treeId);
         if (tree && msg.payload && msg.payload.nodes) {
           tree.nodes = msg.payload.nodes;
           if (activeTreeId === tree.id) renderCanvas();
         }
       })
+      .on('broadcast', { event: 'join-request' }, (msg) => {
+        // HOST: a user is asking to join. Show them in the pending list.
+        if (!collabRoom.isHost) return;
+        const p = msg.payload || {};
+        if (!p.key) return;
+        collabPending[p.key] = { key: p.key, name: p.name || 'Guest', at: Date.now() };
+        renderCollabRoom();
+        showToast((p.name||'Someone') + ' is requesting to join.', 'info');
+      })
+      .on('broadcast', { event: 'join-decision' }, (msg) => {
+        // JOINER: the host approved or denied me.
+        const p = msg.payload || {};
+        if (collabRoom.isHost) return;
+        if (p.key !== collabMyKey) return;
+        if (p.approved) {
+          collabApproved = true;
+          showToast('The host approved you. You\'re in!', 'success');
+          // Request the current tree now that we're approved
+          collabChannel.send({ type:'broadcast', event:'request-sync', payload:{ key: collabMyKey } });
+          renderCollabRoom();
+        } else {
+          showToast('The host denied your request.', 'error');
+          leaveCollab();
+          renderCollabHome();
+        }
+      })
       .on('broadcast', { event: 'request-sync' }, () => {
-        // Host answers sync requests with the canonical tree
+        // HOST answers sync requests with the canonical tree
         if (collabRoom.isHost) {
           const tree = trees.find(t => t.id === collabRoom.treeId);
           if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ nodes: tree.nodes } });
@@ -4543,19 +4580,52 @@ function connectCollabChannel() {
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          await collabChannel.track({ name: myName, host: collabRoom.isHost, at: Date.now() });
-          // New joiners ask the host for the current tree
-          if (!collabRoom.isHost) collabChannel.send({ type:'broadcast', event:'request-sync', payload:{} });
+          // Track presence. Joiners are marked pending until approved.
+          await collabChannel.track({ name: myName, host: collabRoom.isHost, approved: collabRoom.isHost ? true : collabApproved, at: Date.now() });
+          if (!collabRoom.isHost && !collabApproved) {
+            // Ask the host for approval
+            collabChannel.send({ type:'broadcast', event:'join-request', payload:{ key: collabMyKey, name: myName } });
+          }
         }
       });
-    // Broadcast edits whenever we save the shared tree
+    // Broadcast edits whenever we save the shared tree (only if host or approved)
     window._collabBroadcast = () => {
-      if (collabChannel && collabRoom) {
+      if (collabChannel && collabRoom && (collabRoom.isHost || collabApproved)) {
         const tree = trees.find(t => t.id === collabRoom.treeId);
         if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ nodes: tree.nodes } });
       }
     };
   } catch(e) { showToast('Could not connect to the session.', 'error'); }
+}
+
+// HOST: approve or deny a pending requester
+function approveJoiner(key) {
+  if (!collabRoom || !collabRoom.isHost || !collabChannel) return;
+  collabChannel.send({ type:'broadcast', event:'join-decision', payload:{ key: key, approved: true } });
+  delete collabPending[key];
+  renderCollabRoom();
+  showToast('Approved.', 'success');
+}
+function denyJoiner(key) {
+  if (!collabRoom || !collabRoom.isHost || !collabChannel) return;
+  collabChannel.send({ type:'broadcast', event:'join-decision', payload:{ key: key, approved: false } });
+  delete collabPending[key];
+  renderCollabRoom();
+  showToast('Denied.', 'info');
+}
+
+// JOINER waiting screen
+function renderCollabWaiting() {
+  const body = document.getElementById('collab-body');
+  body.innerHTML =
+    '<div style="max-width:520px;margin:40px auto;text-align:center;">' +
+      '<div style="width:64px;height:64px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">' +
+        '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' +
+      '</div>' +
+      '<div style="font-size:18px;font-weight:600;margin-bottom:8px;">Waiting for the host to approve you…</div>' +
+      '<div style="font-size:13px;color:var(--text3);margin-bottom:20px;">Your access code was accepted. The host now needs to admit you to the room, just like joining a group.</div>' +
+      '<button class="btn-sm btn-outline" onclick="leaveCollab();renderCollabHome();" style="color:var(--danger,#e5484d);border-color:var(--danger,#e5484d);">Cancel</button>' +
+    '</div>';
 }
 
 function renderCollabRoom() {
@@ -4578,12 +4648,37 @@ function renderCollabRoom() {
         '<div style="font-size:14px;font-weight:600;margin-bottom:12px;">In this room</div>' +
         '<div id="collab-presence-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
       '</div>' +
+      (collabRoom.isHost ? (
+        '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:18px;">' +
+          '<div style="font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;">Requests to join' +
+            (Object.keys(collabPending).length ? '<span style="background:var(--accent);color:#fff;font-size:11px;border-radius:10px;padding:1px 8px;">' + Object.keys(collabPending).length + '</span>' : '') +
+          '</div>' +
+          '<div id="collab-pending-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
+        '</div>'
+      ) : '') +
       '<div style="display:flex;gap:10px;">' +
         '<button class="btn-sm btn-accent" onclick="closeCollabPage();if(collabRoom)selectTree(collabRoom.treeId);" style="flex:1;justify-content:center;padding:11px;"><i class="ti ti-edit"></i> Open the tree & edit</button>' +
         '<button class="btn-sm btn-outline" onclick="leaveCollab();renderCollabHome();" style="flex:1;justify-content:center;padding:11px;color:var(--danger,#e5484d);border-color:var(--danger,#e5484d);"><i class="ti ti-logout"></i> ' + (collabRoom.isHost ? 'End session' : 'Leave session') + '</button>' +
       '</div>' +
     '</div>';
   renderCollabPresence();
+  renderCollabPending();
+}
+
+function renderCollabPending() {
+  const el = document.getElementById('collab-pending-list');
+  if (!el) return;
+  const keys = Object.keys(collabPending || {});
+  if (!keys.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;">No pending requests.</div>'; return; }
+  el.innerHTML = keys.map(k => {
+    const p = collabPending[k];
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--border);border-radius:8px;">' +
+      '<span style="width:30px;height:30px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">' + esc(((p.name||'?')[0]||'?').toUpperCase()) + '</span>' +
+      '<span style="font-size:14px;flex:1;">' + esc(p.name||'Guest') + '</span>' +
+      '<button class="btn-sm btn-accent" onclick="approveJoiner(\'' + esc(k).replace(/'/g,"\\'") + '\')" style="padding:5px 12px;">Approve</button>' +
+      '<button class="btn-sm btn-outline" onclick="denyJoiner(\'' + esc(k).replace(/'/g,"\\'") + '\')" style="padding:5px 12px;color:var(--danger,#e5484d);border-color:var(--danger,#e5484d);">Deny</button>' +
+    '</div>';
+  }).join('');
 }
 
 function renderCollabPresence() {
