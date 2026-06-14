@@ -3277,6 +3277,9 @@ async function saveTreeToDb(treeId) {
   if (!currentUser) return;
   const tree = trees.find(t => t.id === treeId);
   if (!tree) return;
+  // A live collab mirror belongs to the host — don't save it to this user's own DB.
+  // (Edits still propagate to the host via the broadcast above.)
+  if (tree._collab && (!collabRoom || !collabRoom.isHost)) { setSyncState('saved'); return; }
   setSyncState('syncing');
   const { error } = await sbClient.from('trees').upsert({
     id: tree.id, user_id: currentUser.id,
@@ -4605,11 +4608,22 @@ function connectCollabChannel() {
       .on('broadcast', { event: 'tree-update' }, (msg) => {
         // Only accept tree updates once approved (or if host)
         if (!collabRoom.isHost && !collabApproved) return;
-        const tree = trees.find(t => t.id === collabRoom.treeId);
-        if (tree && msg.payload && msg.payload.nodes) {
-          tree.nodes = msg.payload.nodes;
-          if (activeTreeId === tree.id) renderCanvas();
+        const p = msg.payload || {};
+        if (!p.nodes) return;
+        let tree = trees.find(t => t.id === collabRoom.treeId);
+        if (!tree) {
+          // Joiner doesn't have this tree yet — create a local mirror of the host's tree
+          tree = { id: collabRoom.treeId, name: p.name || 'Shared tree', icon: p.icon || '🤝', color: '#6c8eff', nodes: p.nodes, _collab: true };
+          trees.unshift(tree);
+          renderTreeList();
+        } else {
+          tree.nodes = p.nodes;
+          if (p.name) tree.name = p.name;
+          if (p.icon) tree.icon = p.icon;
         }
+        // Mark this as the live collab tree (don't persist a guest's copy to their own DB)
+        tree._collab = true;
+        if (activeTreeId === tree.id) { renderCanvas(); if (typeof renderTreeList==='function') renderTreeList(); }
       })
       .on('broadcast', { event: 'join-request' }, (msg) => {
         // HOST: a user is asking to join. Show them in the pending list.
@@ -4644,10 +4658,10 @@ function connectCollabChannel() {
         if (!document.getElementById('collab-overlay').classList.contains('hidden')) renderCollabHome();
       })
       .on('broadcast', { event: 'request-sync' }, () => {
-        // HOST answers sync requests with the canonical tree
+        // HOST answers sync requests with the FULL canonical tree
         if (collabRoom.isHost) {
           const tree = trees.find(t => t.id === collabRoom.treeId);
-          if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ nodes: tree.nodes } });
+          if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ name: tree.name, icon: tree.icon, nodes: tree.nodes } });
         }
       })
       .on('presence', { event: 'sync' }, () => {
@@ -4668,7 +4682,7 @@ function connectCollabChannel() {
     window._collabBroadcast = () => {
       if (collabChannel && collabRoom && (collabRoom.isHost || collabApproved)) {
         const tree = trees.find(t => t.id === collabRoom.treeId);
-        if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ nodes: tree.nodes } });
+        if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ name: tree.name, icon: tree.icon, nodes: tree.nodes } });
       }
     };
   } catch(e) { showToast('Could not connect to the session.', 'error'); }
@@ -4678,6 +4692,9 @@ function connectCollabChannel() {
 function approveJoiner(key) {
   if (!collabRoom || !collabRoom.isHost || !collabChannel) return;
   collabChannel.send({ type:'broadcast', event:'join-decision', payload:{ key: key, approved: true } });
+  // Immediately push the full tree so the new collaborator gets it right away
+  const tree = trees.find(t => t.id === collabRoom.treeId);
+  if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ name: tree.name, icon: tree.icon, nodes: tree.nodes } });
   delete collabPending[key];
   renderCollabRoom();
   showToast('Approved.', 'success');
@@ -4733,7 +4750,7 @@ function renderCollabRoom() {
         '</div>'
       ) : '') +
       '<div style="display:flex;gap:10px;">' +
-        '<button class="btn-sm btn-accent" onclick="closeCollabPage();if(collabRoom)selectTree(collabRoom.treeId);" style="flex:1;justify-content:center;padding:11px;"><i class="ti ti-edit"></i> Open the tree & edit</button>' +
+        '<button class="btn-sm btn-accent" onclick="openCollabTree()" style="flex:1;justify-content:center;padding:11px;"><i class="ti ti-edit"></i> Open the tree & edit</button>' +
         '<button class="btn-sm btn-outline" onclick="confirmEndCollab()" style="flex:1;justify-content:center;padding:11px;color:var(--danger,#e5484d);border-color:var(--danger,#e5484d);"><i class="ti ti-logout"></i> ' + (collabRoom.isHost ? 'End session' : 'Leave session') + '</button>' +
       '</div>' +
     '</div>';
@@ -4803,6 +4820,30 @@ function endCollab() {
 
 // Lightweight disconnect that does NOT delete the room (kept for compatibility).
 function leaveCollab() { endCollab(); }
+
+function openCollabTree() {
+  if (!collabRoom) return;
+  const existing = trees.find(t => t.id === collabRoom.treeId);
+  if (existing) {
+    closeCollabPage();
+    selectTree(collabRoom.treeId);
+    return;
+  }
+  // Not synced yet — ask the host for the tree, then open when it arrives.
+  if (!collabRoom.isHost && collabChannel) {
+    showToast('Loading the shared tree…', 'info');
+    try { collabChannel.send({ type:'broadcast', event:'request-sync', payload:{ key: collabMyKey } }); } catch(e){}
+    let tries = 0;
+    const iv = setInterval(() => {
+      tries++;
+      const t = trees.find(t => t.id === collabRoom.treeId);
+      if (t) { clearInterval(iv); closeCollabPage(); selectTree(collabRoom.treeId); }
+      else if (tries > 20) { clearInterval(iv); showToast('Could not load the tree. Make sure the host is online.', 'error'); }
+    }, 250);
+  } else {
+    showToast('Tree not available yet.', 'error');
+  }
+}
 
 async function confirmEndCollab() {
   const isHost = collabRoom && collabRoom.isHost;
