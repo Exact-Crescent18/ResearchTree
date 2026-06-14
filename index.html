@@ -1352,6 +1352,9 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   background: var(--bg3); color: var(--text3); cursor: pointer; transition: var(--transition); flex-shrink: 0;
 }
 .gallery-del-btn:hover { border-color: var(--danger,#e5484d); color: var(--danger,#e5484d); background: var(--bg4); }
+
+.publish-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: var(--transition); }
+.publish-item:hover { border-color: var(--accent); background: var(--bg3); }
 </style>
 </head>
 <body>
@@ -1843,6 +1846,20 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
         <button class="btn-sm btn-outline" id="confirm-cancel">Cancel</button>
         <button class="btn-sm" id="confirm-ok" style="background:var(--danger,#e5484d);color:#fff;border:none;">Delete</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Publish Picker Modal -->
+<div class="modal-overlay hidden" id="publish-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>Publish a Tree</h3>
+      <button class="icon-btn" onclick="closeModal('publish-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px;">Choose which tree to publish to the public gallery. Anyone will be able to view it.</div>
+      <div id="publish-list" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;"></div>
     </div>
   </div>
 </div>
@@ -4409,29 +4426,50 @@ function stopCollaboration() {
 }
 
 // ─── Public gallery, publish, embed ───
-async function publishTree() {
-  const tree = getActiveTree();
-  if (!tree) { showToast('Select a tree first.', 'error'); return; }
-  if (!confirm('Publish "' + tree.name + '" to the public gallery? Anyone will be able to view it.')) return;
-  const snapshot = buildTreeSnapshot();
+function publishTree() {
+  // Open an in-page picker listing the user's trees (no browser popup)
+  if (!trees || !trees.length) { showToast('You have no trees to publish yet.', 'info'); return; }
+  const list = document.getElementById('publish-list');
+  // Mark which trees are already published (by name match in the local registry)
+  let publishedNames = [];
+  try { publishedNames = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]').filter(x => x.ownerId === (currentUser?currentUser.id:null) || x.author === currentDisplayName).map(x => x.name); } catch(e){}
+  list.innerHTML = trees.map(t => {
+    const already = publishedNames.includes(t.name);
+    return '<div class="publish-item" onclick="publishTreeById(\'' + t.id + '\')">' +
+      '<div style="display:flex;align-items:center;gap:10px;min-width:0;">' +
+        '<span style="font-size:22px;flex-shrink:0;">' + (t.icon||'🌳') + '</span>' +
+        '<div style="min-width:0;"><div style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(t.name) + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);">' + countNodes(t.nodes||[]) + ' topics' + (already ? ' · already published' : '') + '</div></div>' +
+      '</div>' +
+      '<button class="btn-sm btn-accent" style="flex-shrink:0;pointer-events:none;"><i class="ti ti-upload"></i> Publish</button>' +
+    '</div>';
+  }).join('');
+  openModal('publish-modal');
+}
+
+async function publishTreeById(treeId) {
+  const tree = trees.find(t => t.id === treeId);
+  if (!tree) { showToast('Tree not found.', 'error'); return; }
+  closeModal('publish-modal');
+  const snapshot = { id: 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8),
+                     name: tree.name, icon: tree.icon, nodes: tree.nodes,
+                     author: currentDisplayName || 'Anonymous', sharedAt: new Date().toISOString() };
   snapshot.public = true;
-  snapshot.author = currentDisplayName || 'Anonymous';
   snapshot.authorAvatar = getAvatarSrc() || null;
   snapshot.authorAvatarKey = currentAvatarKey || null;
   snapshot.authorAvatarCustom = currentAvatarCustom || null;
   snapshot.publishedAt = new Date().toISOString();
-  // Store in shares (for the ?share link) and mark public locally
   try { localStorage.setItem('rt_share_' + snapshot.id, JSON.stringify(snapshot)); } catch(e){}
   try { await sbClient.from('shares').insert({ id: snapshot.id, data: snapshot, created_by: currentUser ? currentUser.id : null }); } catch(e){}
-  // Add to local public registry
   try {
     const reg = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]');
     reg.unshift({ id: snapshot.id, name: tree.name, icon: tree.icon, author: snapshot.author, authorAvatar: snapshot.authorAvatar, authorAvatarCustom: snapshot.authorAvatarCustom, authorAvatarKey: snapshot.authorAvatarKey, nodeCount: countNodes(tree.nodes), shares: 0, ownerId: currentUser ? currentUser.id : null, at: snapshot.publishedAt });
     localStorage.setItem('rt_public_gallery', JSON.stringify(reg.slice(0,100)));
   } catch(e){}
-  // Try a public_trees table too (optional)
   try { await sbClient.from('public_trees').insert({ id: snapshot.id, data: snapshot, name: tree.name, author: snapshot.author, owner_id: currentUser ? currentUser.id : null }); } catch(e){}
-  showToast('Published to the gallery!', 'success');
+  showToast('Published "' + tree.name + '" to the gallery!', 'success');
+  // Refresh the gallery if it's open
+  if (!document.getElementById('gallery-overlay').classList.contains('hidden')) openPublicGallery();
 }
 
 let galleryItems = [];
