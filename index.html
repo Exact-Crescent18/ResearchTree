@@ -1381,11 +1381,11 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     <div id="signin-form" class="auth-form">
       <div class="form-field">
         <label>Email</label>
-        <input type="email" id="signin-email" placeholder="you@example.com">
+        <input type="email" id="signin-email" onkeydown="if(event.key==='Enter'){event.preventDefault();signInEmail();}" placeholder="you@example.com">
       </div>
       <div class="form-field">
         <label>Password</label>
-        <input type="password" id="signin-password" placeholder="••••••••">
+        <input type="password" id="signin-password" onkeydown="if(event.key==='Enter'){event.preventDefault();signInEmail();}" placeholder="••••••••">
       </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;user-select:none;">
         <input type="checkbox" id="signin-remember" checked style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer;">
@@ -1402,11 +1402,11 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     <div id="signup-form" class="auth-form hidden">
       <div class="form-field">
         <label>Email</label>
-        <input type="email" id="signup-email" placeholder="you@example.com">
+        <input type="email" id="signup-email" onkeydown="if(event.key==='Enter'){event.preventDefault();signUpEmail();}" placeholder="you@example.com">
       </div>
       <div class="form-field">
         <label>Password</label>
-        <input type="password" id="signup-password" placeholder="At least 6 characters">
+        <input type="password" id="signup-password" onkeydown="if(event.key==='Enter'){event.preventDefault();signUpEmail();}" placeholder="At least 6 characters">
       </div>
       <button class="btn-primary" onclick="signUpEmail()">Create Account</button>
       <div class="auth-divider">or continue with</div>
@@ -4450,6 +4450,14 @@ function publishTree() {
 async function publishTreeById(treeId) {
   const tree = trees.find(t => t.id === treeId);
   if (!tree) { showToast('Tree not found.', 'error'); return; }
+  // Require a display name so the tree isn't published as "Anonymous"
+  if (!currentDisplayName || !currentDisplayName.trim()) {
+    closeModal('publish-modal');
+    showToast('Set a display name first so people can find your profile.', 'info');
+    openAccountModal();
+    setTimeout(() => editDisplayName(), 300);
+    return;
+  }
   closeModal('publish-modal');
   const snapshot = { id: 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8),
                      name: tree.name, icon: tree.icon, nodes: tree.nodes,
@@ -4570,12 +4578,19 @@ async function openPublicGallery() {
   galleryItems = [];
   const grid = document.getElementById('gallery-grid');
   grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text3);font-size:14px;text-align:center;padding:40px;">Loading gallery…</div>';
-  // Load from DB, fall back to local
+  // Load from BOTH the DB and localStorage, then merge (dedupe by id).
+  // This prevents older local-only trees from disappearing once the DB has rows.
+  let dbItems = [], localItems = [];
   try {
-    const { data } = await sbClient.from('public_trees').select('id,name,author,data,owner_id,created_at').order('created_at',{ascending:false}).limit(100);
-    if (data && data.length) galleryItems = data.map(d => ({ id:d.id, name:d.name, author:d.author||'Anonymous', icon:(d.data&&d.data.icon)||'🌳', nodeCount: d.data&&d.data.nodes?countNodes(d.data.nodes):0, authorAvatar:(d.data&&d.data.authorAvatar)||null, authorAvatarCustom:(d.data&&d.data.authorAvatarCustom)||null, authorAvatarKey:(d.data&&d.data.authorAvatarKey)||null, shares:(d.data&&d.data.shares)||0, ownerId:d.owner_id||null, at:d.created_at }));
+    const { data } = await sbClient.from('public_trees').select('id,name,author,data,owner_id,created_at').order('created_at',{ascending:false}).limit(200);
+    if (data && data.length) dbItems = data.map(d => ({ id:d.id, name:d.name, author:d.author||'Anonymous', icon:(d.data&&d.data.icon)||'🌳', nodeCount: d.data&&d.data.nodes?countNodes(d.data.nodes):0, authorAvatar:(d.data&&d.data.authorAvatar)||null, authorAvatarCustom:(d.data&&d.data.authorAvatarCustom)||null, authorAvatarKey:(d.data&&d.data.authorAvatarKey)||null, shares:(d.data&&d.data.shares)||0, ownerId:d.owner_id||null, at:d.created_at }));
   } catch(e){}
-  if (!galleryItems.length) { try { galleryItems = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]').map(it => ({...it, author: it.author||'Anonymous', shares: it.shares||0})); } catch(e){} }
+  try { localItems = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]').map(it => ({...it, author: it.author||'Anonymous', shares: it.shares||0})); } catch(e){}
+  // Merge: DB rows take priority, then add any local rows not already present.
+  const seen = new Set(dbItems.map(i => i.id));
+  galleryItems = dbItems.concat(localItems.filter(i => !seen.has(i.id)));
+  // Sort newest first by timestamp when available
+  galleryItems.sort((a,b) => (new Date(b.at||0)) - (new Date(a.at||0)));
   galleryRender();
 }
 function closeGallery() {
@@ -4654,7 +4669,7 @@ function closeUserProfile() {
 }
 
 async function openUserProfile(author) {
-  if (!author || author === 'Anonymous') { showToast('This author has no public profile.', 'info'); return; }
+  if (!author || author === 'Anonymous') { showToast('This tree was published without a display name, so there is no profile to view.', 'info'); return; }
   document.getElementById('profile-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   const body = document.getElementById('profile-overlay-body');
@@ -6654,6 +6669,30 @@ function initCanvasPanZoom() {
 let currentAvatarKey = null;
 let currentAvatarCustom = null;
 
+function refreshMyAvatarEverywhere() {
+  // Clear cached avatar for my display name so it re-resolves to the new image
+  if (typeof _avatarCache === 'object' && currentDisplayName) delete _avatarCache[currentDisplayName];
+  // Update my own published gallery items' avatar data so cards show the new one
+  const newSrc = getAvatarSrc();
+  (galleryItems||[]).forEach(it => {
+    if (it.author === currentDisplayName) {
+      it.authorAvatar = newSrc; it.authorAvatarKey = currentAvatarKey; it.authorAvatarCustom = currentAvatarCustom;
+    }
+  });
+  // Re-render anything currently visible
+  if (typeof updateUserUI === 'function') updateUserUI();
+  if (!document.getElementById('gallery-overlay').classList.contains('hidden') && typeof galleryRender === 'function') galleryRender();
+  // Persist new avatar onto my published trees in the registry + DB (best effort)
+  (async () => {
+    try {
+      const reg = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]');
+      let changed = false;
+      reg.forEach(r => { if (r.author === currentDisplayName || r.ownerId === (currentUser?currentUser.id:null)) { r.authorAvatar = newSrc; r.authorAvatarKey = currentAvatarKey; r.authorAvatarCustom = currentAvatarCustom; changed = true; } });
+      if (changed) localStorage.setItem('rt_public_gallery', JSON.stringify(reg));
+    } catch(e){}
+  })();
+}
+
 function getAvatarSrc() {
   if (currentAvatarCustom) return currentAvatarCustom;
   if (currentAvatarKey && PRESET_AVATARS[currentAvatarKey]) return PRESET_AVATARS[currentAvatarKey].src;
@@ -6752,6 +6791,7 @@ async function selectPresetAvatar(key) {
   if (!currentUser) return;
   try { localStorage.setItem('rt_avatar_' + currentUser.id, key); } catch(e){}
   try { await sbClient.from('profiles').update({ avatar_key: key, avatar_custom: null }).eq('id', currentUser.id); } catch(e){}
+  refreshMyAvatarEverywhere();
 }
 
 async function uploadCustomAvatar(input) {
@@ -6775,6 +6815,7 @@ async function uploadCustomAvatar(input) {
       if (!currentUser) return;
       try { localStorage.removeItem('rt_avatar_' + currentUser.id); } catch(e){}
       await sbClient.from('profiles').update({ avatar_custom: dataUrl, avatar_key: null }).eq('id', currentUser.id);
+      refreshMyAvatarEverywhere();
       showToast('Avatar updated!', 'success');
     };
     img.src = e.target.result;
