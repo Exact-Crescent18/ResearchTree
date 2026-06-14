@@ -1296,6 +1296,33 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 }
 .gsearch-item { cursor: pointer; transition: var(--transition); }
 .gsearch-item:hover { border-color: var(--accent); background: var(--bg3); }
+
+/* Topbar tool buttons */
+.topbar-tools { display: flex; align-items: center; gap: 4px; }
+.tb-tool {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: transparent; border: 1px solid transparent; border-radius: 8px;
+  color: var(--text2); cursor: pointer; padding: 5px 9px; transition: var(--transition);
+  font-size: 9px; font-weight: 500; min-width: 50px;
+}
+.tb-tool svg { width: 18px; height: 18px; }
+.tb-tool span { letter-spacing: 0.02em; }
+.tb-tool:hover { background: var(--bg3); border-color: var(--border); color: var(--accent); }
+.tb-tool:disabled { opacity: 0.4; cursor: not-allowed; }
+#tb-summarize:hover { color: var(--accent2, var(--accent)); }
+@media (max-width: 1100px) { .tb-tool span { display: none; } .tb-tool { min-width: 0; padding: 7px; } }
+
+#gallery-overlay { display: flex; }
+#gallery-overlay.hidden { display: none !important; }
+.gallery-tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text2); cursor: pointer; padding: 10px 16px; font-size: 14px; font-weight: 500; transition: var(--transition); }
+.gallery-tab:hover { color: var(--text); }
+.gallery-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.gallery-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: var(--transition); display: flex; flex-direction: column; gap: 8px; }
+.gallery-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow); }
+.gallery-card-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.gallery-card-author { font-size: 12px; color: var(--text3); display: flex; align-items: center; justify-content: space-between; }
+.gallery-follow-btn { font-size: 11px; padding: 3px 10px; border-radius: 12px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; transition: var(--transition); }
+.gallery-follow-btn.following { background: var(--accent); color: #fff; }
 </style>
 </head>
 <body>
@@ -1417,11 +1444,17 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
         <span title="Nodes"><strong id="tb-stat-nodes" style="color:var(--text2);">0</strong> nodes</span>
         <span title="Root trees"><strong id="tb-stat-roots" style="color:var(--text2);">0</strong> roots</span>
       </div>
-      <div class="topbar-btns">
+      <div class="topbar-tools" id="topbar-tools">
         <div class="sync-dot" id="sync-dot" title="Saved"></div>
-        <button class="btn-sm btn-outline" onclick="openTreeSettings()" id="tree-settings-btn" style="display:none" title="Tree settings"><i class="ti ti-settings"></i></button>
-        <button class="btn-sm btn-outline" onclick="openShareModal()" id="share-btn" style="display:none" title="Share"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
-        <button class="btn-sm btn-outline" onclick="openExportModal()" id="export-btn" style="display:none" title="Export / Print"><i class="ti ti-download"></i></button>
+        <button class="tb-tool" onclick="summarizeTree()" id="tb-summarize" style="display:none" title="AI/auto summary of the whole tree → PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 9h1M9 13h6M9 17h6"/></svg><span>Summary</span></button>
+        <button class="tb-tool" onclick="openGlobalSearch()" id="tb-search" title="Search all trees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg><span>Search</span></button>
+        <button class="tb-tool" onclick="openGraphView()" id="tb-graph" style="display:none" title="Graph view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="6" r="3"/><circle cx="19" cy="18" r="3"/><circle cx="19" cy="6" r="3"/><path d="M7.5 7.5l9 9M16.5 7.5l-9 9"/></svg><span>Graph</span></button>
+        <button class="tb-tool" onclick="openStudyMode()" id="tb-study" style="display:none" title="Study mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5zM12 14v7M5 11v4l7 4 7-4v-4"/></svg><span>Study</span></button>
+        <button class="tb-tool" onclick="openPublicGallery()" id="tb-gallery" title="Public gallery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10"/></svg><span>Gallery</span></button>
+        <button class="tb-tool" onclick="openShareModal()" id="share-btn" style="display:none" title="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span>Share</span></button>
+        <button class="tb-tool" onclick="openExportModal()" id="export-btn" style="display:none" title="Export / Print"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span>Export</span></button>
+        <button class="tb-tool" onclick="openToolsModal()" id="tb-more" title="More tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg><span>More</span></button>
+        <button class="tb-tool" onclick="openTreeSettings()" id="tree-settings-btn" style="display:none" title="Tree settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></button>
       </div>
     </div>
     <div id="canvas-wrap">
@@ -1703,16 +1736,27 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
-<!-- Public Gallery Modal -->
-<div class="modal-overlay hidden" id="gallery-modal">
-  <div class="modal" style="max-width:540px;">
-    <div class="modal-header">
-      <h3>Public Gallery</h3>
-      <button class="icon-btn" onclick="closeModal('gallery-modal')"><i class="ti ti-x"></i></button>
+<!-- Public Gallery Overlay (prominent, searchable) -->
+<div id="gallery-overlay" class="hidden" style="position:fixed;inset:0;z-index:880;background:var(--bg);flex-direction:column;">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+    <button class="btn-sm btn-outline" onclick="closeGallery()"><i class="ti ti-arrow-left"></i> Back</button>
+    <div style="font-family:var(--title-font);font-weight:300;font-size:20px;">Public Gallery</div>
+    <div style="flex:1;"></div>
+    <button class="btn-sm btn-accent" onclick="publishTree()"><i class="ti ti-upload"></i> Publish my tree</button>
+  </div>
+  <div style="max-width:900px;width:100%;margin:0 auto;padding:20px;box-sizing:border-box;flex:1;overflow-y:auto;">
+    <!-- Search bar -->
+    <div style="display:flex;gap:10px;margin-bottom:16px;">
+      <input id="gallery-search" type="text" placeholder="Search trees by topic or title..." oninput="galleryRender()" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-size:15px;outline:none;">
+      <input id="gallery-user-search" type="text" placeholder="Find a user..." oninput="galleryRender()" style="width:200px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-size:15px;outline:none;">
     </div>
-    <div class="modal-body">
-      <div id="gallery-list" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;"></div>
+    <!-- Tabs -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);">
+      <button class="gallery-tab active" id="gtab-browse" onclick="galleryTab('browse')">Browse All</button>
+      <button class="gallery-tab" id="gtab-following" onclick="galleryTab('following')">Following</button>
+      <button class="gallery-tab" id="gtab-trending" onclick="galleryTab('trending')">Trending</button>
     </div>
+    <div id="gallery-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;"></div>
   </div>
 </div>
 
@@ -1727,6 +1771,22 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       <div style="font-size:13px;color:var(--text2);margin-bottom:10px;">Paste this code into any website to embed a read-only view of this tree:</div>
       <textarea id="embed-code" readonly style="width:100%;height:90px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:12px;font-family:monospace;outline:none;resize:none;box-sizing:border-box;"></textarea>
       <button class="btn-add-sm primary" onclick="copyEmbedCode()" style="width:100%;margin-top:10px;justify-content:center;display:flex;align-items:center;gap:6px;padding:10px;"><i class="ti ti-clipboard"></i> Copy Embed Code</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tree Summary Modal -->
+<div class="modal-overlay hidden" id="summary-modal">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <h3>Tree Summary</h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-sm btn-accent" onclick="downloadSummaryPDF()"><i class="ti ti-download"></i> Download PDF</button>
+        <button class="icon-btn" onclick="closeModal('summary-modal')"><i class="ti ti-x"></i></button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="summary-content" style="background:#fff;color:#222;border-radius:8px;padding:24px;max-height:60vh;overflow-y:auto;"></div>
     </div>
   </div>
 </div>
@@ -3161,6 +3221,7 @@ async function deleteTree(treeId) {
     const ic = document.getElementById('tree-title-icon'); if (ic) ic.style.display = 'none';
     const sw = document.getElementById('topbar-search-wrap'); if (sw) sw.style.display = 'none';
     const ts = document.getElementById('topbar-stats'); if (ts) ts.style.display = 'none';
+    ['tb-summarize','tb-graph','tb-study','share-btn','export-btn','tree-settings-btn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
     ['tree-settings-btn','export-btn','share-btn','add-root-btn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
   }
   showToast('Tree deleted.', 'info');
@@ -3181,6 +3242,7 @@ function selectTree(treeId) {
   ['tree-settings-btn','add-root-btn'].forEach(id => document.getElementById(id).style.display = '');
   document.getElementById('export-btn').style.display = canExport() ? '' : 'none';
   { const sb = document.getElementById('share-btn'); if (sb) sb.style.display = ''; }
+  ['tb-summarize','tb-graph','tb-study'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
   // Show search + stats
   const sw = document.getElementById('topbar-search-wrap'); if (sw) sw.style.display = '';
   const ts = document.getElementById('topbar-stats'); if (ts) ts.style.display = 'flex';
@@ -4261,25 +4323,76 @@ async function publishTree() {
   showToast('Published to the gallery!', 'success');
 }
 
+let galleryItems = [];
+let galleryActiveTab = 'browse';
+
+function getFollowing() { try { return JSON.parse(localStorage.getItem('rt_following')||'[]'); } catch(e){ return []; } }
+function setFollowing(list) { try { localStorage.setItem('rt_following', JSON.stringify(list)); } catch(e){} }
+function isFollowing(author) { return getFollowing().includes(author); }
+function toggleFollow(author, ev) {
+  if (ev) ev.stopPropagation();
+  let f = getFollowing();
+  if (f.includes(author)) { f = f.filter(a => a !== author); showToast('Unfollowed ' + author, 'info'); }
+  else { f.push(author); showToast('Following ' + author + '!', 'success'); }
+  setFollowing(f);
+  galleryRender();
+}
+
 async function openPublicGallery() {
-  openModal('gallery-modal');
-  const box = document.getElementById('gallery-list');
-  box.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px;">Loading...</div>';
-  let items = [];
-  // Try DB first
+  document.getElementById('gallery-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  galleryActiveTab = 'browse';
+  galleryItems = [];
+  const grid = document.getElementById('gallery-grid');
+  grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text3);font-size:14px;text-align:center;padding:40px;">Loading gallery…</div>';
+  // Load from DB, fall back to local
   try {
-    const { data } = await sbClient.from('public_trees').select('id,name,author,data').order('created_at',{ascending:false}).limit(50);
-    if (data && data.length) items = data.map(d => ({ id:d.id, name:d.name, author:d.author, icon:(d.data&&d.data.icon)||'🌳', nodeCount: d.data&&d.data.nodes?countNodes(d.data.nodes):0 }));
+    const { data } = await sbClient.from('public_trees').select('id,name,author,data,created_at').order('created_at',{ascending:false}).limit(100);
+    if (data && data.length) galleryItems = data.map(d => ({ id:d.id, name:d.name, author:d.author||'Anonymous', icon:(d.data&&d.data.icon)||'🌳', nodeCount: d.data&&d.data.nodes?countNodes(d.data.nodes):0, at:d.created_at }));
   } catch(e){}
-  // Fall back to local registry
-  if (!items.length) { try { items = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]'); } catch(e){} }
-  if (!items.length) { box.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px;">No public trees yet. Publish one from the Tools menu!</div>'; return; }
-  box.innerHTML = items.map(it =>
-    '<div class="gsearch-item" onclick="viewPublicTree(\'' + it.id + '\')">' +
-    '<div style="min-width:0;"><div style="font-size:14px;font-weight:600;">' + (it.icon||'🌳') + ' ' + esc(it.name) + '</div>' +
-    '<div style="font-size:11px;color:var(--text3);">by ' + esc(it.author||'Anonymous') + ' · ' + (it.nodeCount||0) + ' nodes</div></div>' +
-    '<i class="ti ti-eye" style="color:var(--accent);flex-shrink:0;"></i></div>'
-  ).join('');
+  if (!galleryItems.length) { try { galleryItems = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]').map(it => ({...it, author: it.author||'Anonymous'})); } catch(e){} }
+  galleryRender();
+}
+function closeGallery() {
+  document.getElementById('gallery-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+function galleryTab(tab) {
+  galleryActiveTab = tab;
+  ['browse','following','trending'].forEach(t => {
+    const el = document.getElementById('gtab-' + t);
+    if (el) el.classList.toggle('active', t === tab);
+  });
+  galleryRender();
+}
+function galleryRender() {
+  const grid = document.getElementById('gallery-grid');
+  const q = (document.getElementById('gallery-search').value || '').trim().toLowerCase();
+  const uq = (document.getElementById('gallery-user-search').value || '').trim().toLowerCase();
+  let items = galleryItems.slice();
+  if (galleryActiveTab === 'following') {
+    const f = getFollowing();
+    items = items.filter(it => f.includes(it.author));
+  } else if (galleryActiveTab === 'trending') {
+    items = items.slice(0, 12); // newest as a proxy for trending
+  }
+  if (q) items = items.filter(it => (it.name||'').toLowerCase().includes(q));
+  if (uq) items = items.filter(it => (it.author||'').toLowerCase().includes(uq));
+  if (!items.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text3);font-size:14px;text-align:center;padding:40px;">' +
+      (galleryActiveTab === 'following' ? 'You are not following anyone with public trees yet. Follow users from their cards.' : 'No trees found. Be the first to publish one!') + '</div>';
+    return;
+  }
+  grid.innerHTML = items.map(it => {
+    const following = isFollowing(it.author);
+    return '<div class="gallery-card" onclick="viewPublicTree(\'' + it.id + '\')">' +
+      '<div class="gallery-card-title">' + (it.icon||'🌳') + ' ' + esc(it.name) + '</div>' +
+      '<div style="font-size:12px;color:var(--text3);">' + (it.nodeCount||0) + ' topics</div>' +
+      '<div class="gallery-card-author">' +
+        '<span>by ' + esc(it.author||'Anonymous') + '</span>' +
+        (it.author && it.author !== (currentDisplayName||'') ? '<button class="gallery-follow-btn ' + (following?'following':'') + '" onclick="toggleFollow(\'' + esc(it.author).replace(/'/g,"\\'") + '\',event)">' + (following?'Following':'Follow') + '</button>' : '') +
+      '</div></div>';
+  }).join('');
 }
 
 async function viewPublicTree(id) {
@@ -4287,8 +4400,7 @@ async function viewPublicTree(id) {
   try { const s = localStorage.getItem('rt_share_'+id); if (s) snap = JSON.parse(s); } catch(e){}
   if (!snap) { try { const {data} = await sbClient.from('shares').select('data').eq('id',id).single(); if (data) snap = data.data; } catch(e){} }
   if (!snap) { try { const {data} = await sbClient.from('public_trees').select('data').eq('id',id).single(); if (data) snap = data.data; } catch(e){} }
-  closeModal('gallery-modal');
-  if (snap) openSharedViewer(snap);
+  if (snap) { closeGallery(); openSharedViewer(snap); }
   else showToast('Could not load that tree.', 'error');
 }
 
@@ -4514,6 +4626,74 @@ function openSharedViewer(snap) {
   h += '</div>';
   overlay.innerHTML = h;
   document.body.appendChild(overlay);
+}
+
+// ─── Summarize entire tree (→ PDF) ───
+function buildTreeSummaryHTML(tree) {
+  // Build a clean, readable summary document from the whole tree.
+  let stats = { nodes: 0, withNotes: 0, maxDepth: 0 };
+  (function walk(nodes, depth){
+    (nodes||[]).forEach(n => {
+      stats.nodes++;
+      stats.maxDepth = Math.max(stats.maxDepth, depth);
+      const tmp = document.createElement('div'); tmp.innerHTML = n.extNotes || '';
+      if ((tmp.innerText||'').trim()) stats.withNotes++;
+      walk(n.children||[], depth+1);
+    });
+  })(tree.nodes||[], 1);
+
+  let body = '';
+  function render(nodes, depth) {
+    (nodes||[]).forEach(n => {
+      const tag = depth === 0 ? 'h2' : (depth === 1 ? 'h3' : 'h4');
+      body += '<' + tag + ' style="margin:' + (depth===0?'22px':'14px') + ' 0 6px;">' + (depth===0 ? (tree.icon||'') + ' ' : '') + escHtml(n.title) + '</' + tag + '>';
+      if (n.desc) body += '<p style="color:#555;margin:2px 0 6px;">' + escHtml(n.desc) + '</p>';
+      const tmp = document.createElement('div'); tmp.innerHTML = n.extNotes || '';
+      const notes = (tmp.innerText||'').trim();
+      if (notes) body += '<div style="margin:4px 0 8px;padding-left:12px;border-left:2px solid #e0e0e0;color:#333;white-space:pre-wrap;">' + escHtml(notes) + '</div>';
+      render(n.children||[], depth+1);
+    });
+  }
+  render(tree.nodes||[], 0);
+
+  return '<div style="font-family:Georgia,serif;max-width:720px;margin:0 auto;line-height:1.7;color:#222;">' +
+    '<h1 style="font-size:30px;margin-bottom:4px;">' + (tree.icon||'🌳') + ' ' + escHtml(tree.name) + '</h1>' +
+    '<div style="color:#888;font-size:13px;margin-bottom:8px;">Summary · ' + stats.nodes + ' topics · ' + stats.maxDepth + ' levels deep · ' + stats.withNotes + ' with notes · generated ' + new Date().toLocaleDateString() + '</div>' +
+    '<hr style="border:none;border-top:1px solid #ddd;margin:16px 0;">' +
+    '<div id="ai-summary-slot"></div>' +
+    body + '</div>';
+}
+function escHtml(s){ const d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+
+async function summarizeTree() {
+  const tree = getActiveTree();
+  if (!tree) { showToast('Select a tree first.', 'error'); return; }
+  const content = document.getElementById('summary-content');
+  content.innerHTML = buildTreeSummaryHTML(tree);
+  window._summaryTree = tree;
+  openModal('summary-modal');
+
+  // If AI is enabled, prepend an executive summary
+  if (FEATURES.ai) {
+    const slot = content.querySelector('#ai-summary-slot');
+    if (slot) slot.innerHTML = '<div style="color:#888;font-style:italic;">Generating AI overview…</div>';
+    const outline = [];
+    (function walk(nodes, d){ (nodes||[]).forEach(n => { outline.push('  '.repeat(d) + '- ' + n.title); walk(n.children||[], d+1); }); })(tree.nodes||[], 0);
+    const ai = await aiCall('Write a 3-4 sentence executive summary of this knowledge tree:\n\n' + tree.name + '\n' + outline.join('\n'), 400);
+    if (slot) slot.innerHTML = ai ? '<div style="background:#f5f7ff;border-left:3px solid #6c8eff;padding:10px 14px;margin-bottom:14px;border-radius:0 6px 6px 0;"><strong>Overview:</strong> ' + escHtml(ai) + '</div>' : '';
+  }
+}
+
+function downloadSummaryPDF() {
+  const tree = window._summaryTree || getActiveTree();
+  if (!tree) return;
+  const content = document.getElementById('summary-content');
+  const win = window.open('', '_blank');
+  win.document.write('<html><head><title>' + escHtml(tree.name) + ' — Summary</title>' +
+    '<style>@media print{body{margin:0;}}body{padding:30px;}h1,h2,h3,h4{font-family:Georgia,serif;}</style></head><body>' +
+    content.innerHTML + '</body></html>');
+  win.document.close();
+  setTimeout(() => win.print(), 400);
 }
 
 function exportTree(format) {
@@ -6372,13 +6552,10 @@ function openToolsModal() {
   const grid = document.getElementById('tools-grid');
   if (!grid) return;
   const tools = [];
-  if (FEATURES.globalSearch) tools.push(['Search All Trees','Find any node across every tree','M21 21l-4.35-4.35M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'openGlobalSearch()']);
-  if (FEATURES.graphView)    tools.push(['Graph View','See this tree as a connected graph','M5 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM7.5 7.5l9 9M16.5 7.5l-9 9', 'openGraphView()']);
-  if (FEATURES.studyMode)    tools.push(['Study Mode','Flip through nodes as flashcards','M12 14l9-5-9-5-9 5 9 5zM12 14v7M5 11v4l7 4 7-4v-4', 'openStudyMode()']);
+  // These are surfaced on the topbar; "More" holds the rest.
   if (FEATURES.templates)    tools.push(['Templates','Start from or save a template','M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4', 'openTemplatesModal()']);
   if (FEATURES.versionHistory) tools.push(['Version History','Snapshots you can restore','M3 3v5h5M3.05 13a9 9 0 1 0 .5-4.5L3 8M12 7v5l4 2', 'openHistoryModal()']);
   if (FEATURES.importExport) tools.push(['Import Tree','Markdown, OPML, or JSON','M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3', 'importTreeFile()']);
-  if (FEATURES.publicGallery) tools.push(['Public Gallery','Browse published trees','M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10', 'openPublicGallery()']);
   if (FEATURES.publicGallery) tools.push(['Publish Tree','Share to the public gallery','M12 2v13M5 9l7-7 7 7M5 21h14', 'publishTree()']);
   if (FEATURES.importExport) tools.push(['Embed','Get an iframe embed code','M16 18l6-6-6-6M8 6l-6 6 6 6', 'embedTree()']);
   if (FEATURES.realtimeCollab) tools.push(['Live Collaborate','Real-time shared editing','M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75', 'startCollaboration()']);
@@ -6702,7 +6879,9 @@ function importTreeFile() {
 document.addEventListener('keydown', (e) => {
   const studyOpen = !document.getElementById('study-overlay').classList.contains('hidden');
   const graphOpen = !document.getElementById('graph-overlay').classList.contains('hidden');
+  const galleryOpen = !document.getElementById('gallery-overlay').classList.contains('hidden');
   if (e.key === 'Escape') {
+    if (galleryOpen) { closeGallery(); return; }
     if (studyOpen) { closeStudyMode(); return; }
     if (graphOpen) { closeGraphView(); return; }
   }
