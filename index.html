@@ -1316,6 +1316,8 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 #gallery-overlay.hidden { display: none !important; }
 #profile-overlay { display: flex; }
 #profile-overlay.hidden { display: none !important; }
+#collab-overlay { display: flex; }
+#collab-overlay.hidden { display: none !important; }
 .gallery-tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text2); cursor: pointer; padding: 10px 16px; font-size: 14px; font-weight: 500; transition: var(--transition); }
 .gallery-tab:hover { color: var(--text); }
 .gallery-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -1862,6 +1864,17 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
       <div id="publish-list" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;"></div>
     </div>
   </div>
+</div>
+
+<!-- Live Collaboration Overlay (dedicated page) -->
+<div id="collab-overlay" class="hidden" style="position:fixed;inset:0;z-index:890;background:var(--bg);flex-direction:column;">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+    <button class="btn-sm btn-outline" onclick="closeCollabPage()"><i class="ti ti-arrow-left"></i> Back</button>
+    <div style="font-family:var(--title-font);font-weight:300;font-size:20px;">Live Collaboration</div>
+    <div style="flex:1;"></div>
+    <div style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure · access-code protected</div>
+  </div>
+  <div id="collab-body" style="flex:1;overflow-y:auto;padding:28px 20px;box-sizing:border-box;"></div>
 </div>
 
 <!-- Account Modal -->
@@ -4396,34 +4409,225 @@ function openExportModal() {
 }
 
 // ─── Real-time collaboration (Supabase realtime broadcast) ───
+// ═══════════════════════════════════════════════════════════
+// LIVE COLLABORATION — dedicated page with an access-code security gate.
+// Security model:
+//  - The owner starts a session, which creates a room with a random 6-char
+//    access code stored in the `collab_rooms` table (RLS: owner writes).
+//  - A collaborator must enter the room ID + matching access code; the app
+//    verifies the code against the table BEFORE joining the realtime channel.
+//  - Presence tracks who is connected. The host is the source of truth for
+//    the tree; collaborators send edits that the host merges + rebroadcasts.
+// ═══════════════════════════════════════════════════════════
 let collabChannel = null;
-function startCollaboration() {
-  const tree = getActiveTree();
-  if (!tree) { showToast('Select a tree first.', 'error'); return; }
-  if (collabChannel) { showToast('Already collaborating on a tree.', 'info'); return; }
-  if (!sbClient || !sbClient.channel) { showToast('Real-time needs a live Supabase connection.', 'error'); return; }
+let collabRoom = null;        // { id, code, treeId, isHost }
+let collabPresence = {};      // presence state keyed by user key
+
+function genRoomCode() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no ambiguous chars
+  let s = ''; for (let i=0;i<6;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+function openCollabPage() {
+  document.getElementById('collab-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  renderCollabHome();
+}
+function closeCollabPage() {
+  if (collabChannel) {
+    const ok = confirm ? true : true;
+  }
+  leaveCollab();
+  document.getElementById('collab-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function renderCollabHome() {
+  const body = document.getElementById('collab-body');
+  if (collabRoom) { renderCollabRoom(); return; }
+  const myTrees = trees || [];
+  body.innerHTML =
+    '<div style="max-width:640px;margin:0 auto;">' +
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:18px;">' +
+        '<div style="font-size:17px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg> Host a session</div>' +
+        '<div style="font-size:13px;color:var(--text3);margin-bottom:14px;">Start a secure room for one of your trees. You\'ll get an access code to share with people you trust.</div>' +
+        (myTrees.length ?
+          '<select id="collab-tree-select" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;margin-bottom:12px;">' +
+            myTrees.map(t => '<option value="' + t.id + '">' + esc((t.icon||'🌳') + ' ' + t.name) + '</option>').join('') +
+          '</select>' +
+          '<button class="btn-sm btn-accent" onclick="hostCollab()" style="width:100%;justify-content:center;padding:11px;"><i class="ti ti-plus"></i> Start Secure Session</button>'
+          : '<div style="color:var(--text3);font-size:13px;">Create a tree first to host a session.</div>') +
+      '</div>' +
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;">' +
+        '<div style="font-size:17px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg> Join a session</div>' +
+        '<div style="font-size:13px;color:var(--text3);margin-bottom:14px;">Enter the room ID and access code you were given by the host.</div>' +
+        '<input id="collab-join-room" type="text" placeholder="Room ID" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;">' +
+        '<input id="collab-join-code" type="text" placeholder="Access code (6 characters)" maxlength="6" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;margin-bottom:12px;box-sizing:border-box;text-transform:uppercase;">' +
+        '<button class="btn-sm btn-outline" onclick="joinCollab()" style="width:100%;justify-content:center;padding:11px;"><i class="ti ti-login"></i> Join Session</button>' +
+      '</div>' +
+    '</div>';
+}
+
+async function hostCollab() {
+  if (!currentUser) { showToast('Please sign in to host a session.', 'error'); return; }
+  const sel = document.getElementById('collab-tree-select');
+  const treeId = sel ? sel.value : null;
+  const tree = trees.find(t => t.id === treeId);
+  if (!tree) { showToast('Select a tree.', 'error'); return; }
+  const roomId = 'room_' + Math.random().toString(36).slice(2,8);
+  const code = genRoomCode();
+  // Store the room + access code (RLS should restrict writes to the owner)
   try {
-    collabChannel = sbClient.channel('tree-' + tree.id, { config: { broadcast: { self: false } } });
+    await sbClient.from('collab_rooms').insert({ id: roomId, code: code, tree_id: tree.id, owner_id: currentUser.id, tree_name: tree.name });
+  } catch(e) {
+    // Table may not exist yet — keep a local record so hosting still works on this device
+    try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); r[roomId] = { code, tree_id: tree.id, owner_id: currentUser.id }; localStorage.setItem('rt_collab_rooms', JSON.stringify(r)); } catch(e2){}
+  }
+  collabRoom = { id: roomId, code: code, treeId: tree.id, isHost: true };
+  // Make this the active tree
+  if (activeTreeId !== tree.id) selectTree(tree.id);
+  connectCollabChannel();
+  renderCollabRoom();
+}
+
+async function joinCollab() {
+  if (!currentUser) { showToast('Please sign in to join a session.', 'error'); return; }
+  const roomId = (document.getElementById('collab-join-room').value || '').trim();
+  const code = (document.getElementById('collab-join-code').value || '').trim().toUpperCase();
+  if (!roomId || !code) { showToast('Enter both the room ID and access code.', 'error'); return; }
+  // SECURITY GATE: verify the code against the stored room before joining.
+  let room = null;
+  try {
+    const { data } = await sbClient.from('collab_rooms').select('*').eq('id', roomId).single();
+    if (data) room = data;
+  } catch(e){}
+  if (!room) {
+    // Local fallback (same-device testing)
+    try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); if (r[roomId]) room = { ...r[roomId], id: roomId }; } catch(e){}
+  }
+  if (!room) { showToast('Room not found. Check the room ID.', 'error'); return; }
+  if ((room.code||'').toUpperCase() !== code) { showToast('Incorrect access code. Access denied.', 'error'); return; }
+  // Access granted
+  collabRoom = { id: roomId, code: code, treeId: room.tree_id, isHost: false };
+  connectCollabChannel();
+  showToast('Access granted — joined the session.', 'success');
+  renderCollabRoom();
+}
+
+function connectCollabChannel() {
+  if (!collabRoom) return;
+  if (collabChannel) { try { sbClient.removeChannel(collabChannel); } catch(e){} collabChannel = null; }
+  const myName = currentDisplayName || (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'Guest');
+  const myKey = currentUser ? currentUser.id : ('guest_' + Math.random().toString(36).slice(2,7));
+  try {
+    collabChannel = sbClient.channel('collab-' + collabRoom.id, { config: { broadcast: { self: false }, presence: { key: myKey } } });
     collabChannel
-      .on('broadcast', { event: 'update' }, (msg) => {
-        if (msg.payload && msg.payload.treeId === tree.id && msg.payload.nodes) {
+      .on('broadcast', { event: 'tree-update' }, (msg) => {
+        const tree = trees.find(t => t.id === collabRoom.treeId);
+        if (tree && msg.payload && msg.payload.nodes) {
           tree.nodes = msg.payload.nodes;
-          renderCanvas();
-          showToast('Tree updated by a collaborator.', 'info');
+          if (activeTreeId === tree.id) renderCanvas();
         }
       })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') showToast('Live collaboration on! Share the link so others can join.', 'success');
+      .on('broadcast', { event: 'request-sync' }, () => {
+        // Host answers sync requests with the canonical tree
+        if (collabRoom.isHost) {
+          const tree = trees.find(t => t.id === collabRoom.treeId);
+          if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ nodes: tree.nodes } });
+        }
+      })
+      .on('presence', { event: 'sync' }, () => {
+        collabPresence = collabChannel.presenceState();
+        renderCollabPresence();
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await collabChannel.track({ name: myName, host: collabRoom.isHost, at: Date.now() });
+          // New joiners ask the host for the current tree
+          if (!collabRoom.isHost) collabChannel.send({ type:'broadcast', event:'request-sync', payload:{} });
+        }
       });
-    // Broadcast our changes whenever we save
+    // Broadcast edits whenever we save the shared tree
     window._collabBroadcast = () => {
-      if (collabChannel) collabChannel.send({ type: 'broadcast', event: 'update', payload: { treeId: tree.id, nodes: tree.nodes } });
+      if (collabChannel && collabRoom) {
+        const tree = trees.find(t => t.id === collabRoom.treeId);
+        if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ nodes: tree.nodes } });
+      }
     };
-  } catch (e) { showToast('Could not start collaboration.', 'error'); }
+  } catch(e) { showToast('Could not connect to the session.', 'error'); }
 }
-function stopCollaboration() {
-  if (collabChannel) { try { sbClient.removeChannel(collabChannel); } catch(e){} collabChannel = null; window._collabBroadcast = null; }
+
+function renderCollabRoom() {
+  const body = document.getElementById('collab-body');
+  const link = window.location.origin + window.location.pathname + '?collab=' + collabRoom.id;
+  body.innerHTML =
+    '<div style="max-width:640px;margin:0 auto;">' +
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:18px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><span style="width:10px;height:10px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,0.2);"></span><span style="font-size:16px;font-weight:600;">Session live' + (collabRoom.isHost ? ' · you are the host' : '') + '</span></div>' +
+        (collabRoom.isHost ?
+          '<div style="font-size:13px;color:var(--text3);margin-bottom:6px;">Share these with people you trust. They need <b>both</b> to join.</div>' +
+          '<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">' +
+            '<div style="flex:1;min-width:160px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;"><div style="font-size:11px;color:var(--text3);">ROOM ID</div><div style="font-size:15px;font-weight:600;font-family:monospace;">' + esc(collabRoom.id) + '</div></div>' +
+            '<div style="flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;"><div style="font-size:11px;color:var(--text3);">ACCESS CODE</div><div style="font-size:15px;font-weight:700;font-family:monospace;letter-spacing:2px;color:var(--accent);">' + esc(collabRoom.code) + '</div></div>' +
+          '</div>' +
+          '<button class="btn-sm btn-outline" onclick="copyCollabInvite()" style="width:100%;justify-content:center;"><i class="ti ti-clipboard"></i> Copy invite (link + code)</button>'
+          : '<div style="font-size:13px;color:var(--text3);">You\'re collaborating in room <b>' + esc(collabRoom.id) + '</b>. Edits sync live with everyone in the room.</div>') +
+      '</div>' +
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:18px;">' +
+        '<div style="font-size:14px;font-weight:600;margin-bottom:12px;">In this room</div>' +
+        '<div id="collab-presence-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button class="btn-sm btn-accent" onclick="closeCollabPage();if(collabRoom)selectTree(collabRoom.treeId);" style="flex:1;justify-content:center;padding:11px;"><i class="ti ti-edit"></i> Open the tree & edit</button>' +
+        '<button class="btn-sm btn-outline" onclick="leaveCollab();renderCollabHome();" style="flex:1;justify-content:center;padding:11px;color:var(--danger,#e5484d);border-color:var(--danger,#e5484d);"><i class="ti ti-logout"></i> ' + (collabRoom.isHost ? 'End session' : 'Leave session') + '</button>' +
+      '</div>' +
+    '</div>';
+  renderCollabPresence();
 }
+
+function renderCollabPresence() {
+  const el = document.getElementById('collab-presence-list');
+  if (!el) return;
+  const states = collabPresence || {};
+  const people = [];
+  Object.keys(states).forEach(k => (states[k]||[]).forEach(p => people.push(p)));
+  if (!people.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;">Waiting for people to join…</div>'; return; }
+  el.innerHTML = people.map(p =>
+    '<div style="display:flex;align-items:center;gap:10px;">' +
+      '<span style="width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;">' + esc(((p.name||'?')[0]||'?').toUpperCase()) + '</span>' +
+      '<span style="font-size:14px;">' + esc(p.name||'Guest') + (p.host ? ' <span style="font-size:11px;color:var(--accent);">(host)</span>' : '') + '</span>' +
+      '<span style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:#16a34a;"></span>' +
+    '</div>'
+  ).join('');
+}
+
+function copyCollabInvite() {
+  if (!collabRoom) return;
+  const link = window.location.origin + window.location.pathname + '?collab=' + collabRoom.id;
+  const text = 'Join my ResearchTree collaboration:\nRoom ID: ' + collabRoom.id + '\nAccess code: ' + collabRoom.code + '\nLink: ' + link;
+  navigator.clipboard.writeText(text).then(
+    () => showToast('Invite copied!', 'success'),
+    () => showToast('Could not copy.', 'error')
+  );
+}
+
+function leaveCollab() {
+  if (collabChannel) {
+    try { collabChannel.untrack && collabChannel.untrack(); } catch(e){}
+    try { sbClient.removeChannel(collabChannel); } catch(e){}
+  }
+  // Host ending the session removes the room record
+  if (collabRoom && collabRoom.isHost) {
+    try { sbClient.from('collab_rooms').delete().eq('id', collabRoom.id); } catch(e){}
+    try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); delete r[collabRoom.id]; localStorage.setItem('rt_collab_rooms', JSON.stringify(r)); } catch(e){}
+  }
+  collabChannel = null; collabRoom = null; collabPresence = {}; window._collabBroadcast = null;
+}
+
+// Backwards-compatible entry point (Tools menu calls this)
+function startCollaboration() { openCollabPage(); }
+function stopCollaboration() { leaveCollab(); }
 
 // ─── Public gallery, publish, embed ───
 function publishTree() {
@@ -7575,7 +7779,9 @@ document.addEventListener('keydown', (e) => {
   const graphOpen = !document.getElementById('graph-overlay').classList.contains('hidden');
   const galleryOpen = !document.getElementById('gallery-overlay').classList.contains('hidden');
   const profileOpen = !document.getElementById('profile-overlay').classList.contains('hidden');
+  const collabOpen = !document.getElementById('collab-overlay').classList.contains('hidden');
   if (e.key === 'Escape') {
+    if (collabOpen) { closeCollabPage(); return; }
     if (profileOpen) { closeUserProfile(); return; }
     if (galleryOpen) { closeGallery(); return; }
     if (studyOpen) { closeStudyMode(); return; }
@@ -7605,6 +7811,10 @@ try { if (typeof checkForSharedTree === 'function') checkForSharedTree(); } catc
 try {
   const gu = new URLSearchParams(window.location.search).get('gallery_user');
   if (gu) setTimeout(() => { openPublicGallery(); setTimeout(() => openUserProfile(decodeURIComponent(gu)), 600); }, 800);
+} catch(e){}
+try {
+  const cr = new URLSearchParams(window.location.search).get('collab');
+  if (cr) setTimeout(() => { openCollabPage(); setTimeout(() => { const ri = document.getElementById('collab-join-room'); if (ri) ri.value = cr; const cc = document.getElementById('collab-join-code'); if (cc) cc.focus(); }, 300); }, 900);
 } catch(e){}
 loadPrefs();
 init();
