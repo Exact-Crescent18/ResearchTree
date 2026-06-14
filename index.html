@@ -4443,12 +4443,13 @@ function closeCollabPage() {
   document.body.style.overflow = '';
 }
 
-function renderCollabHome() {
+async function renderCollabHome() {
   const body = document.getElementById('collab-body');
   if (collabRoom) { renderCollabRoom(); return; }
   const myTrees = trees || [];
   body.innerHTML =
     '<div style="max-width:640px;margin:0 auto;">' +
+      '<div id="my-collabs-section" style="margin-bottom:18px;"></div>' +
       '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:18px;">' +
         '<div style="font-size:17px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg> Host a session</div>' +
         '<div style="font-size:13px;color:var(--text3);margin-bottom:14px;">Start a secure room for one of your trees. You\'ll get an access code to share with people you trust.</div>' +
@@ -4467,6 +4468,67 @@ function renderCollabHome() {
         '<button class="btn-sm btn-outline" onclick="joinCollab()" style="width:100%;justify-content:center;padding:11px;"><i class="ti ti-login"></i> Join Session</button>' +
       '</div>' +
     '</div>';
+  renderMyCollaborations();
+}
+
+async function renderMyCollaborations() {
+  const sec = document.getElementById('my-collabs-section');
+  if (!sec) return;
+  const rooms = [];   // { id, code, tree_name, role }
+  const seen = new Set();
+  // Rooms I host (from DB, then local)
+  try {
+    if (currentUser) {
+      const { data } = await sbClient.from('collab_rooms').select('*').eq('owner_id', currentUser.id);
+      (data||[]).forEach(r => { if (!seen.has(r.id)) { seen.add(r.id); rooms.push({ id: r.id, code: r.code, tree_name: r.tree_name||'Tree', role: 'Host', treeId: r.tree_id }); } });
+    }
+  } catch(e){}
+  try {
+    const local = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}');
+    Object.keys(local).forEach(id => { if (!seen.has(id)) { seen.add(id); rooms.push({ id, code: local[id].code, tree_name: local[id].tree_name||'Tree', role: 'Host', treeId: local[id].tree_id }); } });
+  } catch(e){}
+  // Rooms I've joined
+  try {
+    const joined = JSON.parse(localStorage.getItem('rt_joined_collabs')||'{}');
+    Object.keys(joined).forEach(id => { if (!seen.has(id)) { seen.add(id); rooms.push({ id, code: joined[id].code, tree_name: joined[id].tree_name||'Shared tree', role: 'Member', treeId: joined[id].tree_id }); } });
+  } catch(e){}
+
+  if (!rooms.length) { sec.innerHTML = ''; return; }
+  sec.innerHTML =
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;">' +
+      '<div style="font-size:17px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> My Collaborations</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;">' +
+        rooms.map(r =>
+          '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;">' +
+            '<div style="min-width:0;flex:1;">' +
+              '<div style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.tree_name) + '</div>' +
+              '<div style="font-size:11px;color:var(--text3);font-family:monospace;">' + esc(r.id) + ' · ' + r.role + '</div>' +
+            '</div>' +
+            '<button class="btn-sm btn-accent" onclick="reenterCollab(\'' + esc(r.id).replace(/\x27/g,"\\x27") + '\',\'' + esc(r.code||'').replace(/\x27/g,"\\x27") + '\',' + (r.role==='Host') + ')" style="padding:6px 14px;flex-shrink:0;">' + (r.role==='Host'?'Resume':'Rejoin') + '</button>' +
+          '</div>'
+        ).join('') +
+      '</div>' +
+    '</div>';
+}
+
+async function reenterCollab(roomId, code, asHost) {
+  if (asHost) {
+    // Resume hosting: verify the room still exists, then reconnect as host
+    let room = null;
+    try { const { data } = await sbClient.from('collab_rooms').select('*').eq('id', roomId).single(); if (data) room = data; } catch(e){}
+    if (!room) { try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); if (r[roomId]) room = { ...r[roomId], id: roomId }; } catch(e){} }
+    if (!room) { showToast('That room no longer exists.', 'error'); renderCollabHome(); return; }
+    collabRoom = { id: roomId, code: room.code || code, treeId: room.tree_id, isHost: true };
+    collabPending = {};
+    if (room.tree_id && activeTreeId !== room.tree_id) selectTree(room.tree_id);
+    connectCollabChannel();
+    renderCollabRoom();
+  } else {
+    // Rejoin: prefill and run the normal (approval-gated) join
+    const ri = document.getElementById('collab-join-room'); if (ri) ri.value = roomId;
+    const cc = document.getElementById('collab-join-code'); if (cc) cc.value = code;
+    joinCollab();
+  }
 }
 
 let collabPending = {};  // host-side: pending join requests keyed by requester key
@@ -4482,15 +4544,17 @@ async function hostCollab() {
   const code = genRoomCode();
   // Store the room + access code so OTHER devices can find it. We require this
   // to succeed (otherwise joiners on other devices get "room not found").
-  let dbOk = false;
+  let dbOk = false, dbErr = null;
   try {
     const { error } = await sbClient.from('collab_rooms').insert({ id: roomId, code: code, tree_id: tree.id, owner_id: currentUser.id, tree_name: tree.name });
-    if (!error) dbOk = true;
-  } catch(e) {}
+    if (!error) dbOk = true; else dbErr = error;
+  } catch(e) { dbErr = e; }
   // Always keep a local copy too (same-device fallback)
-  try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); r[roomId] = { code, tree_id: tree.id, owner_id: currentUser.id }; localStorage.setItem('rt_collab_rooms', JSON.stringify(r)); } catch(e2){}
+  try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); r[roomId] = { code, tree_id: tree.id, owner_id: currentUser.id, tree_name: tree.name, host: true }; localStorage.setItem('rt_collab_rooms', JSON.stringify(r)); } catch(e2){}
   if (!dbOk) {
-    showToast('Heads up: the collab_rooms table isn\'t set up, so people on OTHER devices won\'t be able to join yet.', 'info');
+    const msg = dbErr && dbErr.message ? dbErr.message : 'unknown error';
+    showToast('Room could NOT be saved to the database (' + msg + '). Others can\'t join until this is fixed.', 'error');
+    console.error('collab_rooms insert failed:', dbErr);
   }
   collabRoom = { id: roomId, code: code, treeId: tree.id, isHost: true };
   collabPending = {};
@@ -4515,6 +4579,12 @@ async function joinCollab() {
   }
   if (!room) { showToast('Room not found. Double-check the Room ID — and the host needs the collab_rooms table set up for cross-device joining.', 'error'); return; }
   if ((room.code||'').toUpperCase() !== code) { showToast('Incorrect access code. Access denied.', 'error'); return; }
+  // Remember this room so it appears in "My Collaborations"
+  try {
+    const j = JSON.parse(localStorage.getItem('rt_joined_collabs')||'{}');
+    j[roomId] = { code, tree_id: room.tree_id, tree_name: room.tree_name || 'Shared tree', at: Date.now() };
+    localStorage.setItem('rt_joined_collabs', JSON.stringify(j));
+  } catch(e){}
   // Code OK — now REQUEST approval from the host (SECURITY GATE 2).
   collabRoom = { id: roomId, code: code, treeId: room.tree_id, isHost: false };
   collabApproved = false;
