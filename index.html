@@ -1300,6 +1300,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 /* Topbar tool buttons */
 .topbar-tools { display: flex; align-items: center; gap: 4px; }
 .tb-tool {
+  position: relative;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   background: transparent; border: 1px solid transparent; border-radius: 8px;
   color: var(--text2); cursor: pointer; padding: 5px 9px; transition: var(--transition);
@@ -1482,7 +1483,8 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
         <div class="sync-dot" id="sync-dot" title="Saved"></div>
         <button class="tb-tool" onclick="summarizeTree()" id="tb-summarize" style="display:none" title="AI/auto summary of the whole tree → PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 9h1M9 13h6M9 17h6"/></svg><span>Summary</span></button>
         <button class="tb-tool" onclick="openGlobalSearch()" id="tb-search" title="Search all trees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg><span>Search</span></button>
-        <button class="tb-tool" onclick="openGraphView()" id="tb-graph" style="display:none" title="Graph view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="6" r="3"/><circle cx="19" cy="18" r="3"/><circle cx="19" cy="6" r="3"/><path d="M7.5 7.5l9 9M16.5 7.5l-9 9"/></svg><span>Graph</span></button>
+        <button class="tb-tool" onclick="startCollaboration()" id="tb-collab" title="Live collaboration"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Collab</span><span id="tb-collab-badge" style="display:none;position:absolute;top:2px;right:6px;width:8px;height:8px;border-radius:50%;background:#16a34a;"></span></button>
+        <div id="collab-statusbar" style="display:none;align-items:center;gap:8px;padding:0 8px;margin-left:2px;border-left:1px solid var(--border);"></div>
         <button class="tb-tool" onclick="openStudyMode()" id="tb-study" style="display:none" title="Study mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5zM12 14v7M5 11v4l7 4 7-4v-4"/></svg><span>Study</span></button>
         <button class="tb-tool" onclick="openPublicGallery()" id="tb-gallery" title="Public gallery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10"/></svg><span>Gallery</span></button>
         <button class="tb-tool" onclick="openShareModal()" id="share-btn" style="display:none" title="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span>Share</span></button>
@@ -3357,7 +3359,7 @@ async function deleteTree(treeId) {
     const ic = document.getElementById('tree-title-icon'); if (ic) ic.style.display = 'none';
     const sw = document.getElementById('topbar-search-wrap'); if (sw) sw.style.display = 'none';
     const ts = document.getElementById('topbar-stats'); if (ts) ts.style.display = 'none';
-    ['tb-summarize','tb-graph','tb-study','share-btn','export-btn','tree-settings-btn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    ['tb-summarize','tb-study','share-btn','export-btn','tree-settings-btn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
     ['tree-settings-btn','export-btn','share-btn','add-root-btn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
   }
   showToast('Tree deleted.', 'info');
@@ -3378,7 +3380,7 @@ function selectTree(treeId) {
   ['tree-settings-btn','add-root-btn'].forEach(id => document.getElementById(id).style.display = '');
   document.getElementById('export-btn').style.display = canExport() ? '' : 'none';
   { const sb = document.getElementById('share-btn'); if (sb) sb.style.display = ''; }
-  ['tb-summarize','tb-graph','tb-study'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
+  ['tb-summarize','tb-study'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
   // Show search + stats
   const sw = document.getElementById('topbar-search-wrap'); if (sw) sw.style.display = '';
   const ts = document.getElementById('topbar-stats'); if (ts) ts.style.display = 'flex';
@@ -4508,10 +4510,29 @@ async function renderMyCollaborations() {
               '<div style="font-size:11px;color:var(--text3);font-family:monospace;">' + esc(r.id) + ' · ' + r.role + '</div>' +
             '</div>' +
             '<button class="btn-sm btn-accent" onclick="reenterCollab(\'' + esc(r.id).replace(/\x27/g,"\\x27") + '\',\'' + esc(r.code||'').replace(/\x27/g,"\\x27") + '\',' + (r.role==='Host') + ')" style="padding:6px 14px;flex-shrink:0;">' + (r.role==='Host'?'Resume':'Rejoin') + '</button>' +
+            '<button class="btn-sm btn-outline" onclick="deleteCollabRoom(\'' + esc(r.id).replace(/\x27/g,"\\x27") + '\',' + (r.role==='Host') + ')" title="' + (r.role==='Host'?'Delete this session':'Remove from my list') + '" style="padding:6px 10px;flex-shrink:0;color:var(--danger,#e5484d);border-color:var(--danger,#e5484d);"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>' +
           '</div>'
         ).join('') +
       '</div>' +
     '</div>';
+}
+
+async function deleteCollabRoom(roomId, isHost) {
+  const ok = await confirmDialog(
+    isHost ? 'Delete this collaboration session permanently? Anyone in it will be disconnected.' : 'Remove this collaboration from your list?',
+    { title: isHost ? 'Delete Session' : 'Remove', okText: isHost ? 'Delete' : 'Remove' }
+  );
+  if (!ok) return;
+  // If we're currently in this room, end it first
+  if (collabRoom && collabRoom.id === roomId) { endCollab(); }
+  if (isHost) {
+    try { await sbClient.from('collab_rooms').delete().eq('id', roomId); } catch(e){}
+    try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); delete r[roomId]; localStorage.setItem('rt_collab_rooms', JSON.stringify(r)); } catch(e){}
+  } else {
+    try { const j = JSON.parse(localStorage.getItem('rt_joined_collabs')||'{}'); delete j[roomId]; localStorage.setItem('rt_joined_collabs', JSON.stringify(j)); } catch(e){}
+  }
+  showToast(isHost ? 'Session deleted.' : 'Removed.', 'success');
+  renderCollabHome();
 }
 
 async function reenterCollab(roomId, code, asHost) {
@@ -4543,6 +4564,26 @@ async function hostCollab() {
   const treeId = sel ? sel.value : null;
   const tree = trees.find(t => t.id === treeId);
   if (!tree) { showToast('Select a tree.', 'error'); return; }
+  // #4 Prevent duplicate rooms for the same tree — resume the existing one.
+  let existingRoom = null;
+  try {
+    if (currentUser) {
+      const { data } = await sbClient.from('collab_rooms').select('*').eq('owner_id', currentUser.id).eq('tree_id', tree.id).limit(1);
+      if (data && data.length) existingRoom = data[0];
+    }
+  } catch(e){}
+  if (!existingRoom) {
+    try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); const hit = Object.keys(r).find(id => r[id].tree_id === tree.id); if (hit) existingRoom = { ...r[hit], id: hit }; } catch(e){}
+  }
+  if (existingRoom) {
+    showToast('You already have a session for this tree — resuming it.', 'info');
+    collabRoom = { id: existingRoom.id, code: existingRoom.code, treeId: tree.id, isHost: true };
+    collabPending = {};
+    if (activeTreeId !== tree.id) selectTree(tree.id);
+    connectCollabChannel();
+    renderCollabRoom();
+    return;
+  }
   const roomId = 'room_' + Math.random().toString(36).slice(2,8);
   const code = genRoomCode();
   // Store the room + access code so OTHER devices can find it. We require this
@@ -4596,6 +4637,34 @@ async function joinCollab() {
 }
 
 let collabMyKey = null;
+let collabLastEditor = null;
+
+function updateCollabStatusBar() {
+  const bar = document.getElementById('collab-statusbar');
+  const badge = document.getElementById('tb-collab-badge');
+  if (!bar) return;
+  if (!collabRoom || !collabChannel) {
+    bar.style.display = 'none';
+    if (badge) badge.style.display = 'none';
+    return;
+  }
+  if (badge) badge.style.display = 'block';
+  // Gather active people from presence
+  const states = collabPresence || {};
+  const people = [];
+  Object.keys(states).forEach(k => (states[k]||[]).forEach(p => { if (p.approved !== false) people.push(p); }));
+  // Build avatar stack (initials)
+  let avatars = people.slice(0,5).map(p => {
+    const initial = ((p.name||'?')[0]||'?').toUpperCase();
+    return '<span title="' + esc(p.name||'Guest') + (p.host?' (host)':'') + '" style="width:24px;height:24px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:600;margin-left:-6px;">' + esc(initial) + '</span>';
+  }).join('');
+  const count = people.length;
+  let html = '<div style="display:flex;align-items:center;">' + avatars + '</div>';
+  html += '<span style="font-size:11px;color:var(--text3);white-space:nowrap;">' + count + ' active</span>';
+  if (collabLastEditor) html += '<span style="font-size:11px;color:var(--text3);white-space:nowrap;border-left:1px solid var(--border);padding-left:8px;">last edit: ' + esc(collabLastEditor) + '</span>';
+  bar.innerHTML = html;
+  bar.style.display = 'flex';
+}
 function connectCollabChannel() {
   if (!collabRoom) return;
   if (collabChannel) { try { sbClient.removeChannel(collabChannel); } catch(e){} collabChannel = null; }
@@ -4623,6 +4692,7 @@ function connectCollabChannel() {
         }
         // Mark this as the live collab tree (don't persist a guest's copy to their own DB)
         tree._collab = true;
+        if (p.editor) { collabLastEditor = p.editor; updateCollabStatusBar(); }
         if (activeTreeId === tree.id) { renderCanvas(); if (typeof renderTreeList==='function') renderTreeList(); }
       })
       .on('broadcast', { event: 'join-request' }, (msg) => {
@@ -4661,12 +4731,13 @@ function connectCollabChannel() {
         // HOST answers sync requests with the FULL canonical tree
         if (collabRoom.isHost) {
           const tree = trees.find(t => t.id === collabRoom.treeId);
-          if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ name: tree.name, icon: tree.icon, nodes: tree.nodes } });
+          if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ name: tree.name, icon: tree.icon, nodes: tree.nodes, editor: (currentDisplayName || (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'Someone')) } });
         }
       })
       .on('presence', { event: 'sync' }, () => {
         collabPresence = collabChannel.presenceState();
         renderCollabPresence();
+        updateCollabStatusBar();
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -4682,7 +4753,7 @@ function connectCollabChannel() {
     window._collabBroadcast = () => {
       if (collabChannel && collabRoom && (collabRoom.isHost || collabApproved)) {
         const tree = trees.find(t => t.id === collabRoom.treeId);
-        if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ name: tree.name, icon: tree.icon, nodes: tree.nodes } });
+        if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ name: tree.name, icon: tree.icon, nodes: tree.nodes, editor: (currentDisplayName || (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'Someone')) } });
       }
     };
   } catch(e) { showToast('Could not connect to the session.', 'error'); }
@@ -4694,7 +4765,7 @@ function approveJoiner(key) {
   collabChannel.send({ type:'broadcast', event:'join-decision', payload:{ key: key, approved: true } });
   // Immediately push the full tree so the new collaborator gets it right away
   const tree = trees.find(t => t.id === collabRoom.treeId);
-  if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ name: tree.name, icon: tree.icon, nodes: tree.nodes } });
+  if (tree) collabChannel.send({ type:'broadcast', event:'tree-update', payload:{ name: tree.name, icon: tree.icon, nodes: tree.nodes, editor: (currentDisplayName || (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'Someone')) } });
   delete collabPending[key];
   renderCollabRoom();
   showToast('Approved.', 'success');
@@ -4815,7 +4886,8 @@ function endCollab() {
     // A member leaving just removes their own joined-room record
     try { const j = JSON.parse(localStorage.getItem('rt_joined_collabs')||'{}'); delete j[collabRoom.id]; localStorage.setItem('rt_joined_collabs', JSON.stringify(j)); } catch(e){}
   }
-  collabChannel = null; collabRoom = null; collabPresence = {}; collabApproved = false; collabPending = {}; window._collabBroadcast = null;
+  collabChannel = null; collabRoom = null; collabPresence = {}; collabApproved = false; collabPending = {}; collabLastEditor = null; window._collabBroadcast = null;
+  try { updateCollabStatusBar(); } catch(e){}
 }
 
 // Lightweight disconnect that does NOT delete the room (kept for compatibility).
@@ -7621,7 +7693,7 @@ function openToolsModal() {
   if (FEATURES.importExport) tools.push(['Import Tree','Markdown, OPML, or JSON','M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3', 'importTreeFile()']);
   if (FEATURES.publicGallery) tools.push(['Publish Tree','Share to the public gallery','M12 2v13M5 9l7-7 7 7M5 21h14', 'publishTree()']);
   if (FEATURES.importExport) tools.push(['Embed','Get an iframe embed code','M16 18l6-6-6-6M8 6l-6 6 6 6', 'embedTree()']);
-  if (FEATURES.realtimeCollab) tools.push(['Live Collaborate','Real-time shared editing','M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75', 'startCollaboration()']);
+  if (FEATURES.graphView) tools.push(['Graph View','See this tree as a connected graph','M5 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM7.5 7.5l9 9M16.5 7.5l-9 9', 'openGraphView()']);
   grid.innerHTML = tools.map(t =>
     '<div class="tool-card" onclick="closeModal(\'tools-modal\');' + t[3] + '">' +
     '<div class="tool-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + t[2] + '"/></svg></div>' +
