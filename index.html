@@ -1331,16 +1331,17 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .gallery-card-actions { display: flex; gap: 6px; margin-top: 4px; }
 .gallery-share-btn {
   display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500;
-  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
-  background: var(--bg3); color: var(--text2); cursor: pointer; transition: var(--transition); width: 100%; justify-content: center;
+  padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg3); color: var(--text2); cursor: pointer; transition: var(--transition);
+  justify-content: center; flex: 2 1 0; min-width: 0;
 }
 .gallery-share-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--bg4); }
 
 .gallery-followmini-btn {
   display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600;
-  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--accent);
+  padding: 7px 12px; border-radius: 8px; border: 1px solid var(--accent);
   background: transparent; color: var(--accent); cursor: pointer; transition: var(--transition);
-  white-space: nowrap; flex-shrink: 0;
+  white-space: nowrap; justify-content: center; flex: 1 1 0; min-width: 0;
 }
 .gallery-followmini-btn:hover { background: var(--accent-dim, rgba(108,142,255,0.12)); }
 .gallery-followmini-btn.following { background: var(--accent); color: #fff; }
@@ -4378,6 +4379,7 @@ async function publishTree() {
   snapshot.author = currentDisplayName || 'Anonymous';
   snapshot.authorAvatar = getAvatarSrc() || null;
   snapshot.authorAvatarKey = currentAvatarKey || null;
+  snapshot.authorAvatarCustom = currentAvatarCustom || null;
   snapshot.publishedAt = new Date().toISOString();
   // Store in shares (for the ?share link) and mark public locally
   try { localStorage.setItem('rt_share_' + snapshot.id, JSON.stringify(snapshot)); } catch(e){}
@@ -4385,7 +4387,7 @@ async function publishTree() {
   // Add to local public registry
   try {
     const reg = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]');
-    reg.unshift({ id: snapshot.id, name: tree.name, icon: tree.icon, author: snapshot.author, authorAvatar: snapshot.authorAvatar, authorAvatarKey: snapshot.authorAvatarKey, nodeCount: countNodes(tree.nodes), at: snapshot.publishedAt });
+    reg.unshift({ id: snapshot.id, name: tree.name, icon: tree.icon, author: snapshot.author, authorAvatar: snapshot.authorAvatar, authorAvatarCustom: snapshot.authorAvatarCustom, authorAvatarKey: snapshot.authorAvatarKey, nodeCount: countNodes(tree.nodes), shares: 0, at: snapshot.publishedAt });
     localStorage.setItem('rt_public_gallery', JSON.stringify(reg.slice(0,100)));
   } catch(e){}
   // Try a public_trees table too (optional)
@@ -4396,11 +4398,37 @@ async function publishTree() {
 let galleryItems = [];
 let galleryActiveTab = 'browse';
 
+const _avatarCache = {};
+async function resolveAuthorAvatar(author) {
+  if (!author) return null;
+  if (_avatarCache[author] !== undefined) return _avatarCache[author];
+  // 1. current user
+  if (author === (currentDisplayName||'')) { const a = getAvatarSrc(); _avatarCache[author] = a; return a; }
+  // 2. gallery items
+  const it = (galleryItems||[]).find(i => (i.author||'')===author && (i.authorAvatar || i.authorAvatarCustom || i.authorAvatarKey));
+  if (it) {
+    const a = it.authorAvatar || it.authorAvatarCustom || (it.authorAvatarKey && PRESET_AVATARS[it.authorAvatarKey] ? PRESET_AVATARS[it.authorAvatarKey].src : null);
+    if (a) { _avatarCache[author] = a; return a; }
+  }
+  // 3. profiles table (cross-account)
+  try {
+    const { data } = await sbClient.from('profiles').select('avatar_key, avatar_custom').ilike('display_name', author).limit(1).single();
+    if (data) {
+      const a = data.avatar_custom || (data.avatar_key && PRESET_AVATARS[data.avatar_key] ? PRESET_AVATARS[data.avatar_key].src : null);
+      _avatarCache[author] = a || null;
+      return a || null;
+    }
+  } catch(e){}
+  _avatarCache[author] = null;
+  return null;
+}
+
 function getAuthorAvatar(author) {
   // Look through gallery items for a stored avatar for this author
-  const it = (galleryItems||[]).find(i => (i.author||'')===author && (i.authorAvatar || i.authorAvatarKey));
+  const it = (galleryItems||[]).find(i => (i.author||'')===author && (i.authorAvatar || i.authorAvatarCustom || i.authorAvatarKey));
   if (it) {
     if (it.authorAvatar) return it.authorAvatar;
+    if (it.authorAvatarCustom) return it.authorAvatarCustom;
     if (it.authorAvatarKey && PRESET_AVATARS[it.authorAvatarKey]) return PRESET_AVATARS[it.authorAvatarKey].src;
   }
   // If it's the current user, use their own avatar
@@ -4423,22 +4451,35 @@ async function getFollowStats(author) {
   } catch(e){}
   // Local fallbacks
   if (following === null && author === (currentDisplayName||'')) following = getFollowing().length;
-  // Approximate followers locally: 1 if the current user follows them
-  if (followers === null) followers = isFollowing(author) ? 1 : 0;
+  if (followers === null) {
+    // Use the locally-tracked follower count (reflects follows made on this device)
+    const m = getLocalFollowerCounts();
+    followers = m[author] || 0;
+  }
   return { followers, following: following === null ? 0 : following };
 }
 function setFollowing(list) { try { localStorage.setItem('rt_following', JSON.stringify(list)); } catch(e){} }
 function isFollowing(author) { return getFollowing().includes(author); }
+function getLocalFollowerCounts() { try { return JSON.parse(localStorage.getItem('rt_follower_counts')||'{}'); } catch(e){ return {}; } }
+function bumpLocalFollowerCount(author, delta) {
+  try {
+    const m = getLocalFollowerCounts();
+    m[author] = Math.max(0, (m[author]||0) + delta);
+    localStorage.setItem('rt_follower_counts', JSON.stringify(m));
+  } catch(e){}
+}
 function toggleFollow(author, ev) {
   if (ev) ev.stopPropagation();
   let f = getFollowing();
   const me = currentDisplayName || 'Anonymous';
   if (f.includes(author)) {
     f = f.filter(a => a !== author);
+    bumpLocalFollowerCount(author, -1);
     showToast('Unfollowed ' + author, 'info');
     try { sbClient.from('follows').delete().eq('follower', me).eq('following', author); } catch(e){}
   } else {
     f.push(author);
+    bumpLocalFollowerCount(author, 1);
     showToast('Following ' + author + '!', 'success');
     try { sbClient.from('follows').insert({ follower: me, following: author, follower_id: currentUser ? currentUser.id : null }); } catch(e){}
   }
@@ -4456,9 +4497,9 @@ async function openPublicGallery() {
   // Load from DB, fall back to local
   try {
     const { data } = await sbClient.from('public_trees').select('id,name,author,data,created_at').order('created_at',{ascending:false}).limit(100);
-    if (data && data.length) galleryItems = data.map(d => ({ id:d.id, name:d.name, author:d.author||'Anonymous', icon:(d.data&&d.data.icon)||'🌳', nodeCount: d.data&&d.data.nodes?countNodes(d.data.nodes):0, at:d.created_at }));
+    if (data && data.length) galleryItems = data.map(d => ({ id:d.id, name:d.name, author:d.author||'Anonymous', icon:(d.data&&d.data.icon)||'🌳', nodeCount: d.data&&d.data.nodes?countNodes(d.data.nodes):0, authorAvatar:(d.data&&d.data.authorAvatar)||null, authorAvatarCustom:(d.data&&d.data.authorAvatarCustom)||null, authorAvatarKey:(d.data&&d.data.authorAvatarKey)||null, shares:(d.data&&d.data.shares)||0, at:d.created_at }));
   } catch(e){}
-  if (!galleryItems.length) { try { galleryItems = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]').map(it => ({...it, author: it.author||'Anonymous'})); } catch(e){} }
+  if (!galleryItems.length) { try { galleryItems = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]').map(it => ({...it, author: it.author||'Anonymous', shares: it.shares||0})); } catch(e){} }
   galleryRender();
 }
 function closeGallery() {
@@ -4495,7 +4536,8 @@ function galleryRender() {
     const authorName = it.author || 'Anonymous';
     const following = isFollowing(authorName);
     const safeAuthor = esc(authorName).replace(/'/g,"\\'");
-    const isMine = authorName === (currentDisplayName || '');  // hide follow only on my own trees
+    const isMine = authorName === (currentDisplayName || '');
+    const shareCount = it.shares || 0;
     const followBtn = !isMine ?
       '<button class="gallery-followmini-btn ' + (following?'following':'') + '" onclick="event.stopPropagation();toggleFollow(\'' + safeAuthor + '\',event)" title="' + (following?'Unfollow':'Follow') + ' ' + esc(authorName) + '">' +
         (following ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Following'
@@ -4503,9 +4545,13 @@ function galleryRender() {
       '</button>' : '';
     return '<div class="gallery-card" onclick="viewPublicTree(\'' + it.id + '\')">' +
       '<div class="gallery-card-title">' + (it.icon||'🌳') + ' ' + esc(it.name) + '</div>' +
-      '<div style="font-size:12px;color:var(--text3);">' + (it.nodeCount||0) + ' topics</div>' +
-      '<div class="gallery-card-author">' +
-        '<span class="gallery-author-link" onclick="event.stopPropagation();openUserProfile(\'' + safeAuthor + '\')">by ' + esc(authorName) + '</span>' +
+      '<div style="font-size:12px;color:var(--text3);display:flex;gap:10px;">' +
+        '<span>' + (it.nodeCount||0) + ' topics</span>' +
+        '<span title="Times shared"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> ' + shareCount + '</span>' +
+      '</div>' +
+      '<div class="gallery-card-author" onclick="event.stopPropagation();openUserProfile(\'' + safeAuthor + '\')" style="cursor:pointer;display:flex;align-items:center;gap:8px;">' +
+        '<span class="gallery-card-avatar" data-author="' + safeAuthor + '" style="width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0;overflow:hidden;">' + esc((authorName[0]||'?').toUpperCase()) + '</span>' +
+        '<span style="font-size:13px;color:var(--text2);font-weight:500;">' + esc(authorName) + '</span>' +
       '</div>' +
       '<div class="gallery-card-actions">' +
         '<button class="gallery-share-btn" onclick="event.stopPropagation();shareGalleryTree(\'' + it.id + '\')" title="Share this tree">' +
@@ -4514,6 +4560,16 @@ function galleryRender() {
         followBtn +
       '</div></div>';
   }).join('');
+  // Asynchronously fill in real avatars for each unique author
+  const authors = [...new Set(items.map(it => it.author || 'Anonymous'))];
+  authors.forEach(a => {
+    resolveAuthorAvatar(a).then(src => {
+      if (!src) return;
+      document.querySelectorAll('.gallery-card-avatar[data-author="' + (esc(a).replace(/"/g,'&quot;')) + '"]').forEach(el => {
+        el.innerHTML = '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;">';
+      });
+    }).catch(()=>{});
+  });
 }
 
 function closeUserProfile() {
@@ -4533,28 +4589,29 @@ async function openUserProfile(author) {
   // Try to load their profile bio from the DB
   let prof = null;
   try {
-    const { data } = await sbClient.from('profiles').select('display_name, bio, education, field_of_study, qualifications, avatar_key').ilike('display_name', author).limit(1).single();
+    const { data } = await sbClient.from('profiles').select('display_name, bio, education, field_of_study, qualifications, avatar_key, avatar_custom').ilike('display_name', author).limit(1).single();
     if (data) prof = data;
   } catch(e){}
   // Fallback: if it's the current user, use local values
   if (!prof && author === currentDisplayName) {
-    prof = { display_name: author, bio: currentBio, education: currentEducation, field_of_study: currentField, qualifications: currentQualifications };
+    prof = { display_name: author, bio: currentBio, education: currentEducation, field_of_study: currentField, qualifications: currentQualifications, avatar_key: currentAvatarKey, avatar_custom: currentAvatarCustom };
   }
 
   const following = isFollowing(author);
   const isSelf = author === (currentDisplayName||'');
   const initial = (author[0]||'?').toUpperCase();
 
-  // Resolve the author's real avatar (from their profile or published trees)
-  let avatarSrc = getAuthorAvatar(author);
-  if (!avatarSrc && prof && prof.avatar_key && PRESET_AVATARS[prof.avatar_key]) avatarSrc = PRESET_AVATARS[prof.avatar_key].src;
+  // Resolve the author's real avatar: prefer their profile row, then gallery/sync
+  let avatarSrc = (prof && prof.avatar_custom) ? prof.avatar_custom
+                : (prof && prof.avatar_key && PRESET_AVATARS[prof.avatar_key]) ? PRESET_AVATARS[prof.avatar_key].src
+                : getAuthorAvatar(author);
   const safeA = esc(author).replace(/'/g,"\\'");
 
   let h = '<div style="display:flex;align-items:center;gap:18px;margin-bottom:24px;">';
   if (avatarSrc) {
-    h += '<div style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:2px solid var(--border);flex-shrink:0;"><img src="' + avatarSrc + '" style="width:100%;height:100%;object-fit:cover;"></div>';
+    h += '<div id="profile-avatar-box" style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:2px solid var(--border);flex-shrink:0;"><img src="' + avatarSrc + '" style="width:100%;height:100%;object-fit:cover;"></div>';
   } else {
-    h += '<div style="width:80px;height:80px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:600;color:#fff;flex-shrink:0;">' + esc(initial) + '</div>';
+    h += '<div id="profile-avatar-box" style="width:80px;height:80px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:600;color:#fff;flex-shrink:0;">' + esc(initial) + '</div>';
   }
   h += '<div style="flex:1;min-width:0;">';
   h += '<div style="font-size:24px;font-weight:700;font-family:var(--title-font);">' + esc(author) + '</div>';
@@ -4568,7 +4625,6 @@ async function openUserProfile(author) {
   h += '</div>';
   h += '<div style="display:flex;gap:8px;flex-shrink:0;">';
   if (!isSelf) h += '<button class="btn-sm ' + (following?'btn-outline':'btn-accent') + '" onclick="toggleFollow(\'' + safeA + '\');setTimeout(()=>openUserProfile(\'' + safeA + '\'),50);">' + (following?'<i class="ti ti-check"></i> Following':'<i class="ti ti-plus"></i> Follow') + '</button>';
-  h += '<button class="btn-sm btn-outline" onclick="shareUserProfile(\'' + safeA + '\')" title="Share this profile"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share</button>';
   h += '</div>';
   h += '</div>';
 
@@ -4613,6 +4669,15 @@ async function openUserProfile(author) {
 
   body.innerHTML = h;
 
+  // Async-resolve avatar if we didn't have one synchronously
+  if (!avatarSrc) {
+    resolveAuthorAvatar(author).then(src => {
+      if (!src) return;
+      const box = document.getElementById('profile-avatar-box');
+      if (box) { box.style.background = 'none'; box.innerHTML = '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;">'; }
+    }).catch(()=>{});
+  }
+
   // Fill follower/following counts asynchronously
   getFollowStats(author).then(stats => {
     const fEl = document.getElementById('pf-followers');
@@ -4638,8 +4703,28 @@ async function shareGalleryTree(id) {
   if (!snap) { try { const {data} = await sbClient.from('shares').select('data').eq('id',id).single(); if (data) snap = data.data; } catch(e){} }
   if (!snap) { try { const {data} = await sbClient.from('public_trees').select('data').eq('id',id).single(); if (data) snap = data.data; } catch(e){} }
   if (!snap) { showToast('Could not load that tree to share.', 'error'); return; }
+  incrementShareCount(id);
   // Reuse the existing share modal with this snapshot
   openShareModal(snap, 'Share Tree');
+}
+
+function incrementShareCount(id) {
+  // Bump the local gallery item + registry, and best-effort the DB
+  const it = (galleryItems||[]).find(i => i.id === id);
+  if (it) it.shares = (it.shares||0) + 1;
+  try {
+    const reg = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]');
+    const r = reg.find(x => x.id === id);
+    if (r) { r.shares = (r.shares||0) + 1; localStorage.setItem('rt_public_gallery', JSON.stringify(reg)); }
+  } catch(e){}
+  // Persist into the snapshot's data.shares if possible
+  (async () => {
+    try {
+      const { data } = await sbClient.from('public_trees').select('data').eq('id', id).single();
+      if (data && data.data) { data.data.shares = (data.data.shares||0) + 1; await sbClient.from('public_trees').update({ data: data.data }).eq('id', id); }
+    } catch(e){}
+  })();
+  if (typeof galleryRender === 'function' && !document.getElementById('gallery-overlay').classList.contains('hidden')) galleryRender();
 }
 
 async function viewPublicTree(id) {
@@ -4893,7 +4978,12 @@ function openSharedViewer(snap) {
     if (author) {
       const following = (function(){ try { return JSON.parse(localStorage.getItem('rt_following')||'[]').includes(author); } catch(e){ return false; } })();
       const isSelf = author === (currentDisplayName||'');
-      h += '<span style="font-size:13px;color:var(--text2);">by <span class="shared-author-link" onclick="closeSharedViewer();openUserProfile(\''+esc(author).replace(/\x27/g,"\\x27")+'\')" style="color:var(--accent);cursor:pointer;text-decoration:underline;">'+esc(author)+'</span></span>';
+      const av = snap.authorAvatar || snap.authorAvatarCustom || (snap.authorAvatarKey && PRESET_AVATARS[snap.authorAvatarKey] ? PRESET_AVATARS[snap.authorAvatarKey].src : null);
+      const initial2 = (author[0]||'?').toUpperCase();
+      h += '<div class="shared-author-link" onclick="closeSharedViewer();openUserProfile(\''+esc(author).replace(/\x27/g,"\\x27")+'\')" style="display:flex;align-items:center;gap:8px;cursor:pointer;">';
+      if (av) h += '<span style="width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="'+av+'" style="width:100%;height:100%;object-fit:cover;"></span>';
+      else h += '<span style="width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0;">'+esc(initial2)+'</span>';
+      h += '<span style="font-size:14px;color:var(--text);font-weight:500;">'+esc(author)+'</span></div>';
       if (!isSelf) h += '<button id="shared-follow-btn" class="btn-sm '+(following?'btn-outline':'btn-accent')+'" onclick="sharedFollow(\''+esc(author).replace(/\x27/g,"\\x27")+'\')">'+(following?'<i class="ti ti-check"></i> Following':'<i class="ti ti-plus"></i> Follow')+'</button>';
     }
     h += '<span style="font-size:12px;color:var(--text3);flex:1;text-align:right;">Read-only · <a href="'+window.location.pathname+'" style="color:var(--accent);">Open ResearchTree</a></span>';
