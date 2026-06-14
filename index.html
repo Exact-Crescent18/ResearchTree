@@ -6030,6 +6030,315 @@ async function aiSummarizeNotes(nodeId) {
   if (out) { showToast('Summary ready.', 'success'); alert(out); }
 }
 
+// ═══════════════════════════════════════════════════════════
+// TOOLS — graph view, study mode, templates, version history, global search
+// ═══════════════════════════════════════════════════════════
+
+function openToolsModal() {
+  const grid = document.getElementById('tools-grid');
+  if (!grid) return;
+  const tools = [];
+  if (FEATURES.globalSearch) tools.push(['Search All Trees','Find any node across every tree','M21 21l-4.35-4.35M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'openGlobalSearch()']);
+  if (FEATURES.graphView)    tools.push(['Graph View','See this tree as a connected graph','M5 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM7.5 7.5l9 9M16.5 7.5l-9 9', 'openGraphView()']);
+  if (FEATURES.studyMode)    tools.push(['Study Mode','Flip through nodes as flashcards','M12 14l9-5-9-5-9 5 9 5zM12 14v7M5 11v4l7 4 7-4v-4', 'openStudyMode()']);
+  if (FEATURES.templates)    tools.push(['Templates','Start from or save a template','M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4', 'openTemplatesModal()']);
+  if (FEATURES.versionHistory) tools.push(['Version History','Snapshots you can restore','M3 3v5h5M3.05 13a9 9 0 1 0 .5-4.5L3 8M12 7v5l4 2', 'openHistoryModal()']);
+  if (FEATURES.importExport) tools.push(['Import Tree','Import from JSON','M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3', 'importTreeFile()']);
+  grid.innerHTML = tools.map(t =>
+    '<div class="tool-card" onclick="closeModal(\'tools-modal\');' + t[3] + '">' +
+    '<div class="tool-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + t[2] + '"/></svg></div>' +
+    '<div class="tool-name">' + t[0] + '</div>' +
+    '<div class="tool-desc">' + t[1] + '</div></div>'
+  ).join('');
+  if (!getActiveTree()) {
+    grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text3);font-size:13px;text-align:center;padding:20px;">Select a tree first to use most tools.</div>' + grid.innerHTML;
+  }
+  openModal('tools-modal');
+}
+
+// ─── Global search across all trees ───
+function openGlobalSearch() {
+  openModal('gsearch-modal');
+  const input = document.getElementById('gsearch-input');
+  if (input) { input.value = ''; setTimeout(() => input.focus(), 50); }
+  document.getElementById('gsearch-results').innerHTML = '';
+}
+function globalSearch(q) {
+  const box = document.getElementById('gsearch-results');
+  q = (q || '').trim().toLowerCase();
+  if (!q) { box.innerHTML = ''; return; }
+  const matches = [];
+  trees.forEach(tree => {
+    (function walk(nodes, path) {
+      (nodes || []).forEach(n => {
+        const tmp = document.createElement('div'); tmp.innerHTML = n.extNotes || '';
+        const notes = (tmp.innerText || '').toLowerCase();
+        const hay = (n.title + ' ' + (n.desc||'') + ' ' + (n.tags||[]).join(' ') + ' ' + notes).toLowerCase();
+        if (hay.includes(q)) matches.push({ tree, node: n, path: path.concat([n.title]) });
+        walk(n.children || [], path.concat([n.title]));
+      });
+    })(tree.nodes || [], []);
+  });
+  if (!matches.length) { box.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px;">No matches.</div>'; return; }
+  box.innerHTML = matches.slice(0, 60).map((m,i) =>
+    '<div class="gsearch-item" onclick="gotoSearchResult(' + i + ')">' +
+    '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (m.tree.icon||'🌳') + ' ' + esc(m.node.title) + '</div>' +
+    '<div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(m.tree.name) + ' › ' + esc(m.path.slice(0,-1).join(' › ') || 'root') + '</div></div>' +
+    '<i class="ti ti-arrow-right" style="color:var(--text3);flex-shrink:0;"></i></div>'
+  ).join('');
+  window._gsearchMatches = matches;
+}
+function gotoSearchResult(i) {
+  const m = window._gsearchMatches && window._gsearchMatches[i];
+  if (!m) return;
+  closeModal('gsearch-modal');
+  if (activeTreeId !== m.tree.id) selectTree(m.tree.id);
+  setTimeout(() => { selectNode(m.node.id); if (typeof openNodeView === 'function') openNodeView(m.node.id); }, 100);
+}
+
+// ─── Graph view ───
+let graphState = { scale: 1, ox: 0, oy: 0 };
+function openGraphView() {
+  const tree = getActiveTree();
+  if (!tree) { showToast('Select a tree first.', 'error'); return; }
+  document.getElementById('graph-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  renderGraph();
+}
+function closeGraphView() {
+  document.getElementById('graph-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+function renderGraph() {
+  const tree = getActiveTree(); if (!tree) return;
+  const svg = document.getElementById('graph-svg');
+  const W = svg.clientWidth || 900, H = svg.clientHeight || 600;
+  // Simple radial layout: roots spread across, children fan out by depth
+  const nodes = [], links = [];
+  let leafIndex = 0;
+  function countLeaves(n){ if(!n.children||!n.children.length) return 1; return n.children.reduce((s,c)=>s+countLeaves(c),0); }
+  const totalLeaves = Math.max(1, (tree.nodes||[]).reduce((s,n)=>s+countLeaves(n),0));
+  function place(n, depth, parentId) {
+    const span = countLeaves(n);
+    const x = 80 + depth * 180;
+    const myLeaves = [];
+    const startLeaf = leafIndex;
+    if (!n.children || !n.children.length) { leafIndex++; }
+    const y = 60 + ((startLeaf + span/2) / totalLeaves) * (H - 120);
+    const id = n.id;
+    nodes.push({ id, x, y, title: n.title, depth });
+    if (parentId) links.push({ from: parentId, to: id });
+    (n.children||[]).forEach(c => place(c, depth+1, id));
+  }
+  (tree.nodes||[]).forEach(r => place(r, 0, null));
+  const pos = {}; nodes.forEach(n => pos[n.id] = n);
+  let h = '<g id="graph-g" transform="translate(' + graphState.ox + ',' + graphState.oy + ') scale(' + graphState.scale + ')">';
+  links.forEach(l => {
+    const a = pos[l.from], b = pos[l.to];
+    if (a && b) h += '<path d="M' + a.x + ' ' + a.y + ' C' + ((a.x+b.x)/2) + ' ' + a.y + ',' + ((a.x+b.x)/2) + ' ' + b.y + ',' + b.x + ' ' + b.y + '" fill="none" stroke="var(--border2)" stroke-width="1.5"/>';
+  });
+  nodes.forEach(n => {
+    const r = n.depth === 0 ? 9 : 6;
+    const color = n.depth === 0 ? 'var(--accent)' : 'var(--text3)';
+    h += '<g class="gnode" style="cursor:pointer" onclick="graphClick(\'' + n.id + '\')">';
+    h += '<circle cx="' + n.x + '" cy="' + n.y + '" r="' + r + '" fill="' + color + '"/>';
+    h += '<text x="' + (n.x + 12) + '" y="' + (n.y + 4) + '" font-size="12" fill="var(--text)">' + esc(n.title.slice(0,28)) + '</text></g>';
+  });
+  h += '</g>';
+  svg.innerHTML = h;
+  wireGraphPanZoom(svg);
+}
+function graphClick(id) { closeGraphView(); selectNode(id); if (typeof openNodeView === 'function') openNodeView(id); }
+function wireGraphPanZoom(svg) {
+  svg.onwheel = (e) => { e.preventDefault(); const d = e.deltaY < 0 ? 1.1 : 1/1.1; graphState.scale = Math.max(0.2, Math.min(4, graphState.scale*d)); renderGraph(); };
+  svg.onmousedown = (e) => {
+    const sx = e.clientX, sy = e.clientY, ox = graphState.ox, oy = graphState.oy;
+    svg.style.cursor = 'grabbing';
+    function mv(ev){ graphState.ox = ox + (ev.clientX-sx); graphState.oy = oy + (ev.clientY-sy); renderGraph(); }
+    function up(){ svg.style.cursor='grab'; document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); }
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+  };
+}
+
+// ─── Study mode (flashcards: title = question, notes/desc = answer) ───
+let studyCards = [], studyIdx = 0, studyRevealed = false;
+function openStudyMode() {
+  const tree = getActiveTree();
+  if (!tree) { showToast('Select a tree first.', 'error'); return; }
+  studyCards = [];
+  (function walk(nodes){ (nodes||[]).forEach(n => {
+    const tmp = document.createElement('div'); tmp.innerHTML = n.extNotes || '';
+    const notes = (tmp.innerText || '').trim();
+    const answer = n.desc || notes;
+    if (answer) studyCards.push({ q: n.title, a: answer });
+    walk(n.children||[]);
+  }); })(tree.nodes||[]);
+  if (!studyCards.length) { showToast('No nodes with descriptions or notes to study.', 'info'); return; }
+  studyIdx = 0; studyRevealed = false;
+  document.getElementById('study-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  renderStudyCard();
+}
+function closeStudyMode() {
+  document.getElementById('study-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+function renderStudyCard() {
+  const card = studyCards[studyIdx]; if (!card) return;
+  document.getElementById('study-card-content').textContent = studyRevealed ? card.a : card.q;
+  document.getElementById('study-hint').textContent = studyRevealed ? 'Click to show question' : 'Click to reveal';
+  document.getElementById('study-progress').textContent = (studyIdx+1) + ' / ' + studyCards.length;
+}
+function studyFlip() { studyRevealed = !studyRevealed; renderStudyCard(); }
+function studyNext() { if (studyIdx < studyCards.length-1) { studyIdx++; studyRevealed = false; renderStudyCard(); } }
+function studyPrev() { if (studyIdx > 0) { studyIdx--; studyRevealed = false; renderStudyCard(); } }
+
+// ─── Templates ───
+const BUILTIN_TEMPLATES = [
+  { name: 'Literature Review', icon: '📚', nodes: [
+    { title: 'Research Question', desc: 'The central question' },
+    { title: 'Key Sources', children: [{title:'Source 1'},{title:'Source 2'}] },
+    { title: 'Themes', children: [{title:'Theme A'},{title:'Theme B'}] },
+    { title: 'Gaps & Future Work' }
+  ]},
+  { name: 'Project Plan', icon: '🚀', nodes: [
+    { title: 'Goals' },
+    { title: 'Milestones', children: [{title:'Milestone 1'},{title:'Milestone 2'}] },
+    { title: 'Tasks' },
+    { title: 'Risks' }
+  ]},
+  { name: 'Course Outline', icon: '🎓', nodes: [
+    { title: 'Module 1', children: [{title:'Lesson 1.1'},{title:'Lesson 1.2'}] },
+    { title: 'Module 2', children: [{title:'Lesson 2.1'}] },
+    { title: 'Assessments' }
+  ]}
+];
+function getUserTemplates() { try { return JSON.parse(localStorage.getItem('rt_templates')||'[]'); } catch(e){ return []; } }
+function openTemplatesModal() {
+  const grid = document.getElementById('templates-grid');
+  const userT = getUserTemplates();
+  const all = BUILTIN_TEMPLATES.concat(userT);
+  grid.innerHTML = all.map((t,i) =>
+    '<div class="tool-card" onclick="createFromTemplate(' + i + ')">' +
+    '<div class="tool-icon" style="font-size:22px;">' + (t.icon||'🌳') + '</div>' +
+    '<div class="tool-name">' + esc(t.name) + '</div>' +
+    '<div class="tool-desc">' + ((t.nodes||[]).length) + ' top-level nodes</div></div>'
+  ).join('');
+  window._allTemplates = all;
+  openModal('templates-modal');
+}
+function assignIds(nodes, side) {
+  return (nodes||[]).map(n => ({
+    id: 'node_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    title: n.title, desc: n.desc || '', children: assignIds(n.children, side), side: side || 'right'
+  }));
+}
+async function createFromTemplate(i) {
+  const t = window._allTemplates[i]; if (!t) return;
+  if (!canCreateTree()) { showToast('Tree limit reached for your plan.', 'error'); closeModal('templates-modal'); openPaywall('plus'); return; }
+  const tree = { id: 'tree_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), name: t.name, icon: t.icon || '🌳', color: '#6c8eff', nodes: assignIds(t.nodes) };
+  trees.unshift(tree);
+  closeModal('templates-modal');
+  renderTreeList(); selectTree(tree.id);
+  showToast('Created from template!', 'success');
+  try { await saveTreeToDb(tree.id); } catch(e) {}
+}
+function stripIds(nodes) { return (nodes||[]).map(n => ({ title: n.title, desc: n.desc||'', children: stripIds(n.children) })); }
+function saveCurrentAsTemplate() {
+  const tree = getActiveTree(); if (!tree) { showToast('Select a tree first.', 'error'); return; }
+  const name = prompt('Template name:', tree.name + ' Template'); if (!name) return;
+  const t = getUserTemplates();
+  t.push({ name: name.trim(), icon: tree.icon, nodes: stripIds(tree.nodes), custom: true });
+  try { localStorage.setItem('rt_templates', JSON.stringify(t)); } catch(e){}
+  showToast('Template saved!', 'success');
+  openTemplatesModal();
+}
+
+// ─── Version history (snapshots in localStorage per tree) ───
+function versionsKey(treeId) { return 'rt_versions_' + treeId; }
+function getVersions(treeId) { try { return JSON.parse(localStorage.getItem(versionsKey(treeId))||'[]'); } catch(e){ return []; } }
+function saveVersionSnapshot(manual) {
+  const tree = getActiveTree(); if (!tree) { if (manual) showToast('Select a tree first.','error'); return; }
+  const v = getVersions(tree.id);
+  v.unshift({ at: new Date().toISOString(), nodes: JSON.parse(JSON.stringify(tree.nodes)) });
+  while (v.length > 20) v.pop(); // keep last 20
+  try { localStorage.setItem(versionsKey(tree.id), JSON.stringify(v)); } catch(e){}
+  if (manual) { showToast('Snapshot saved.', 'success'); openHistoryModal(); }
+}
+function openHistoryModal() {
+  const tree = getActiveTree(); if (!tree) { showToast('Select a tree first.', 'error'); return; }
+  const list = document.getElementById('history-list');
+  const v = getVersions(tree.id);
+  if (!v.length) { list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px;">No snapshots yet. Save one below.</div>'; }
+  else list.innerHTML = v.map((s,i) => {
+    const d = new Date(s.at);
+    return '<div class="history-item"><div><div style="font-size:13px;">' + d.toLocaleString() + '</div>' +
+      '<div style="font-size:11px;color:var(--text3);">' + countNodes(s.nodes) + ' nodes</div></div>' +
+      '<button class="btn-sm btn-outline" onclick="restoreVersion(' + i + ')">Restore</button></div>';
+  }).join('');
+  window._historyVersions = v;
+  openModal('history-modal');
+}
+function restoreVersion(i) {
+  const v = window._historyVersions && window._historyVersions[i]; if (!v) return;
+  if (!confirm('Restore this snapshot? Current state will be snapshotted first.')) return;
+  saveVersionSnapshot(false); // snapshot current before restoring
+  const tree = getActiveTree();
+  tree.nodes = JSON.parse(JSON.stringify(v.nodes));
+  debouncedSave(tree.id); renderCanvas(); renderTreeList();
+  closeModal('history-modal');
+  showToast('Snapshot restored.', 'success');
+}
+
+// ─── Import tree from JSON file ───
+function importTreeFile() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = () => {
+    const file = inp.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        const nodes = data.nodes || data;
+        if (!Array.isArray(nodes)) throw new Error('Invalid format');
+        if (!canCreateTree()) { showToast('Tree limit reached.', 'error'); openPaywall('plus'); return; }
+        const tree = { id: 'tree_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), name: data.name || file.name.replace(/\.json$/,''), icon: data.icon || '🌳', color: '#6c8eff', nodes: assignIds(nodes) };
+        trees.unshift(tree); renderTreeList(); selectTree(tree.id);
+        showToast('Tree imported!', 'success');
+        try { await saveTreeToDb(tree.id); } catch(err){}
+      } catch(err) { showToast('Could not import: invalid JSON.', 'error'); }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+}
+
+// Global keyboard handling for the tool overlays (never get trapped)
+document.addEventListener('keydown', (e) => {
+  const studyOpen = !document.getElementById('study-overlay').classList.contains('hidden');
+  const graphOpen = !document.getElementById('graph-overlay').classList.contains('hidden');
+  if (e.key === 'Escape') {
+    if (studyOpen) { closeStudyMode(); return; }
+    if (graphOpen) { closeGraphView(); return; }
+  }
+  if (studyOpen) {
+    if (e.key === 'ArrowRight') { e.preventDefault(); studyNext(); }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); studyPrev(); }
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); studyFlip(); }
+  }
+});
+
+// Auto-snapshot a version when a tree is opened (lightweight, throttled)
+let _lastAutoSnap = 0;
+function maybeAutoSnapshot() {
+  if (!FEATURES.versionHistory) return;
+  const now = Date.now();
+  if (now - _lastAutoSnap < 60000) return; // at most once a minute
+  _lastAutoSnap = now;
+  saveVersionSnapshot(false);
+}
+
 // Start
 // If opened via a share link, show the read-only viewer instead of the app
 try { if (typeof checkForSharedTree === 'function') checkForSharedTree(); } catch(e){}
