@@ -1345,6 +1345,13 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 }
 .gallery-followmini-btn:hover { background: var(--accent-dim, rgba(108,142,255,0.12)); }
 .gallery-followmini-btn.following { background: var(--accent); color: #fff; }
+
+.gallery-del-btn {
+  display: flex; align-items: center; justify-content: center;
+  padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg3); color: var(--text3); cursor: pointer; transition: var(--transition); flex-shrink: 0;
+}
+.gallery-del-btn:hover { border-color: var(--danger,#e5484d); color: var(--danger,#e5484d); background: var(--bg4); }
 </style>
 </head>
 <body>
@@ -1675,7 +1682,9 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     <button class="btn-sm btn-outline" onclick="closeGraphView()"><i class="ti ti-arrow-left"></i> Back</button>
     <div style="font-family:var(--title-font);font-weight:300;font-size:18px;">Graph View</div>
     <div style="flex:1;"></div>
-    <div style="font-size:12px;color:var(--text3);">Drag nodes · scroll to zoom</div>
+    <div style="font-size:12px;color:var(--text3);margin-right:12px;">Drag nodes · scroll to zoom</div>
+    <button class="btn-sm btn-outline" onclick="exportGraphPNG()" title="Export as PNG"><i class="ti ti-photo"></i> PNG</button>
+    <button class="btn-sm btn-outline" onclick="exportGraphSVG()" title="Export as SVG"><i class="ti ti-download"></i> SVG</button>
   </div>
   <div style="flex:1;overflow:hidden;position:relative;"><svg id="graph-svg" style="width:100%;height:100%;cursor:grab;"></svg></div>
 </div>
@@ -1822,6 +1831,22 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
+<!-- In-page Confirm Dialog -->
+<div class="modal-overlay hidden" id="confirm-modal" style="z-index:1000;">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <h3 id="confirm-title">Confirm</h3>
+    </div>
+    <div class="modal-body">
+      <div id="confirm-message" style="font-size:14px;line-height:1.6;color:var(--text2);margin-bottom:20px;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn-sm btn-outline" id="confirm-cancel">Cancel</button>
+        <button class="btn-sm" id="confirm-ok" style="background:var(--danger,#e5484d);color:#fff;border:none;">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Account Modal -->
 <div class="modal-overlay hidden" id="account-modal">
   <div class="modal" style="max-width:500px;">
@@ -1914,7 +1939,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
         <div class="current-plan-icon" id="current-plan-icon">🌱</div>
         <div class="current-plan-info">
           <div class="current-plan-name" id="current-plan-name">Free Plan</div>
-          <div class="current-plan-desc" id="current-plan-desc">Basic access · 3 trees · 20 nodes</div>
+          <div class="current-plan-desc" id="current-plan-desc">Basic access · 5 trees · 20 nodes</div>
         </div>
       </div>
       <div class="plan-action-row" id="plan-action-row"></div>
@@ -2651,12 +2676,15 @@ async function loadUserProfile() {
   if (planData) {
     currentPlan = planData.plan || 'free';
   } else if (planErr && planErr.code === 'PGRST116') {
-    // No profile row yet — create one with a permanent random avatar ONCE.
+    // No profile row yet — create one with a permanent avatar ONCE.
     isNewProfile = true;
+    // Reuse a previously-cached avatar for this user id if one exists, else pick once.
+    const cached = localStorage.getItem('rt_avatar_' + currentUser.id);
     const aKeys = Object.keys(PRESET_AVATARS);
-    const firstAvatar = aKeys[Math.floor(Math.random() * aKeys.length)];
+    const firstAvatar = (cached && PRESET_AVATARS[cached]) ? cached : aKeys[Math.floor(Math.random() * aKeys.length)];
+    // Cache immediately so it can NEVER re-randomize on reload.
+    try { localStorage.setItem('rt_avatar_' + currentUser.id, firstAvatar); } catch(e){}
     const insertRow = { id: currentUser.id, plan: 'free' };
-    // Try to store the avatar + name too (ignore if columns missing)
     try {
       await sbClient.from('profiles').insert({ ...insertRow, display_name: nameFromMeta, avatar_key: firstAvatar });
     } catch (e) {
@@ -2703,19 +2731,25 @@ async function loadUserProfile() {
     } catch(e3) {}
   }
 
-  // STEP 3: For an EXISTING profile that somehow has no avatar, assign one
-  // ONCE and persist it. If persistence fails (missing column), keep it stable
-  // for this session via localStorage so it never changes between logins.
-  if (!currentAvatarKey && !currentAvatarCustom) {
+  // STEP 3: Resolve a STABLE avatar.
+  // Priority: DB custom > DB key > localStorage cache > (assign once & cache).
+  if (currentAvatarCustom) {
+    // custom avatar wins; nothing to do
+  } else if (currentAvatarKey && PRESET_AVATARS[currentAvatarKey]) {
+    // DB gave us a valid key — cache it so it stays consistent offline too
+    try { localStorage.setItem('rt_avatar_' + currentUser.id, currentAvatarKey); } catch(e){}
+  } else {
+    // No avatar from DB — fall back to the cached one, or assign ONCE.
     const stored = localStorage.getItem('rt_avatar_' + currentUser.id);
     if (stored && PRESET_AVATARS[stored]) {
       currentAvatarKey = stored;
     } else {
       const aKeys = Object.keys(PRESET_AVATARS);
       currentAvatarKey = aKeys[Math.floor(Math.random() * aKeys.length)];
-      localStorage.setItem('rt_avatar_' + currentUser.id, currentAvatarKey);
-      try { await sbClient.from('profiles').update({ avatar_key: currentAvatarKey }).eq('id', currentUser.id); } catch(e) {}
+      try { localStorage.setItem('rt_avatar_' + currentUser.id, currentAvatarKey); } catch(e){}
     }
+    // Best-effort persist to DB so OTHER users see the same avatar
+    try { await sbClient.from('profiles').update({ avatar_key: currentAvatarKey }).eq('id', currentUser.id); } catch(e) {}
   }
 }
 
@@ -2790,7 +2824,7 @@ function updateUserUI() {
   // Plan tab
   const planIcons = { free: '🌱', plus: '⭐', pro: '👑' };
   const planDescs = {
-    free: 'Basic access · 3 trees · 20 nodes',
+    free: 'Basic access · 5 trees · 20 nodes',
     plus: '50 trees · Unlimited nodes · Media · Export · Search',
     pro: 'All Plus features · Colors · Tags · Extended notes · Stats'
   };
@@ -3451,9 +3485,12 @@ function saveNodeFromModal() {
   }
 }
 
-function deleteNodeById(nodeId) {
+async function deleteNodeById(nodeId) {
   const tree = getActiveTree(); if (!tree) return;
-  if (prefs.confirmDelete !== false && !confirm('Delete this node and all its children?')) return;
+  if (prefs.confirmDelete !== false) {
+    const ok = await confirmDialog('Delete this node and all of its children? This cannot be undone.', { title: 'Delete Node', okText: 'Delete' });
+    if (!ok) return;
+  }
   deleteNode(tree.nodes, nodeId);
   if (selectedNodeId === nodeId) { selectedNodeId = null; closeDetailPanel(); }
   debouncedSave(activeTreeId);
@@ -3479,6 +3516,7 @@ function renderCanvas() {
     empty.style.display = 'flex';
     empty.querySelector('p').textContent = 'This tree is empty';
     empty.querySelector('small').textContent = 'Click "Add Node" to get started';
+    updateTopbarStats();
     return;
   }
   empty.style.display = 'none';
@@ -3512,6 +3550,7 @@ function renderCanvas() {
   canvas.innerHTML = '';
   canvas.appendChild(container);
   updateStatsBar();
+  updateTopbarStats();
   // Redraw vlines after layout
   requestAnimationFrame(() => requestAnimationFrame(() => {
     document.querySelectorAll('.node-children:not(.collapsed)').forEach(drawVLine);
@@ -4387,11 +4426,11 @@ async function publishTree() {
   // Add to local public registry
   try {
     const reg = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]');
-    reg.unshift({ id: snapshot.id, name: tree.name, icon: tree.icon, author: snapshot.author, authorAvatar: snapshot.authorAvatar, authorAvatarCustom: snapshot.authorAvatarCustom, authorAvatarKey: snapshot.authorAvatarKey, nodeCount: countNodes(tree.nodes), shares: 0, at: snapshot.publishedAt });
+    reg.unshift({ id: snapshot.id, name: tree.name, icon: tree.icon, author: snapshot.author, authorAvatar: snapshot.authorAvatar, authorAvatarCustom: snapshot.authorAvatarCustom, authorAvatarKey: snapshot.authorAvatarKey, nodeCount: countNodes(tree.nodes), shares: 0, ownerId: currentUser ? currentUser.id : null, at: snapshot.publishedAt });
     localStorage.setItem('rt_public_gallery', JSON.stringify(reg.slice(0,100)));
   } catch(e){}
   // Try a public_trees table too (optional)
-  try { await sbClient.from('public_trees').insert({ id: snapshot.id, data: snapshot, name: tree.name, author: snapshot.author }); } catch(e){}
+  try { await sbClient.from('public_trees').insert({ id: snapshot.id, data: snapshot, name: tree.name, author: snapshot.author, owner_id: currentUser ? currentUser.id : null }); } catch(e){}
   showToast('Published to the gallery!', 'success');
 }
 
@@ -4441,22 +4480,21 @@ function getFollowing() { try { return JSON.parse(localStorage.getItem('rt_follo
 // Fetch follower/following counts for a user. Uses a 'follows' table when present,
 // otherwise falls back to what we can know locally (self only).
 async function getFollowStats(author) {
-  let followers = null, following = null;
+  let dbFollowers = null, dbFollowing = null;
   // Try the database (real, cross-user counts)
   try {
     const { count: fc } = await sbClient.from('follows').select('*', { count: 'exact', head: true }).eq('following', author);
-    if (typeof fc === 'number') followers = fc;
+    if (typeof fc === 'number') dbFollowers = fc;
     const { count: gc } = await sbClient.from('follows').select('*', { count: 'exact', head: true }).eq('follower', author);
-    if (typeof gc === 'number') following = gc;
+    if (typeof gc === 'number') dbFollowing = gc;
   } catch(e){}
-  // Local fallbacks
-  if (following === null && author === (currentDisplayName||'')) following = getFollowing().length;
-  if (followers === null) {
-    // Use the locally-tracked follower count (reflects follows made on this device)
-    const m = getLocalFollowerCounts();
-    followers = m[author] || 0;
-  }
-  return { followers, following: following === null ? 0 : following };
+  // Local tracking (reflects actions made on this device, instantly)
+  const localFollowers = getLocalFollowerCounts()[author] || 0;
+  const localFollowing = (author === (currentDisplayName||'')) ? getFollowing().length : 0;
+  // Use the higher of DB vs local so a just-made follow always shows.
+  const followers = Math.max(dbFollowers || 0, localFollowers);
+  const following = Math.max(dbFollowing || 0, localFollowing);
+  return { followers, following };
 }
 function setFollowing(list) { try { localStorage.setItem('rt_following', JSON.stringify(list)); } catch(e){} }
 function isFollowing(author) { return getFollowing().includes(author); }
@@ -4496,8 +4534,8 @@ async function openPublicGallery() {
   grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text3);font-size:14px;text-align:center;padding:40px;">Loading gallery…</div>';
   // Load from DB, fall back to local
   try {
-    const { data } = await sbClient.from('public_trees').select('id,name,author,data,created_at').order('created_at',{ascending:false}).limit(100);
-    if (data && data.length) galleryItems = data.map(d => ({ id:d.id, name:d.name, author:d.author||'Anonymous', icon:(d.data&&d.data.icon)||'🌳', nodeCount: d.data&&d.data.nodes?countNodes(d.data.nodes):0, authorAvatar:(d.data&&d.data.authorAvatar)||null, authorAvatarCustom:(d.data&&d.data.authorAvatarCustom)||null, authorAvatarKey:(d.data&&d.data.authorAvatarKey)||null, shares:(d.data&&d.data.shares)||0, at:d.created_at }));
+    const { data } = await sbClient.from('public_trees').select('id,name,author,data,owner_id,created_at').order('created_at',{ascending:false}).limit(100);
+    if (data && data.length) galleryItems = data.map(d => ({ id:d.id, name:d.name, author:d.author||'Anonymous', icon:(d.data&&d.data.icon)||'🌳', nodeCount: d.data&&d.data.nodes?countNodes(d.data.nodes):0, authorAvatar:(d.data&&d.data.authorAvatar)||null, authorAvatarCustom:(d.data&&d.data.authorAvatarCustom)||null, authorAvatarKey:(d.data&&d.data.authorAvatarKey)||null, shares:(d.data&&d.data.shares)||0, ownerId:d.owner_id||null, at:d.created_at }));
   } catch(e){}
   if (!galleryItems.length) { try { galleryItems = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]').map(it => ({...it, author: it.author||'Anonymous', shares: it.shares||0})); } catch(e){} }
   galleryRender();
@@ -4558,6 +4596,7 @@ function galleryRender() {
           '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share' +
         '</button>' +
         followBtn +
+        (isMine && canDeletePublished(it) ? '<button class="gallery-del-btn" onclick="event.stopPropagation();deletePublishedTree(\'' + it.id + '\')" title="Remove from gallery"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>' : '') +
       '</div></div>';
   }).join('');
   // Asynchronously fill in real avatars for each unique author
@@ -4644,22 +4683,15 @@ async function openUserProfile(author) {
   if (theirTrees.length) {
     h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">';
     theirTrees.forEach(it => {
-      const pf = isFollowing(author);
-      const pSelf = author === (currentDisplayName||'');
       h += '<div class="gallery-card" onclick="closeUserProfile();viewPublicTree(\'' + it.id + '\')">' +
         '<div class="gallery-card-title">' + (it.icon||'🌳') + ' ' + esc(it.name) + '</div>' +
         '<div class="gallery-card-author">' +
           '<span>' + (it.nodeCount||0) + ' topics</span>' +
         '</div>' +
         '<div class="gallery-card-actions">' +
-          '<button class="gallery-share-btn" onclick="event.stopPropagation();shareGalleryTree(\'' + it.id + '\')" title="Share this tree">' +
+          '<button class="gallery-share-btn" onclick="event.stopPropagation();shareGalleryTree(\'' + it.id + '\')" title="Share this tree" style="flex:1;">' +
             '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share' +
           '</button>' +
-          (!pSelf ?
-            '<button class="gallery-followmini-btn ' + (pf?'following':'') + '" onclick="event.stopPropagation();toggleFollow(\'' + esc(author).replace(/\x27/g,"\\x27") + '\',event);setTimeout(()=>openUserProfile(\'' + esc(author).replace(/\x27/g,"\\x27") + '\'),40);" title="' + (pf?'Unfollow':'Follow') + '">' +
-              (pf ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Following'
-                  : '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Follow') +
-            '</button>' : '') +
         '</div></div>';
     });
     h += '</div>';
@@ -4694,6 +4726,28 @@ function shareUserProfile(author) {
     () => showToast('Profile link copied! Share it anywhere.', 'success'),
     () => showToast('Link: ' + link, 'info')
   );
+}
+
+function canDeletePublished(it) {
+  // Owner check: prefer ownerId match; fall back to author name match (local case)
+  if (it.ownerId && currentUser) return it.ownerId === currentUser.id;
+  return (it.author || '') === (currentDisplayName || '');
+}
+
+async function deletePublishedTree(id) {
+  const it = (galleryItems||[]).find(i => i.id === id);
+  if (!it || !canDeletePublished(it)) { showToast('Only the owner can remove this tree.', 'error'); return; }
+  const ok = await confirmDialog('Remove "' + (it.name||'this tree') + '" from the public gallery? Your original tree stays in your account.', { title: 'Remove from Gallery', okText: 'Remove' });
+  if (!ok) return;
+  // Remove from DB (owner-scoped) and local registry
+  try { await sbClient.from('public_trees').delete().eq('id', id); } catch(e){}
+  try {
+    const reg = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]').filter(x => x.id !== id);
+    localStorage.setItem('rt_public_gallery', JSON.stringify(reg));
+  } catch(e){}
+  galleryItems = galleryItems.filter(i => i.id !== id);
+  galleryRender();
+  showToast('Removed from gallery.', 'success');
 }
 
 async function shareGalleryTree(id) {
@@ -5172,6 +5226,34 @@ function openAccountModal() {
 
 // ─── Modal Utilities ───
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+
+// In-page confirm dialog (returns a Promise<boolean>)
+function confirmDialog(message, opts) {
+  opts = opts || {};
+  return new Promise((resolve) => {
+    const modal = document.getElementById('confirm-modal');
+    document.getElementById('confirm-title').textContent = opts.title || 'Confirm';
+    document.getElementById('confirm-message').textContent = message;
+    const okBtn = document.getElementById('confirm-ok');
+    const cancelBtn = document.getElementById('confirm-cancel');
+    okBtn.textContent = opts.okText || 'Delete';
+    okBtn.style.background = opts.danger === false ? 'var(--accent)' : 'var(--danger,#e5484d)';
+    modal.classList.remove('hidden');
+    function cleanup(result) {
+      modal.classList.add('hidden');
+      okBtn.onclick = null; cancelBtn.onclick = null;
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') cleanup(false);
+      if (e.key === 'Enter') cleanup(true);
+    }
+    okBtn.onclick = () => cleanup(true);
+    cancelBtn.onclick = () => cleanup(false);
+    document.addEventListener('keydown', onKey);
+  });
+}
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function openNewTreeModal() {
   document.getElementById('new-tree-name').value = '';
@@ -6653,6 +6735,7 @@ async function uploadCustomAvatar(input) {
       currentAvatarKey = null;
       renderAvatarUI();
       if (!currentUser) return;
+      try { localStorage.removeItem('rt_avatar_' + currentUser.id); } catch(e){}
       await sbClient.from('profiles').update({ avatar_custom: dataUrl, avatar_key: null }).eq('id', currentUser.id);
       showToast('Avatar updated!', 'success');
     };
@@ -7038,6 +7121,70 @@ function openGraphView() {
   document.body.style.overflow = 'hidden';
   renderGraph();
 }
+function exportGraphSVG() {
+  const svg = document.getElementById('graph-svg');
+  if (!svg) return;
+  // Clone and inline a background + computed colors
+  const clone = svg.cloneNode(true);
+  const bbox = svg.getBBox ? svg.getBBox() : { x:0, y:0, width: svg.clientWidth, height: svg.clientHeight };
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('width', svg.clientWidth);
+  clone.setAttribute('height', svg.clientHeight);
+  // Resolve CSS variables to concrete colors for a standalone file
+  const cs = getComputedStyle(document.documentElement);
+  let str = new XMLSerializer().serializeToString(clone);
+  ['--accent','--text','--text3','--border2','--bg'].forEach(v => {
+    const val = cs.getPropertyValue(v).trim() || '#888';
+    str = str.split('var(' + v + ')').join(val);
+  });
+  const bg = cs.getPropertyValue('--bg').trim() || '#0f1117';
+  str = '<svg xmlns="http://www.w3.org/2000/svg" width="' + svg.clientWidth + '" height="' + svg.clientHeight + '"><rect width="100%" height="100%" fill="' + bg + '"/>' + str.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '') + '</svg>';
+  const blob = new Blob([str], { type: 'image/svg+xml' });
+  const a = document.createElement('a');
+  const tree = getActiveTree();
+  a.href = URL.createObjectURL(blob);
+  a.download = ((tree && tree.name) || 'graph') + '-graph.svg';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  showToast('Graph exported as SVG.', 'success');
+}
+
+function exportGraphPNG() {
+  const svg = document.getElementById('graph-svg');
+  if (!svg) return;
+  const cs = getComputedStyle(document.documentElement);
+  let str = new XMLSerializer().serializeToString(svg);
+  ['--accent','--text','--text3','--border2','--bg'].forEach(v => {
+    const val = cs.getPropertyValue(v).trim() || '#888';
+    str = str.split('var(' + v + ')').join(val);
+  });
+  const W = svg.clientWidth, H = svg.clientHeight;
+  const bg = cs.getPropertyValue('--bg').trim() || '#0f1117';
+  const full = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '"><rect width="100%" height="100%" fill="' + bg + '"/>' + str.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '') + '</svg>';
+  const img = new window.Image();
+  const svgBlob = new Blob([full], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = W * 2; canvas.height = H * 2; // 2x for crispness
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    canvas.toBlob((blob) => {
+      const a = document.createElement('a');
+      const tree = getActiveTree();
+      a.href = URL.createObjectURL(blob);
+      a.download = ((tree && tree.name) || 'graph') + '-graph.png';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      showToast('Graph exported as PNG.', 'success');
+    }, 'image/png');
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); showToast('PNG export failed; try SVG.', 'error'); };
+  img.src = url;
+}
+
 function closeGraphView() {
   document.getElementById('graph-overlay').classList.add('hidden');
   document.body.style.overflow = '';
