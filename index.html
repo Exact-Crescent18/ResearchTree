@@ -1358,6 +1358,10 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
 .publish-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: var(--transition); }
 .publish-item:hover { border-color: var(--accent); background: var(--bg3); }
+
+.node-editor-badge { display: flex; align-items: center; gap: 5px; margin-top: 8px; padding-top: 7px; border-top: 1px dashed var(--border); }
+.node-editor-badge .neb-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.node-editor-badge .neb-name { font-size: 10px; color: var(--text3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -1877,6 +1881,19 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
     <div style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure · access-code protected</div>
   </div>
   <div id="collab-body" style="flex:1;overflow-y:auto;padding:28px 20px;box-sizing:border-box;"></div>
+</div>
+
+<!-- Active Users Modal -->
+<div class="modal-overlay hidden" id="active-users-modal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <h3>Active in this session</h3>
+      <button class="icon-btn" onclick="closeModal('active-users-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="active-users-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Account Modal -->
@@ -3295,6 +3312,20 @@ async function saveTreeToDb(treeId) {
 function debouncedSave(treeId) {
   clearTimeout(saveDebounceTimer);
   setSyncState('syncing');
+  // If we're in a live session and editing the shared tree, mark ME as the
+  // last editor (locally + on the touched node) so it reflects immediately.
+  try {
+    if (collabRoom && collabChannel && treeId === collabRoom.treeId) {
+      const me = (currentDisplayName || (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'Someone'));
+      collabLastEditor = me;
+      const tree = trees.find(t => t.id === treeId);
+      if (tree && selectedNodeId) {
+        const n = findNode(tree.nodes, selectedNodeId);
+        if (n) { n._lastEditor = me; n._lastEditAt = Date.now(); }
+      }
+      updateCollabStatusBar();
+    }
+  } catch(e){}
   saveDebounceTimer = setTimeout(() => saveTreeToDb(treeId), 800);
 }
 
@@ -3852,6 +3883,16 @@ function buildNodeCard(node, isLeft, isRoot) {
     }
     colBtn.onclick = (e) => { e.stopPropagation(); toggleCollapse(node.id); };
     card.appendChild(colBtn);
+  }
+
+  // Live-collaboration "edited by" badge — shows who last touched this node
+  if (collabRoom && node._lastEditor) {
+    const eb = document.createElement('div');
+    eb.className = 'node-editor-badge';
+    const initial = (node._lastEditor[0] || '?').toUpperCase();
+    eb.title = 'Last edited by ' + node._lastEditor;
+    eb.innerHTML = '<span class="neb-dot">' + escHtml(initial) + '</span><span class="neb-name">' + escHtml(node._lastEditor) + '</span>';
+    card.appendChild(eb);
   }
 
   return card;
@@ -4639,6 +4680,28 @@ async function joinCollab() {
 let collabMyKey = null;
 let collabLastEditor = null;
 
+function getActivePeople() {
+  const states = collabPresence || {};
+  const people = [];
+  const seen = new Set();
+  Object.keys(states).forEach(k => (states[k]||[]).forEach(p => {
+    if (p.approved === false) return;
+    const id = (p.name||'') + '|' + (p.host?'h':'');
+    if (seen.has(id)) return; seen.add(id);
+    people.push(p);
+  }));
+  return people;
+}
+
+function avatarChip(p, overlap) {
+  const ml = overlap ? 'margin-left:-8px;' : '';
+  if (p.avatar) {
+    return '<span title="' + esc(p.name||'Guest') + (p.host?' (host)':'') + '" style="width:26px;height:26px;border-radius:50%;border:2px solid var(--bg);overflow:hidden;display:inline-block;' + ml + 'flex-shrink:0;"><img src="' + p.avatar + '" style="width:100%;height:100%;object-fit:cover;display:block;"></span>';
+  }
+  const initial = ((p.name||'?')[0]||'?').toUpperCase();
+  return '<span title="' + esc(p.name||'Guest') + (p.host?' (host)':'') + '" style="width:26px;height:26px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:600;' + ml + 'flex-shrink:0;">' + esc(initial) + '</span>';
+}
+
 function updateCollabStatusBar() {
   const bar = document.getElementById('collab-statusbar');
   const badge = document.getElementById('tb-collab-badge');
@@ -4649,21 +4712,43 @@ function updateCollabStatusBar() {
     return;
   }
   if (badge) badge.style.display = 'block';
-  // Gather active people from presence
-  const states = collabPresence || {};
-  const people = [];
-  Object.keys(states).forEach(k => (states[k]||[]).forEach(p => { if (p.approved !== false) people.push(p); }));
-  // Build avatar stack (initials)
-  let avatars = people.slice(0,5).map(p => {
-    const initial = ((p.name||'?')[0]||'?').toUpperCase();
-    return '<span title="' + esc(p.name||'Guest') + (p.host?' (host)':'') + '" style="width:24px;height:24px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:600;margin-left:-6px;">' + esc(initial) + '</span>';
-  }).join('');
+  const people = getActivePeople();
   const count = people.length;
-  let html = '<div style="display:flex;align-items:center;">' + avatars + '</div>';
-  html += '<span style="font-size:11px;color:var(--text3);white-space:nowrap;">' + count + ' active</span>';
-  if (collabLastEditor) html += '<span style="font-size:11px;color:var(--text3);white-space:nowrap;border-left:1px solid var(--border);padding-left:8px;">last edit: ' + esc(collabLastEditor) + '</span>';
-  bar.innerHTML = html;
+
+  let avatarsHtml = '';
+  if (count <= 1) {
+    // Single user — just their avatar
+    avatarsHtml = people.map(p => avatarChip(p, false)).join('');
+  } else {
+    // More than one: show the first avatar + a clickable "+N" overflow chip
+    avatarsHtml = avatarChip(people[0], false);
+    const extra = count - 1;
+    avatarsHtml += '<span onclick="openActiveUsersList()" title="See everyone in this session" style="width:26px;height:26px;border-radius:50%;border:2px solid var(--bg);background:var(--bg4);color:var(--text);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-left:-8px;cursor:pointer;flex-shrink:0;">+' + extra + '</span>';
+  }
+
+  let h = '<div style="display:flex;align-items:center;cursor:' + (count>1?'pointer':'default') + ';" ' + (count>1?'onclick="openActiveUsersList()"':'') + '>' + avatarsHtml + '</div>';
+  h += '<span style="font-size:11px;color:var(--text3);white-space:nowrap;">' + count + ' active</span>';
+  if (collabLastEditor) {
+    const meName = (currentDisplayName || (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'Someone'));
+    const label = (collabLastEditor === meName) ? 'last edit: you' : 'last edit: ' + esc(collabLastEditor);
+    h += '<span style="font-size:11px;color:var(--text3);white-space:nowrap;border-left:1px solid var(--border);padding-left:8px;">' + label + '</span>';
+  }
+  bar.innerHTML = h;
   bar.style.display = 'flex';
+}
+
+function openActiveUsersList() {
+  const people = getActivePeople();
+  const body = document.getElementById('active-users-list');
+  if (!body) return;
+  body.innerHTML = people.map(p =>
+    '<div style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--border);border-radius:8px;">' +
+      avatarChip(p, false) +
+      '<span style="font-size:14px;">' + esc(p.name||'Guest') + (p.host?' <span style="font-size:11px;color:var(--accent);">(host)</span>':'') + '</span>' +
+      '<span style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:#16a34a;"></span>' +
+    '</div>'
+  ).join('') || '<div style="color:var(--text3);font-size:13px;">No one else is here right now.</div>';
+  openModal('active-users-modal');
 }
 function connectCollabChannel() {
   if (!collabRoom) return;
@@ -4742,7 +4827,7 @@ function connectCollabChannel() {
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           // Track presence. Joiners are marked pending until approved.
-          await collabChannel.track({ name: myName, host: collabRoom.isHost, approved: collabRoom.isHost ? true : collabApproved, at: Date.now() });
+          await collabChannel.track({ name: myName, host: collabRoom.isHost, approved: collabRoom.isHost ? true : collabApproved, avatar: (getAvatarSrc && getAvatarSrc()) || null, at: Date.now() });
           if (!collabRoom.isHost && !collabApproved) {
             // Ask the host for approval
             collabChannel.send({ type:'broadcast', event:'join-request', payload:{ key: collabMyKey, name: myName } });
