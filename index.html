@@ -1314,6 +1314,8 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 
 #gallery-overlay { display: flex; }
 #gallery-overlay.hidden { display: none !important; }
+#profile-overlay { display: flex; }
+#profile-overlay.hidden { display: none !important; }
 .gallery-tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text2); cursor: pointer; padding: 10px 16px; font-size: 14px; font-weight: 500; transition: var(--transition); }
 .gallery-tab:hover { color: var(--text); }
 .gallery-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -1321,6 +1323,8 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 .gallery-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow); }
 .gallery-card-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .gallery-card-author { font-size: 12px; color: var(--text3); display: flex; align-items: center; justify-content: space-between; }
+.gallery-author-link { cursor: pointer; transition: var(--transition); }
+.gallery-author-link:hover { color: var(--accent); text-decoration: underline; }
 .gallery-follow-btn { font-size: 11px; padding: 3px 10px; border-radius: 12px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; transition: var(--transition); }
 .gallery-follow-btn.following { background: var(--accent); color: #fff; }
 </style>
@@ -1760,6 +1764,15 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
+<!-- Public User Profile Overlay -->
+<div id="profile-overlay" class="hidden" style="position:fixed;inset:0;z-index:885;background:var(--bg);flex-direction:column;">
+  <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+    <button class="btn-sm btn-outline" onclick="closeUserProfile()"><i class="ti ti-arrow-left"></i> Back</button>
+    <div style="font-family:var(--title-font);font-weight:300;font-size:20px;">User Profile</div>
+  </div>
+  <div style="max-width:760px;width:100%;margin:0 auto;padding:28px 20px;box-sizing:border-box;flex:1;overflow-y:auto;" id="profile-overlay-body"></div>
+</div>
+
 <!-- Embed Modal -->
 <div class="modal-overlay hidden" id="embed-modal">
   <div class="modal" style="max-width:520px;">
@@ -1828,6 +1841,29 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
             <input type="file" accept="image/*" style="display:none;" onchange="uploadCustomAvatar(this)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M7 11l5-5 5 5"/><path d="M12 4v12"/></svg>
           </label>
+        </div>
+      </div>
+
+      <!-- About / qualifications -->
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);">About You</div>
+          <span style="font-size:11px;color:var(--text3);">Shown on your public profile</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <label style="font-size:12px;color:var(--text2);">Bio
+            <textarea id="prof-bio" rows="2" placeholder="A short bio about yourself..." style="width:100%;margin-top:4px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>
+          </label>
+          <label style="font-size:12px;color:var(--text2);">Education
+            <input id="prof-education" type="text" placeholder="e.g. B.Sc. Biology, University of Oregon" style="width:100%;margin-top:4px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
+          </label>
+          <label style="font-size:12px;color:var(--text2);">Field of Study
+            <input id="prof-field" type="text" placeholder="e.g. Molecular Biology" style="width:100%;margin-top:4px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
+          </label>
+          <label style="font-size:12px;color:var(--text2);">Qualifications / Credentials
+            <input id="prof-qualifications" type="text" placeholder="e.g. PhD candidate, Certified Educator" style="width:100%;margin-top:4px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
+          </label>
+          <button class="btn-sm btn-accent" onclick="saveProfileBio()" style="align-self:flex-start;"><i class="ti ti-check"></i> Save Profile</button>
         </div>
       </div>
 
@@ -2580,6 +2616,7 @@ async function signOut() {
 
 // ─── Profile / Plan ───
 let currentDisplayName = '';
+let currentBio = '', currentEducation = '', currentField = '', currentQualifications = '';
 
 async function loadUserProfile() {
   const nameFromMeta = currentUser.user_metadata?.full_name
@@ -2620,18 +2657,32 @@ async function loadUserProfile() {
   try {
     const { data: extra } = await sbClient
       .from('profiles')
-      .select('display_name, avatar_key, avatar_custom')
+      .select('display_name, avatar_key, avatar_custom, bio, education, field_of_study, qualifications')
       .eq('id', currentUser.id)
       .single();
     if (extra) {
       currentDisplayName = extra.display_name || nameFromMeta;
       currentAvatarKey = extra.avatar_key || null;
       currentAvatarCustom = extra.avatar_custom || null;
+      currentBio = extra.bio || '';
+      currentEducation = extra.education || '';
+      currentField = extra.field_of_study || '';
+      currentQualifications = extra.qualifications || '';
     } else {
       currentDisplayName = nameFromMeta;
     }
   } catch (e) {
-    currentDisplayName = nameFromMeta;
+    // bio columns may not exist yet — read just the core columns
+    try {
+      const { data: core } = await sbClient.from('profiles').select('display_name, avatar_key, avatar_custom').eq('id', currentUser.id).single();
+      if (core) { currentDisplayName = core.display_name || nameFromMeta; currentAvatarKey = core.avatar_key || null; currentAvatarCustom = core.avatar_custom || null; }
+      else currentDisplayName = nameFromMeta;
+    } catch (e2) { currentDisplayName = nameFromMeta; }
+    // Cache bio locally as a fallback
+    try {
+      const local = JSON.parse(localStorage.getItem('rt_bio_' + currentUser.id) || '{}');
+      currentBio = local.bio||''; currentEducation = local.education||''; currentField = local.field||''; currentQualifications = local.qualifications||'';
+    } catch(e3) {}
   }
 
   // STEP 3: For an EXISTING profile that somehow has no avatar, assign one
@@ -4385,14 +4436,82 @@ function galleryRender() {
   }
   grid.innerHTML = items.map(it => {
     const following = isFollowing(it.author);
+    const safeAuthor = esc(it.author||'Anonymous').replace(/'/g,"\\'");
     return '<div class="gallery-card" onclick="viewPublicTree(\'' + it.id + '\')">' +
       '<div class="gallery-card-title">' + (it.icon||'🌳') + ' ' + esc(it.name) + '</div>' +
       '<div style="font-size:12px;color:var(--text3);">' + (it.nodeCount||0) + ' topics</div>' +
       '<div class="gallery-card-author">' +
-        '<span>by ' + esc(it.author||'Anonymous') + '</span>' +
-        (it.author && it.author !== (currentDisplayName||'') ? '<button class="gallery-follow-btn ' + (following?'following':'') + '" onclick="toggleFollow(\'' + esc(it.author).replace(/'/g,"\\'") + '\',event)">' + (following?'Following':'Follow') + '</button>' : '') +
+        '<span class="gallery-author-link" onclick="event.stopPropagation();openUserProfile(\'' + safeAuthor + '\')">by ' + esc(it.author||'Anonymous') + '</span>' +
+        (it.author && it.author !== (currentDisplayName||'') ? '<button class="gallery-follow-btn ' + (following?'following':'') + '" onclick="toggleFollow(\'' + safeAuthor + '\',event)">' + (following?'Following':'Follow') + '</button>' : '') +
       '</div></div>';
   }).join('');
+}
+
+function closeUserProfile() {
+  document.getElementById('profile-overlay').classList.add('hidden');
+}
+
+async function openUserProfile(author) {
+  if (!author || author === 'Anonymous') { showToast('This author has no public profile.', 'info'); return; }
+  document.getElementById('profile-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  const body = document.getElementById('profile-overlay-body');
+  body.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;">Loading profile…</div>';
+
+  // Gather this author's published trees from the gallery list
+  const theirTrees = (galleryItems || []).filter(it => (it.author||'') === author);
+
+  // Try to load their profile bio from the DB
+  let prof = null;
+  try {
+    const { data } = await sbClient.from('profiles').select('display_name, bio, education, field_of_study, qualifications, avatar_key').ilike('display_name', author).limit(1).single();
+    if (data) prof = data;
+  } catch(e){}
+  // Fallback: if it's the current user, use local values
+  if (!prof && author === currentDisplayName) {
+    prof = { display_name: author, bio: currentBio, education: currentEducation, field_of_study: currentField, qualifications: currentQualifications };
+  }
+
+  const following = isFollowing(author);
+  const isSelf = author === (currentDisplayName||'');
+  const initial = (author[0]||'?').toUpperCase();
+
+  let h = '<div style="display:flex;align-items:center;gap:18px;margin-bottom:24px;">';
+  h += '<div style="width:80px;height:80px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:600;color:#fff;flex-shrink:0;">' + esc(initial) + '</div>';
+  h += '<div style="flex:1;min-width:0;">';
+  h += '<div style="font-size:24px;font-weight:700;font-family:var(--title-font);">' + esc(author) + '</div>';
+  if (prof && prof.field_of_study) h += '<div style="font-size:14px;color:var(--accent);margin-top:2px;">' + esc(prof.field_of_study) + '</div>';
+  h += '<div style="font-size:13px;color:var(--text3);margin-top:4px;">' + theirTrees.length + ' published tree' + (theirTrees.length!==1?'s':'') + '</div>';
+  h += '</div>';
+  if (!isSelf) h += '<button class="btn-sm ' + (following?'btn-outline':'btn-accent') + '" onclick="toggleFollow(\'' + esc(author).replace(/'/g,"\\'") + '\');setTimeout(()=>openUserProfile(\'' + esc(author).replace(/'/g,"\\'") + '\'),50);" style="flex-shrink:0;">' + (following?'<i class="ti ti-check"></i> Following':'<i class="ti ti-plus"></i> Follow') + '</button>';
+  h += '</div>';
+
+  // Bio / qualifications section
+  if (prof && (prof.bio || prof.education || prof.qualifications)) {
+    h += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:24px;">';
+    if (prof.bio) h += '<div style="font-size:14px;line-height:1.6;margin-bottom:' + ((prof.education||prof.qualifications)?'14px':'0') + ';">' + esc(prof.bio) + '</div>';
+    if (prof.education) h += '<div style="font-size:13px;margin-bottom:6px;"><span style="color:var(--text3);">🎓 Education:</span> ' + esc(prof.education) + '</div>';
+    if (prof.qualifications) h += '<div style="font-size:13px;"><span style="color:var(--text3);">📜 Qualifications:</span> ' + esc(prof.qualifications) + '</div>';
+    h += '</div>';
+  } else {
+    h += '<div style="color:var(--text3);font-size:13px;margin-bottom:24px;">This user hasn\'t added profile details yet.</div>';
+  }
+
+  // Their published trees
+  h += '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin-bottom:12px;">Published Trees</div>';
+  if (theirTrees.length) {
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">';
+    theirTrees.forEach(it => {
+      h += '<div class="gallery-card" onclick="closeUserProfile();viewPublicTree(\'' + it.id + '\')">' +
+        '<div class="gallery-card-title">' + (it.icon||'🌳') + ' ' + esc(it.name) + '</div>' +
+        '<div style="font-size:12px;color:var(--text3);">' + (it.nodeCount||0) + ' topics</div></div>';
+    });
+    h += '</div>';
+  } else {
+    h += '<div style="color:var(--text3);font-size:13px;">No published trees yet.</div>';
+  }
+
+  body.innerHTML = h;
 }
 
 async function viewPublicTree(id) {
@@ -4784,7 +4903,11 @@ function selectEmoji(emoji, type) {
 function openAccountModal() {
   updateUserUI();
   applyPrefs();
-  // Reset to profile tab
+  // Fill bio fields
+  const b = document.getElementById('prof-bio'); if (b) b.value = currentBio || '';
+  const ed = document.getElementById('prof-education'); if (ed) ed.value = currentEducation || '';
+  const fl = document.getElementById('prof-field'); if (fl) fl.value = currentField || '';
+  const q = document.getElementById('prof-qualifications'); if (q) q.value = currentQualifications || '';
   switchAcctTab('profile');
   openModal('account-modal');
 }
@@ -6159,15 +6282,52 @@ function getAvatarSrc() {
   return null;
 }
 
+async function saveProfileBio() {
+  currentBio = (document.getElementById('prof-bio').value || '').trim();
+  currentEducation = (document.getElementById('prof-education').value || '').trim();
+  currentField = (document.getElementById('prof-field').value || '').trim();
+  currentQualifications = (document.getElementById('prof-qualifications').value || '').trim();
+  // Always cache locally
+  try { localStorage.setItem('rt_bio_' + currentUser.id, JSON.stringify({ bio: currentBio, education: currentEducation, field: currentField, qualifications: currentQualifications })); } catch(e){}
+  // Try to persist to DB (ignore if columns missing)
+  try {
+    await sbClient.from('profiles').update({ bio: currentBio, education: currentEducation, field_of_study: currentField, qualifications: currentQualifications }).eq('id', currentUser.id);
+  } catch(e){}
+  showToast('Profile saved!', 'success');
+}
+
 async function editDisplayName() {
   const current = currentDisplayName || '';
-  const newName = prompt('Enter your display name:', current);
+  const newName = prompt('Enter your display name (must be unique):', current);
   if (newName === null) return;
   const trimmed = newName.trim();
   if (!trimmed) { showToast('Name cannot be empty.', 'error'); return; }
+  if (trimmed.length < 2) { showToast('Name must be at least 2 characters.', 'error'); return; }
+  if (trimmed === current) { return; }
+  // Check uniqueness against other profiles (case-insensitive)
+  try {
+    const { data: taken } = await sbClient
+      .from('profiles')
+      .select('id')
+      .ilike('display_name', trimmed)
+      .neq('id', currentUser.id)
+      .limit(1);
+    if (taken && taken.length) { showToast('That name is already taken. Try another.', 'error'); return; }
+  } catch(e) {
+    // If the query fails (e.g. column missing), fall back to a local check
+    try {
+      const used = JSON.parse(localStorage.getItem('rt_used_names') || '[]');
+      if (used.map(n=>n.toLowerCase()).includes(trimmed.toLowerCase())) { showToast('That name is already taken locally.', 'error'); return; }
+    } catch(e2){}
+  }
   try {
     await sbClient.from('profiles').update({ display_name: trimmed }).eq('id', currentUser.id);
   } catch(e) {}
+  // Track locally for fallback uniqueness
+  try {
+    const used = JSON.parse(localStorage.getItem('rt_used_names') || '[]');
+    if (!used.includes(trimmed)) { used.push(trimmed); localStorage.setItem('rt_used_names', JSON.stringify(used)); }
+  } catch(e){}
   currentDisplayName = trimmed;
   updateUserUI();
   showToast('Name updated!', 'success');
@@ -6880,7 +7040,9 @@ document.addEventListener('keydown', (e) => {
   const studyOpen = !document.getElementById('study-overlay').classList.contains('hidden');
   const graphOpen = !document.getElementById('graph-overlay').classList.contains('hidden');
   const galleryOpen = !document.getElementById('gallery-overlay').classList.contains('hidden');
+  const profileOpen = !document.getElementById('profile-overlay').classList.contains('hidden');
   if (e.key === 'Escape') {
+    if (profileOpen) { closeUserProfile(); return; }
     if (galleryOpen) { closeGallery(); return; }
     if (studyOpen) { closeStudyMode(); return; }
     if (graphOpen) { closeGraphView(); return; }
