@@ -4458,6 +4458,18 @@ async function publishTreeById(treeId) {
     setTimeout(() => editDisplayName(), 300);
     return;
   }
+  // #1 Prevent publishing a duplicate (same name) — remove the old copy first
+  try {
+    const reg = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]');
+    const dup = reg.find(r => r.name === tree.name && (r.ownerId === (currentUser?currentUser.id:null) || r.author === currentDisplayName));
+    if (dup) {
+      // Remove the existing published copy (DB + local) before re-publishing
+      try { await sbClient.from('public_trees').delete().eq('id', dup.id); } catch(e){}
+      const reg2 = reg.filter(r => r.id !== dup.id);
+      localStorage.setItem('rt_public_gallery', JSON.stringify(reg2));
+      showToast('Updated your existing published tree.', 'info');
+    }
+  } catch(e){}
   closeModal('publish-modal');
   const snapshot = { id: 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8),
                      name: tree.name, icon: tree.icon, nodes: tree.nodes,
@@ -4588,7 +4600,17 @@ async function openPublicGallery() {
   try { localItems = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]').map(it => ({...it, author: it.author||'Anonymous', shares: it.shares||0})); } catch(e){}
   // Merge: DB rows take priority, then add any local rows not already present.
   const seen = new Set(dbItems.map(i => i.id));
-  galleryItems = dbItems.concat(localItems.filter(i => !seen.has(i.id)));
+  let merged = dbItems.concat(localItems.filter(i => !seen.has(i.id)));
+  // #3 Remove Anonymous (nameless) trees from the gallery view
+  merged = merged.filter(i => i.author && i.author !== 'Anonymous');
+  // #1 De-duplicate: same author + same tree name = one entry (keep the newest)
+  const byKey = {};
+  merged.forEach(i => {
+    const key = (i.author||'') + '||' + (i.name||'');
+    const existing = byKey[key];
+    if (!existing || (new Date(i.at||0)) > (new Date(existing.at||0))) byKey[key] = i;
+  });
+  galleryItems = Object.values(byKey);
   // Sort newest first by timestamp when available
   galleryItems.sort((a,b) => (new Date(b.at||0)) - (new Date(a.at||0)));
   galleryRender();
@@ -4635,14 +4657,14 @@ function galleryRender() {
                    : '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Follow') +
       '</button>' : '';
     return '<div class="gallery-card" onclick="viewPublicTree(\'' + it.id + '\')">' +
+      '<div class="gallery-card-author" onclick="event.stopPropagation();openUserProfile(\'' + safeAuthor + '\')" style="cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:2px;">' +
+        '<span class="gallery-card-avatar" data-author="' + safeAuthor + '" style="width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0;overflow:hidden;">' + esc((authorName[0]||'?').toUpperCase()) + '</span>' +
+        '<span style="font-size:13px;color:var(--text2);font-weight:600;">' + esc(authorName) + '</span>' +
+      '</div>' +
       '<div class="gallery-card-title">' + (it.icon||'🌳') + ' ' + esc(it.name) + '</div>' +
       '<div style="font-size:12px;color:var(--text3);display:flex;gap:10px;">' +
         '<span>' + (it.nodeCount||0) + ' topics</span>' +
         '<span title="Times shared"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> ' + shareCount + '</span>' +
-      '</div>' +
-      '<div class="gallery-card-author" onclick="event.stopPropagation();openUserProfile(\'' + safeAuthor + '\')" style="cursor:pointer;display:flex;align-items:center;gap:8px;">' +
-        '<span class="gallery-card-avatar" data-author="' + safeAuthor + '" style="width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0;overflow:hidden;">' + esc((authorName[0]||'?').toUpperCase()) + '</span>' +
-        '<span style="font-size:13px;color:var(--text2);font-weight:500;">' + esc(authorName) + '</span>' +
       '</div>' +
       '<div class="gallery-card-actions">' +
         '<button class="gallery-share-btn" onclick="event.stopPropagation();shareGalleryTree(\'' + it.id + '\')" title="Share this tree">' +
@@ -6745,9 +6767,37 @@ async function editDisplayName() {
     const used = JSON.parse(localStorage.getItem('rt_used_names') || '[]');
     if (!used.includes(trimmed)) { used.push(trimmed); localStorage.setItem('rt_used_names', JSON.stringify(used)); }
   } catch(e){}
+  const oldName = current;
   currentDisplayName = trimmed;
   updateUserUI();
+  // #2 Propagate the new name to all of this user's published trees
+  await propagateNameChange(oldName, trimmed);
   showToast('Name updated!', 'success');
+}
+
+async function propagateNameChange(oldName, newName) {
+  const myId = currentUser ? currentUser.id : null;
+  // Update local registry
+  try {
+    const reg = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]');
+    let changed = false;
+    reg.forEach(r => { if (r.ownerId === myId || r.author === oldName) { r.author = newName; changed = true; } });
+    if (changed) localStorage.setItem('rt_public_gallery', JSON.stringify(reg));
+  } catch(e){}
+  // Update in-memory gallery items
+  (galleryItems||[]).forEach(it => { if (it.ownerId === myId || it.author === oldName) it.author = newName; });
+  // Update DB rows (author column + the snapshot's author inside data)
+  try {
+    if (myId) {
+      await sbClient.from('public_trees').update({ author: newName }).eq('owner_id', myId);
+    } else {
+      await sbClient.from('public_trees').update({ author: newName }).eq('author', oldName);
+    }
+  } catch(e){}
+  // Refresh the avatar cache key for the new name
+  try { if (typeof _avatarCache === 'object') { delete _avatarCache[oldName]; delete _avatarCache[newName]; } } catch(e){}
+  // Re-render gallery if open
+  if (!document.getElementById('gallery-overlay').classList.contains('hidden') && typeof galleryRender === 'function') galleryRender();
 }
 
 function renderAvatarUI() {
