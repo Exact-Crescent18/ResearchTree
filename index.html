@@ -4492,24 +4492,26 @@ function galleryRender() {
     return;
   }
   grid.innerHTML = items.map(it => {
-    const following = isFollowing(it.author);
-    const safeAuthor = esc(it.author||'Anonymous').replace(/'/g,"\\'");
+    const authorName = it.author || 'Anonymous';
+    const following = isFollowing(authorName);
+    const safeAuthor = esc(authorName).replace(/'/g,"\\'");
+    const isMine = authorName === (currentDisplayName || '');  // hide follow only on my own trees
+    const followBtn = !isMine ?
+      '<button class="gallery-followmini-btn ' + (following?'following':'') + '" onclick="event.stopPropagation();toggleFollow(\'' + safeAuthor + '\',event)" title="' + (following?'Unfollow':'Follow') + ' ' + esc(authorName) + '">' +
+        (following ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Following'
+                   : '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Follow') +
+      '</button>' : '';
     return '<div class="gallery-card" onclick="viewPublicTree(\'' + it.id + '\')">' +
       '<div class="gallery-card-title">' + (it.icon||'🌳') + ' ' + esc(it.name) + '</div>' +
       '<div style="font-size:12px;color:var(--text3);">' + (it.nodeCount||0) + ' topics</div>' +
       '<div class="gallery-card-author">' +
-        '<span class="gallery-author-link" onclick="event.stopPropagation();openUserProfile(\'' + safeAuthor + '\')">by ' + esc(it.author||'Anonymous') + '</span>' +
-        (it.author && it.author !== (currentDisplayName||'') ? '<button class="gallery-follow-btn ' + (following?'following':'') + '" onclick="toggleFollow(\'' + safeAuthor + '\',event)">' + (following?'Following':'Follow') + '</button>' : '') +
+        '<span class="gallery-author-link" onclick="event.stopPropagation();openUserProfile(\'' + safeAuthor + '\')">by ' + esc(authorName) + '</span>' +
       '</div>' +
       '<div class="gallery-card-actions">' +
         '<button class="gallery-share-btn" onclick="event.stopPropagation();shareGalleryTree(\'' + it.id + '\')" title="Share this tree">' +
           '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share' +
         '</button>' +
-        (it.author && it.author !== (currentDisplayName||'') ?
-          '<button class="gallery-followmini-btn ' + (following?'following':'') + '" onclick="event.stopPropagation();toggleFollow(\'' + safeAuthor + '\',event)" title="' + (following?'Unfollow':'Follow') + ' ' + esc(it.author) + '">' +
-            (following ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Following'
-                       : '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Follow') +
-          '</button>' : '') +
+        followBtn +
       '</div></div>';
   }).join('');
 }
@@ -4592,7 +4594,6 @@ async function openUserProfile(author) {
         '<div class="gallery-card-title">' + (it.icon||'🌳') + ' ' + esc(it.name) + '</div>' +
         '<div class="gallery-card-author">' +
           '<span>' + (it.nodeCount||0) + ' topics</span>' +
-          (!pSelf ? '<button class="gallery-follow-btn ' + (pf?'following':'') + '" onclick="event.stopPropagation();toggleFollow(\'' + esc(author).replace(/\x27/g,"\\x27") + '\',event);setTimeout(()=>openUserProfile(\'' + esc(author).replace(/\x27/g,"\\x27") + '\'),40);">' + (pf?'Following':'Follow') + '</button>' : '') +
         '</div>' +
         '<div class="gallery-card-actions">' +
           '<button class="gallery-share-btn" onclick="event.stopPropagation();shareGalleryTree(\'' + it.id + '\')" title="Share this tree">' +
