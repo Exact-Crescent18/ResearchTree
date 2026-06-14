@@ -4435,12 +4435,12 @@ function openCollabPage() {
   renderCollabHome();
 }
 function closeCollabPage() {
-  if (collabChannel) {
-    const ok = confirm ? true : true;
-  }
-  leaveCollab();
+  // Closing the page does NOT end the session. The room + realtime channel
+  // stay alive in the background so collaboration is ongoing. Only the
+  // explicit "End session" / "Leave session" button calls endCollab().
   document.getElementById('collab-overlay').classList.add('hidden');
   document.body.style.overflow = '';
+  if (collabRoom) showToast('Collaboration still running in the background.', 'info');
 }
 
 async function renderCollabHome() {
@@ -4637,6 +4637,12 @@ function connectCollabChannel() {
           renderCollabHome();
         }
       })
+      .on('broadcast', { event: 'session-ended' }, () => {
+        if (!collabRoom || collabRoom.isHost) return;
+        showToast('The host ended the session.', 'info');
+        endCollab();
+        if (!document.getElementById('collab-overlay').classList.contains('hidden')) renderCollabHome();
+      })
       .on('broadcast', { event: 'request-sync' }, () => {
         // HOST answers sync requests with the canonical tree
         if (collabRoom.isHost) {
@@ -4728,7 +4734,7 @@ function renderCollabRoom() {
       ) : '') +
       '<div style="display:flex;gap:10px;">' +
         '<button class="btn-sm btn-accent" onclick="closeCollabPage();if(collabRoom)selectTree(collabRoom.treeId);" style="flex:1;justify-content:center;padding:11px;"><i class="ti ti-edit"></i> Open the tree & edit</button>' +
-        '<button class="btn-sm btn-outline" onclick="leaveCollab();renderCollabHome();" style="flex:1;justify-content:center;padding:11px;color:var(--danger,#e5484d);border-color:var(--danger,#e5484d);"><i class="ti ti-logout"></i> ' + (collabRoom.isHost ? 'End session' : 'Leave session') + '</button>' +
+        '<button class="btn-sm btn-outline" onclick="confirmEndCollab()" style="flex:1;justify-content:center;padding:11px;color:var(--danger,#e5484d);border-color:var(--danger,#e5484d);"><i class="ti ti-logout"></i> ' + (collabRoom.isHost ? 'End session' : 'Leave session') + '</button>' +
       '</div>' +
     '</div>';
   renderCollabPresence();
@@ -4777,22 +4783,39 @@ function copyCollabInvite() {
   );
 }
 
-function leaveCollab() {
+// Explicitly END the session: host deletes the room; everyone disconnects.
+function endCollab() {
   if (collabChannel) {
     try { collabChannel.untrack && collabChannel.untrack(); } catch(e){}
     try { sbClient.removeChannel(collabChannel); } catch(e){}
   }
-  // Host ending the session removes the room record
   if (collabRoom && collabRoom.isHost) {
+    // Tell everyone the session ended, then remove the room record.
+    try { collabChannel && collabChannel.send({ type:'broadcast', event:'session-ended', payload:{} }); } catch(e){}
     try { sbClient.from('collab_rooms').delete().eq('id', collabRoom.id); } catch(e){}
     try { const r = JSON.parse(localStorage.getItem('rt_collab_rooms')||'{}'); delete r[collabRoom.id]; localStorage.setItem('rt_collab_rooms', JSON.stringify(r)); } catch(e){}
+  } else if (collabRoom) {
+    // A member leaving just removes their own joined-room record
+    try { const j = JSON.parse(localStorage.getItem('rt_joined_collabs')||'{}'); delete j[collabRoom.id]; localStorage.setItem('rt_joined_collabs', JSON.stringify(j)); } catch(e){}
   }
-  collabChannel = null; collabRoom = null; collabPresence = {}; window._collabBroadcast = null;
+  collabChannel = null; collabRoom = null; collabPresence = {}; collabApproved = false; collabPending = {}; window._collabBroadcast = null;
+}
+
+// Lightweight disconnect that does NOT delete the room (kept for compatibility).
+function leaveCollab() { endCollab(); }
+
+async function confirmEndCollab() {
+  const isHost = collabRoom && collabRoom.isHost;
+  const msg = isHost ? 'End this session for everyone? Collaborators will be disconnected and the room will close.' : 'Leave this collaboration?';
+  const ok = await confirmDialog(msg, { title: isHost ? 'End Session' : 'Leave Session', okText: isHost ? 'End Session' : 'Leave' });
+  if (!ok) return;
+  endCollab();
+  renderCollabHome();
 }
 
 // Backwards-compatible entry point (Tools menu calls this)
 function startCollaboration() { openCollabPage(); }
-function stopCollaboration() { leaveCollab(); }
+function stopCollaboration() { endCollab(); }
 
 // ─── Public gallery, publish, embed ───
 function publishTree() {
