@@ -1689,6 +1689,48 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   </div>
 </div>
 
+<!-- Link Picker Modal -->
+<div class="modal-overlay hidden" id="linkpicker-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3>Link to a Note</h3>
+      <button class="icon-btn" onclick="closeModal('linkpicker-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input id="linkpicker-input" type="text" placeholder="Search notes in any tree..." oninput="linkPickerSearch(this.value)" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;margin-bottom:12px;box-sizing:border-box;">
+      <div id="linkpicker-results" style="display:flex;flex-direction:column;gap:6px;max-height:360px;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Public Gallery Modal -->
+<div class="modal-overlay hidden" id="gallery-modal">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-header">
+      <h3>Public Gallery</h3>
+      <button class="icon-btn" onclick="closeModal('gallery-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="gallery-list" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Embed Modal -->
+<div class="modal-overlay hidden" id="embed-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3>Embed Tree</h3>
+      <button class="icon-btn" onclick="closeModal('embed-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:10px;">Paste this code into any website to embed a read-only view of this tree:</div>
+      <textarea id="embed-code" readonly style="width:100%;height:90px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:12px;font-family:monospace;outline:none;resize:none;box-sizing:border-box;"></textarea>
+      <button class="btn-add-sm primary" onclick="copyEmbedCode()" style="width:100%;margin-top:10px;justify-content:center;display:flex;align-items:center;gap:6px;padding:10px;"><i class="ti ti-clipboard"></i> Copy Embed Code</button>
+    </div>
+  </div>
+</div>
+
 <!-- Account Modal -->
 <div class="modal-overlay hidden" id="account-modal">
   <div class="modal" style="max-width:500px;">
@@ -2764,6 +2806,7 @@ const FEATURES = {
   studyMode: true,
   publicGallery: true,
   importExport: true,
+  realtimeCollab: true,
   pwa: true
 };
 // When AI is enabled later, fill this in (kept here so turning it on is trivial):
@@ -3037,6 +3080,7 @@ async function loadTrees() {
 }
 
 async function saveTreeToDb(treeId) {
+  try { if (window._collabBroadcast) window._collabBroadcast(); } catch(e){}
   if (!currentUser) return;
   const tree = trees.find(t => t.id === treeId);
   if (!tree) return;
@@ -3636,6 +3680,118 @@ function selectNode(nodeId) {
 }
 
 // ─── Detail Panel ───
+// ─── Cross-tree links & backlinks ───
+function findNodeAnywhere(nodeId) {
+  for (const t of trees) {
+    const n = findNode(t.nodes, nodeId);
+    if (n) return { tree: t, node: n };
+  }
+  return null;
+}
+
+function computeBacklinks(nodeId) {
+  // Find every node (in any tree) whose refs point at nodeId
+  const back = [];
+  trees.forEach(t => {
+    (function walk(nodes) {
+      (nodes||[]).forEach(n => {
+        if (n.refs && n.refs.some(r => r.nodeId === nodeId)) back.push({ tree: t, node: n });
+        walk(n.children||[]);
+      });
+    })(t.nodes||[]);
+  });
+  return back;
+}
+
+function renderCrossLinksSection(nodeId) {
+  const found = findNodeAnywhere(nodeId);
+  if (!found) return '';
+  const node = found.node;
+  const refs = node.refs || [];
+  const backlinks = computeBacklinks(nodeId);
+  let h = '<div class="detail-section"><div class="detail-label">Linked Notes</div>';
+  // Outgoing refs
+  if (refs.length) {
+    h += '<div style="display:flex;flex-direction:column;gap:4px;">';
+    refs.forEach((r,i) => {
+      const target = findNodeAnywhere(r.nodeId);
+      const label = target ? ((target.tree.icon||'🌳') + ' ' + target.node.title) : '(deleted)';
+      h += '<div style="display:flex;align-items:center;gap:6px;font-size:12px;">' +
+        '<span onclick="gotoLinkedNode(\'' + r.nodeId + '\')" style="flex:1;cursor:pointer;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(label) + '</span>' +
+        '<i class="ti ti-x" style="cursor:pointer;color:var(--text3);font-size:13px;" onclick="removeCrossLink(\'' + nodeId + '\',\'' + r.nodeId + '\')"></i></div>';
+    });
+    h += '</div>';
+  }
+  h += '<button class="btn-add-sm" style="margin-top:4px;font-size:12px;padding:6px 10px;" onclick="openLinkPicker(\'' + nodeId + '\')"><i class="ti ti-link"></i> Link to another note</button>';
+  // Backlinks (incoming)
+  if (backlinks.length) {
+    h += '<div class="detail-label" style="margin-top:10px;">Linked from (' + backlinks.length + ')</div>';
+    h += '<div style="display:flex;flex-direction:column;gap:4px;">';
+    backlinks.forEach(b => {
+      h += '<div onclick="gotoLinkedNode(\'' + b.node.id + '\')" style="font-size:12px;cursor:pointer;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+        '← ' + esc((b.tree.icon||'🌳') + ' ' + b.node.title) + '</div>';
+    });
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function gotoLinkedNode(nodeId) {
+  const found = findNodeAnywhere(nodeId);
+  if (!found) { showToast('That note no longer exists.', 'error'); return; }
+  if (activeTreeId !== found.tree.id) selectTree(found.tree.id);
+  setTimeout(() => { selectNode(nodeId); }, 80);
+}
+
+function removeCrossLink(fromId, toId) {
+  const found = findNodeAnywhere(fromId);
+  if (!found) return;
+  found.node.refs = (found.node.refs||[]).filter(r => r.nodeId !== toId);
+  debouncedSave(found.tree.id);
+  renderDetailPanel(fromId);
+}
+
+let _linkPickerFrom = null;
+function openLinkPicker(fromId) {
+  _linkPickerFrom = fromId;
+  openModal('linkpicker-modal');
+  const inp = document.getElementById('linkpicker-input');
+  if (inp) { inp.value = ''; setTimeout(()=>inp.focus(),50); }
+  linkPickerSearch('');
+}
+function linkPickerSearch(q) {
+  q = (q||'').trim().toLowerCase();
+  const box = document.getElementById('linkpicker-results');
+  const results = [];
+  trees.forEach(t => {
+    (function walk(nodes){ (nodes||[]).forEach(n => {
+      if (n.id === _linkPickerFrom) return; // can't link to self
+      if (!q || (n.title + ' ' + (n.desc||'')).toLowerCase().includes(q)) results.push({ tree:t, node:n });
+      walk(n.children||[]);
+    }); })(t.nodes||[]);
+  });
+  box.innerHTML = results.slice(0,40).map(r =>
+    '<div class="gsearch-item" onclick="addCrossLink(\'' + r.node.id + '\')">' +
+    '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.tree.icon||'🌳') + ' ' + esc(r.node.title) + '</div>' +
+    '<div style="font-size:11px;color:var(--text3);">' + esc(r.tree.name) + '</div></div>' +
+    '<i class="ti ti-plus" style="color:var(--accent);flex-shrink:0;"></i></div>'
+  ).join('') || '<div style="color:var(--text3);font-size:13px;padding:8px;">No notes found.</div>';
+}
+function addCrossLink(toId) {
+  const found = findNodeAnywhere(_linkPickerFrom);
+  if (!found) return;
+  if (!found.node.refs) found.node.refs = [];
+  if (!found.node.refs.some(r => r.nodeId === toId)) {
+    const target = findNodeAnywhere(toId);
+    found.node.refs.push({ nodeId: toId, treeId: target ? target.tree.id : null });
+    debouncedSave(found.tree.id);
+  }
+  closeModal('linkpicker-modal');
+  renderDetailPanel(_linkPickerFrom);
+  showToast('Link added.', 'success');
+}
+
 function renderDetailPanel(nodeId) {
   const tree = getActiveTree(); if (!tree) return;
   const node = findNode(tree.nodes, nodeId); if (!node) return;
@@ -3793,6 +3949,19 @@ function renderDetailPanel(nodeId) {
     // (Edit/Open button lives in the sticky footer now)
   }
   html += `</div>`;
+
+  // ─── AI actions (hidden until FEATURES.ai) ───
+  if (FEATURES.ai) {
+    html += `<div class="detail-section"><div class="detail-label">AI Assist</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <button class="btn-add-sm" style="font-size:12px;padding:7px 10px;justify-content:flex-start;display:flex;gap:6px;" onclick="aiExpandNode('${nodeId}')"><i class="ti ti-sparkles"></i> Expand into sub-topics</button>
+        <button class="btn-add-sm" style="font-size:12px;padding:7px 10px;justify-content:flex-start;display:flex;gap:6px;" onclick="aiSuggestBranches('${nodeId}')"><i class="ti ti-bulb"></i> Suggest related branches</button>
+        <button class="btn-add-sm" style="font-size:12px;padding:7px 10px;justify-content:flex-start;display:flex;gap:6px;" onclick="aiSummarizeNotes('${nodeId}')"><i class="ti ti-file-text"></i> Summarize notes</button>
+      </div></div>`;
+  }
+
+  // ─── Cross-tree links / backlinks ───
+  html += renderCrossLinksSection(nodeId);
 
   body.innerHTML = html;
 
@@ -4039,6 +4208,107 @@ function openExportModal() {
   openModal('export-modal');
 }
 
+// ─── Real-time collaboration (Supabase realtime broadcast) ───
+let collabChannel = null;
+function startCollaboration() {
+  const tree = getActiveTree();
+  if (!tree) { showToast('Select a tree first.', 'error'); return; }
+  if (collabChannel) { showToast('Already collaborating on a tree.', 'info'); return; }
+  if (!sbClient || !sbClient.channel) { showToast('Real-time needs a live Supabase connection.', 'error'); return; }
+  try {
+    collabChannel = sbClient.channel('tree-' + tree.id, { config: { broadcast: { self: false } } });
+    collabChannel
+      .on('broadcast', { event: 'update' }, (msg) => {
+        if (msg.payload && msg.payload.treeId === tree.id && msg.payload.nodes) {
+          tree.nodes = msg.payload.nodes;
+          renderCanvas();
+          showToast('Tree updated by a collaborator.', 'info');
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') showToast('Live collaboration on! Share the link so others can join.', 'success');
+      });
+    // Broadcast our changes whenever we save
+    window._collabBroadcast = () => {
+      if (collabChannel) collabChannel.send({ type: 'broadcast', event: 'update', payload: { treeId: tree.id, nodes: tree.nodes } });
+    };
+  } catch (e) { showToast('Could not start collaboration.', 'error'); }
+}
+function stopCollaboration() {
+  if (collabChannel) { try { sbClient.removeChannel(collabChannel); } catch(e){} collabChannel = null; window._collabBroadcast = null; }
+}
+
+// ─── Public gallery, publish, embed ───
+async function publishTree() {
+  const tree = getActiveTree();
+  if (!tree) { showToast('Select a tree first.', 'error'); return; }
+  if (!confirm('Publish "' + tree.name + '" to the public gallery? Anyone will be able to view it.')) return;
+  const snapshot = buildTreeSnapshot();
+  snapshot.public = true;
+  snapshot.author = currentDisplayName || 'Anonymous';
+  snapshot.publishedAt = new Date().toISOString();
+  // Store in shares (for the ?share link) and mark public locally
+  try { localStorage.setItem('rt_share_' + snapshot.id, JSON.stringify(snapshot)); } catch(e){}
+  try { await sbClient.from('shares').insert({ id: snapshot.id, data: snapshot, created_by: currentUser ? currentUser.id : null }); } catch(e){}
+  // Add to local public registry
+  try {
+    const reg = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]');
+    reg.unshift({ id: snapshot.id, name: tree.name, icon: tree.icon, author: snapshot.author, nodeCount: countNodes(tree.nodes), at: snapshot.publishedAt });
+    localStorage.setItem('rt_public_gallery', JSON.stringify(reg.slice(0,100)));
+  } catch(e){}
+  // Try a public_trees table too (optional)
+  try { await sbClient.from('public_trees').insert({ id: snapshot.id, data: snapshot, name: tree.name, author: snapshot.author }); } catch(e){}
+  showToast('Published to the gallery!', 'success');
+}
+
+async function openPublicGallery() {
+  openModal('gallery-modal');
+  const box = document.getElementById('gallery-list');
+  box.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px;">Loading...</div>';
+  let items = [];
+  // Try DB first
+  try {
+    const { data } = await sbClient.from('public_trees').select('id,name,author,data').order('created_at',{ascending:false}).limit(50);
+    if (data && data.length) items = data.map(d => ({ id:d.id, name:d.name, author:d.author, icon:(d.data&&d.data.icon)||'🌳', nodeCount: d.data&&d.data.nodes?countNodes(d.data.nodes):0 }));
+  } catch(e){}
+  // Fall back to local registry
+  if (!items.length) { try { items = JSON.parse(localStorage.getItem('rt_public_gallery')||'[]'); } catch(e){} }
+  if (!items.length) { box.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px;">No public trees yet. Publish one from the Tools menu!</div>'; return; }
+  box.innerHTML = items.map(it =>
+    '<div class="gsearch-item" onclick="viewPublicTree(\'' + it.id + '\')">' +
+    '<div style="min-width:0;"><div style="font-size:14px;font-weight:600;">' + (it.icon||'🌳') + ' ' + esc(it.name) + '</div>' +
+    '<div style="font-size:11px;color:var(--text3);">by ' + esc(it.author||'Anonymous') + ' · ' + (it.nodeCount||0) + ' nodes</div></div>' +
+    '<i class="ti ti-eye" style="color:var(--accent);flex-shrink:0;"></i></div>'
+  ).join('');
+}
+
+async function viewPublicTree(id) {
+  let snap = null;
+  try { const s = localStorage.getItem('rt_share_'+id); if (s) snap = JSON.parse(s); } catch(e){}
+  if (!snap) { try { const {data} = await sbClient.from('shares').select('data').eq('id',id).single(); if (data) snap = data.data; } catch(e){} }
+  if (!snap) { try { const {data} = await sbClient.from('public_trees').select('data').eq('id',id).single(); if (data) snap = data.data; } catch(e){} }
+  closeModal('gallery-modal');
+  if (snap) openSharedViewer(snap);
+  else showToast('Could not load that tree.', 'error');
+}
+
+function embedTree() {
+  const tree = getActiveTree();
+  if (!tree) { showToast('Select a tree first.', 'error'); return; }
+  const snapshot = buildTreeSnapshot();
+  try { localStorage.setItem('rt_share_' + snapshot.id, JSON.stringify(snapshot)); } catch(e){}
+  try { sbClient.from('shares').insert({ id: snapshot.id, data: snapshot, created_by: currentUser ? currentUser.id : null }); } catch(e){}
+  const url = window.location.origin + window.location.pathname + '?share=' + snapshot.id + '&embed=1';
+  const code = '<iframe src="' + url + '" width="100%" height="600" style="border:1px solid #ddd;border-radius:8px;" title="' + esc(tree.name) + '"></iframe>';
+  const box = document.getElementById('embed-code');
+  if (box) box.value = code;
+  openModal('embed-modal');
+}
+function copyEmbedCode() {
+  const box = document.getElementById('embed-code');
+  if (box) { box.select(); navigator.clipboard.writeText(box.value).then(()=>showToast('Embed code copied!','success'),()=>showToast('Copy failed','error')); }
+}
+
 // ─── Sharing ───
 let neShareCachedLink = null;
 let neShareSnapshot = null;   // what we're sharing: whole tree OR a single node
@@ -4223,12 +4493,13 @@ function checkForSharedTree() {
 }
 
 function openSharedViewer(snap) {
+  const isEmbed = new URLSearchParams(window.location.search).get('embed') === '1';
   // Render a simple read-only view of the shared tree
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:2000;background:var(--bg);overflow:auto;padding:40px 20px;';
   let h = '<div style="max-width:760px;margin:0 auto;">';
   h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:28px;">'+(snap.icon||'🌳')+'</span><h1 style="font-family:var(--title-font);font-weight:300;font-size:30px;">'+esc(snap.name||'Shared Tree')+'</h1></div>';
-  h += '<div style="font-size:12px;color:var(--text3);margin-bottom:24px;">Read-only shared view · <a href="'+window.location.pathname+'" style="color:var(--accent);">Open ResearchTree</a></div>';
+  if (!isEmbed) h += '<div style="font-size:12px;color:var(--text3);margin-bottom:24px;">Read-only shared view · <a href="'+window.location.pathname+'" style="color:var(--accent);">Open ResearchTree</a></div>'; else h += '<div style="margin-bottom:16px;"></div>';
   function render(nodes, depth) {
     nodes.forEach(n => {
       h += '<div style="margin-left:'+(depth*20)+'px;padding:10px 0;border-bottom:1px solid var(--border);">';
@@ -5202,7 +5473,48 @@ function neRedrawLinks() {
     // Endpoint X = the page edge on the image's side; Y = the anchor's line
     const edgeX = (imgIsLeft ? pRect.left : pRect.right) - cRect.left;
     const ay = (aRect.top + aRect.height/2) - cRect.top;
-    // Start from the image's inner edge (the side facing the page)
+    // ─── PWA: installable + basic offline (service worker via blob) ───
+function setupPWA() {
+  if (!FEATURES.pwa) return;
+  // Inject a manifest
+  try {
+    const manifest = {
+      name: 'ResearchTree', short_name: 'ResearchTree',
+      start_url: '.', display: 'standalone',
+      background_color: '#0f1117', theme_color: '#6c8eff',
+      icons: [{ src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="32" fill="#6c8eff"/><text x="96" y="130" font-size="110" text-anchor="middle">🌳</text></svg>'), sizes: '192x192', type: 'image/svg+xml' }]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const link = document.createElement('link');
+    link.rel = 'manifest'; link.href = URL.createObjectURL(blob);
+    document.head.appendChild(link);
+  } catch(e){}
+  // Register a minimal service worker that caches the page shell for offline use.
+  if ('serviceWorker' in navigator) {
+    try {
+      const swCode = `
+        const CACHE = 'researchtree-v1';
+        self.addEventListener('install', e => self.skipWaiting());
+        self.addEventListener('activate', e => self.clients.claim());
+        self.addEventListener('fetch', e => {
+          if (e.request.method !== 'GET') return;
+          e.respondWith(
+            caches.open(CACHE).then(cache =>
+              cache.match(e.request).then(hit =>
+                hit || fetch(e.request).then(res => { try { cache.put(e.request, res.clone()); } catch(x){} return res; })
+                  .catch(() => hit)
+              )
+            )
+          );
+        });
+      `;
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+    } catch(e){}
+  }
+}
+
+// Start from the image's inner edge (the side facing the page)
     const ix = (imgIsLeft ? iRect.right : iRect.left) - cRect.left;
     const iy = (iRect.top + iRect.height/2) - cRect.top;
     const ax = edgeX;
@@ -5977,6 +6289,25 @@ document.addEventListener('click', (e) => {
 // AI FEATURES (hidden until FEATURES.ai = true and API wired)
 // All UI for these is gated on FEATURES.ai, so nothing shows until enabled.
 // ═══════════════════════════════════════════════════════════
+async function aiSuggestBranches(nodeId) {
+  if (!FEATURES.ai) return;
+  const tree = getActiveTree(); if (!tree) return;
+  const node = findNode(tree.nodes, nodeId); if (!node) return;
+  showToast('Thinking of related branches...', 'info');
+  const siblings = (node.children||[]).map(c => c.title).join(', ');
+  const prompt = `For a knowledge tree about "${tree.name}", the node "${node.title}" currently has these children: ${siblings || '(none)'}. Suggest 5 RELATED topics NOT already listed that would deepen this branch. Respond ONLY as a JSON array of short strings.`;
+  const out = await aiCall(prompt, 400);
+  if (!out) return;
+  try {
+    const titles = JSON.parse(out.replace(/```json|```/g,'').trim());
+    if (!node.children) node.children = [];
+    titles.forEach(t => node.children.push({ id: 'node_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), title: String(t), desc:'', children:[], side: node.side||'right' }));
+    node.collapsed = false;
+    debouncedSave(activeTreeId); renderCanvas();
+    showToast('Added related branches.', 'success');
+  } catch(e) { showToast('Could not parse AI response.', 'error'); }
+}
+
 async function aiCall(prompt, maxTokens) {
   // This is the single integration point. When you have an API, set
   // AI_CONFIG.enabled = true. (In production, proxy this through a backend so
@@ -6046,7 +6377,11 @@ function openToolsModal() {
   if (FEATURES.studyMode)    tools.push(['Study Mode','Flip through nodes as flashcards','M12 14l9-5-9-5-9 5 9 5zM12 14v7M5 11v4l7 4 7-4v-4', 'openStudyMode()']);
   if (FEATURES.templates)    tools.push(['Templates','Start from or save a template','M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4', 'openTemplatesModal()']);
   if (FEATURES.versionHistory) tools.push(['Version History','Snapshots you can restore','M3 3v5h5M3.05 13a9 9 0 1 0 .5-4.5L3 8M12 7v5l4 2', 'openHistoryModal()']);
-  if (FEATURES.importExport) tools.push(['Import Tree','Import from JSON','M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3', 'importTreeFile()']);
+  if (FEATURES.importExport) tools.push(['Import Tree','Markdown, OPML, or JSON','M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3', 'importTreeFile()']);
+  if (FEATURES.publicGallery) tools.push(['Public Gallery','Browse published trees','M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10', 'openPublicGallery()']);
+  if (FEATURES.publicGallery) tools.push(['Publish Tree','Share to the public gallery','M12 2v13M5 9l7-7 7 7M5 21h14', 'publishTree()']);
+  if (FEATURES.importExport) tools.push(['Embed','Get an iframe embed code','M16 18l6-6-6-6M8 6l-6 6 6 6', 'embedTree()']);
+  if (FEATURES.realtimeCollab) tools.push(['Live Collaborate','Real-time shared editing','M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75', 'startCollaboration()']);
   grid.innerHTML = tools.map(t =>
     '<div class="tool-card" onclick="closeModal(\'tools-modal\');' + t[3] + '">' +
     '<div class="tool-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + t[2] + '"/></svg></div>' +
@@ -6293,24 +6628,70 @@ function restoreVersion(i) {
   showToast('Snapshot restored.', 'success');
 }
 
-// ─── Import tree from JSON file ───
+// ─── Multi-format import: Markdown outline, OPML, or JSON ───
+function parseMarkdownOutline(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  const root = { children: [] };
+  const stack = [{ node: root, level: -1 }];
+  lines.forEach(line => {
+    let level, title;
+    const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
+    const bulletMatch = line.match(/^(\s*)[-*+]\s+(.*)/);
+    const numMatch = line.match(/^(\s*)\d+\.\s+(.*)/);
+    if (headingMatch) { level = headingMatch[1].length; title = headingMatch[2]; }
+    else if (bulletMatch) { level = 100 + Math.floor(bulletMatch[1].replace(/\t/g,'  ').length / 2); title = bulletMatch[2]; }
+    else if (numMatch) { level = 100 + Math.floor(numMatch[1].replace(/\t/g,'  ').length / 2); title = numMatch[2]; }
+    else { return; }
+    title = title.replace(/\*\*/g,'').replace(/[*_`]/g,'').trim();
+    if (!title) return;
+    const node = { title, desc: '', children: [] };
+    while (stack.length > 1 && stack[stack.length-1].level >= level) stack.pop();
+    stack[stack.length-1].node.children.push(node);
+    stack.push({ node, level });
+  });
+  return root.children;
+}
+
+function parseOPML(text) {
+  try {
+    const doc = new DOMParser().parseFromString(text, 'text/xml');
+    function walk(outline) {
+      return [...outline.children].filter(c => c.tagName === 'outline').map(o => ({
+        title: o.getAttribute('text') || o.getAttribute('title') || 'Untitled',
+        desc: '', children: walk(o)
+      }));
+    }
+    const body = doc.querySelector('body');
+    return body ? walk(body) : [];
+  } catch (e) { return []; }
+}
+
 function importTreeFile() {
   const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.type = 'file'; inp.accept = '.json,.md,.markdown,.txt,.opml,.xml';
   inp.onchange = () => {
     const file = inp.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = async (e) => {
+      const text = e.target.result;
+      const name = file.name.replace(/\.(json|md|markdown|txt|opml|xml)$/i,'');
+      let nodes = null, icon = '🌳', treeName = name;
       try {
-        const data = JSON.parse(e.target.result);
-        const nodes = data.nodes || data;
-        if (!Array.isArray(nodes)) throw new Error('Invalid format');
-        if (!canCreateTree()) { showToast('Tree limit reached.', 'error'); openPaywall('plus'); return; }
-        const tree = { id: 'tree_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), name: data.name || file.name.replace(/\.json$/,''), icon: data.icon || '🌳', color: '#6c8eff', nodes: assignIds(nodes) };
-        trees.unshift(tree); renderTreeList(); selectTree(tree.id);
-        showToast('Tree imported!', 'success');
-        try { await saveTreeToDb(tree.id); } catch(err){}
-      } catch(err) { showToast('Could not import: invalid JSON.', 'error'); }
+        if (/\.json$/i.test(file.name)) {
+          const data = JSON.parse(text);
+          nodes = data.nodes || data; icon = data.icon || '🌳'; treeName = data.name || name;
+        } else if (/\.(opml|xml)$/i.test(file.name)) {
+          nodes = parseOPML(text);
+        } else {
+          nodes = parseMarkdownOutline(text);
+        }
+      } catch (err) { showToast('Could not parse file.', 'error'); return; }
+      if (!Array.isArray(nodes) || !nodes.length) { showToast('No nodes found in file.', 'error'); return; }
+      if (!canCreateTree()) { showToast('Tree limit reached.', 'error'); openPaywall('plus'); return; }
+      const tree = { id: 'tree_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), name: treeName, icon, color: '#6c8eff', nodes: assignIds(nodes) };
+      trees.unshift(tree); renderTreeList(); selectTree(tree.id);
+      showToast('Imported ' + countNodes(tree.nodes) + ' nodes!', 'success');
+      try { await saveTreeToDb(tree.id); } catch(err){}
     };
     reader.readAsText(file);
   };
@@ -6347,6 +6728,7 @@ function maybeAutoSnapshot() {
 try { if (typeof checkForSharedTree === 'function') checkForSharedTree(); } catch(e){}
 loadPrefs();
 init();
+try { setupPWA(); } catch(e){}
 setTimeout(initCanvasPanZoom, 500);
 </script>
 </body>
