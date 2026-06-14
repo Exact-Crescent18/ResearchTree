@@ -1067,6 +1067,9 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 }
 @keyframes editorSlideIn { from { opacity:0; transform:translateY(12px);} to {opacity:1;transform:translateY(0);} }
 #node-view-overlay.hidden { display: none; }
+/* New tool overlays — must be display:none when hidden (override inline) */
+#graph-overlay, #study-overlay { display: flex; }
+#graph-overlay.hidden, #study-overlay.hidden { display: none !important; }
 .nv-topbar {
   height: 56px; flex-shrink: 0; background: var(--bg2);
   border-bottom: 1px solid var(--border);
@@ -1612,7 +1615,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 </div>
 
 <!-- Graph View Overlay -->
-<div id="graph-overlay" class="hidden" style="position:fixed;inset:0;z-index:850;background:var(--bg);display:flex;flex-direction:column;">
+<div id="graph-overlay" class="hidden" style="position:fixed;inset:0;z-index:850;background:var(--bg);flex-direction:column;">
   <div style="height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
     <button class="btn-sm btn-outline" onclick="closeGraphView()"><i class="ti ti-arrow-left"></i> Back</button>
     <div style="font-family:var(--title-font);font-weight:300;font-size:18px;">Graph View</div>
@@ -1623,7 +1626,7 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
 </div>
 
 <!-- Study Mode Overlay -->
-<div id="study-overlay" class="hidden" style="position:fixed;inset:0;z-index:850;background:var(--bg);display:flex;flex-direction:column;align-items:center;">
+<div id="study-overlay" class="hidden" style="position:fixed;inset:0;z-index:850;background:var(--bg);flex-direction:column;align-items:center;">
   <div style="width:100%;height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;box-sizing:border-box;">
     <button class="btn-sm btn-outline" onclick="closeStudyMode()"><i class="ti ti-arrow-left"></i> Exit</button>
     <div style="font-family:var(--title-font);font-weight:300;font-size:18px;">Study Mode</div>
