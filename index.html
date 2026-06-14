@@ -1335,6 +1335,15 @@ textarea.detail-input { resize: vertical; min-height: 80px; }
   background: var(--bg3); color: var(--text2); cursor: pointer; transition: var(--transition); width: 100%; justify-content: center;
 }
 .gallery-share-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--bg4); }
+
+.gallery-followmini-btn {
+  display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--accent);
+  background: transparent; color: var(--accent); cursor: pointer; transition: var(--transition);
+  white-space: nowrap; flex-shrink: 0;
+}
+.gallery-followmini-btn:hover { background: var(--accent-dim, rgba(108,142,255,0.12)); }
+.gallery-followmini-btn.following { background: var(--accent); color: #fff; }
 </style>
 </head>
 <body>
@@ -4400,13 +4409,39 @@ function getAuthorAvatar(author) {
 }
 
 function getFollowing() { try { return JSON.parse(localStorage.getItem('rt_following')||'[]'); } catch(e){ return []; } }
+
+// Fetch follower/following counts for a user. Uses a 'follows' table when present,
+// otherwise falls back to what we can know locally (self only).
+async function getFollowStats(author) {
+  let followers = null, following = null;
+  // Try the database (real, cross-user counts)
+  try {
+    const { count: fc } = await sbClient.from('follows').select('*', { count: 'exact', head: true }).eq('following', author);
+    if (typeof fc === 'number') followers = fc;
+    const { count: gc } = await sbClient.from('follows').select('*', { count: 'exact', head: true }).eq('follower', author);
+    if (typeof gc === 'number') following = gc;
+  } catch(e){}
+  // Local fallbacks
+  if (following === null && author === (currentDisplayName||'')) following = getFollowing().length;
+  // Approximate followers locally: 1 if the current user follows them
+  if (followers === null) followers = isFollowing(author) ? 1 : 0;
+  return { followers, following: following === null ? 0 : following };
+}
 function setFollowing(list) { try { localStorage.setItem('rt_following', JSON.stringify(list)); } catch(e){} }
 function isFollowing(author) { return getFollowing().includes(author); }
 function toggleFollow(author, ev) {
   if (ev) ev.stopPropagation();
   let f = getFollowing();
-  if (f.includes(author)) { f = f.filter(a => a !== author); showToast('Unfollowed ' + author, 'info'); }
-  else { f.push(author); showToast('Following ' + author + '!', 'success'); }
+  const me = currentDisplayName || 'Anonymous';
+  if (f.includes(author)) {
+    f = f.filter(a => a !== author);
+    showToast('Unfollowed ' + author, 'info');
+    try { sbClient.from('follows').delete().eq('follower', me).eq('following', author); } catch(e){}
+  } else {
+    f.push(author);
+    showToast('Following ' + author + '!', 'success');
+    try { sbClient.from('follows').insert({ follower: me, following: author, follower_id: currentUser ? currentUser.id : null }); } catch(e){}
+  }
   setFollowing(f);
   galleryRender();
 }
@@ -4470,6 +4505,11 @@ function galleryRender() {
         '<button class="gallery-share-btn" onclick="event.stopPropagation();shareGalleryTree(\'' + it.id + '\')" title="Share this tree">' +
           '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share' +
         '</button>' +
+        (it.author && it.author !== (currentDisplayName||'') ?
+          '<button class="gallery-followmini-btn ' + (following?'following':'') + '" onclick="event.stopPropagation();toggleFollow(\'' + safeAuthor + '\',event)" title="' + (following?'Unfollow':'Follow') + ' ' + esc(it.author) + '">' +
+            (following ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Following'
+                       : '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Follow') +
+          '</button>' : '') +
       '</div></div>';
   }).join('');
 }
@@ -4518,6 +4558,11 @@ async function openUserProfile(author) {
   h += '<div style="font-size:24px;font-weight:700;font-family:var(--title-font);">' + esc(author) + '</div>';
   if (prof && prof.field_of_study) h += '<div style="font-size:14px;color:var(--accent);margin-top:2px;">' + esc(prof.field_of_study) + '</div>';
   h += '<div style="font-size:13px;color:var(--text3);margin-top:4px;">' + theirTrees.length + ' published tree' + (theirTrees.length!==1?'s':'') + '</div>';
+  // Followers / Following counts (filled in async below)
+  h += '<div id="profile-follow-stats" style="display:flex;gap:18px;margin-top:8px;">' +
+    '<span style="font-size:13px;"><strong id="pf-followers">–</strong> <span style="color:var(--text3);">Followers</span></span>' +
+    '<span style="font-size:13px;"><strong id="pf-following">–</strong> <span style="color:var(--text3);">Following</span></span>' +
+    '</div>';
   h += '</div>';
   h += '<div style="display:flex;gap:8px;flex-shrink:0;">';
   if (!isSelf) h += '<button class="btn-sm ' + (following?'btn-outline':'btn-accent') + '" onclick="toggleFollow(\'' + safeA + '\');setTimeout(()=>openUserProfile(\'' + safeA + '\'),50);">' + (following?'<i class="ti ti-check"></i> Following':'<i class="ti ti-plus"></i> Follow') + '</button>';
@@ -4553,6 +4598,11 @@ async function openUserProfile(author) {
           '<button class="gallery-share-btn" onclick="event.stopPropagation();shareGalleryTree(\'' + it.id + '\')" title="Share this tree">' +
             '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share' +
           '</button>' +
+          (!pSelf ?
+            '<button class="gallery-followmini-btn ' + (pf?'following':'') + '" onclick="event.stopPropagation();toggleFollow(\'' + esc(author).replace(/\x27/g,"\\x27") + '\',event);setTimeout(()=>openUserProfile(\'' + esc(author).replace(/\x27/g,"\\x27") + '\'),40);" title="' + (pf?'Unfollow':'Follow') + '">' +
+              (pf ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Following'
+                  : '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Follow') +
+            '</button>' : '') +
         '</div></div>';
     });
     h += '</div>';
@@ -4561,6 +4611,14 @@ async function openUserProfile(author) {
   }
 
   body.innerHTML = h;
+
+  // Fill follower/following counts asynchronously
+  getFollowStats(author).then(stats => {
+    const fEl = document.getElementById('pf-followers');
+    const gEl = document.getElementById('pf-following');
+    if (fEl) fEl.textContent = stats.followers;
+    if (gEl) gEl.textContent = stats.following;
+  }).catch(()=>{});
 }
 
 function shareUserProfile(author) {
